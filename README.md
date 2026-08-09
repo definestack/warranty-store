@@ -48,6 +48,7 @@ Warranty Tracker helps users remember warranty expiry dates, store invoice image
 src/
   screens/
   components/
+  navigation/
   store/
   db/
   services/

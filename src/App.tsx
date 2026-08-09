@@ -1,8 +1,11 @@
+import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { initDatabase } from './db/database';
+import RootNavigator from './navigation/RootNavigator';
 
 type DbStatus = 'loading' | 'ready' | 'error';
 
@@ -20,16 +23,31 @@ export default function App() {
       });
   }, []);
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Warranty Store</Text>
-      {status === 'loading' && <Text>Initializing database…</Text>}
-      {status === 'ready' && <Text>Database ready</Text>}
-      {status === 'error' && (
+  if (status === 'loading') {
+    return (
+      <View style={styles.container}>
+        <Text>Initializing database…</Text>
+        <StatusBar style="auto" />
+      </View>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <View style={styles.container}>
         <Text style={styles.error}>Database error: {error}</Text>
-      )}
+        <StatusBar style="auto" />
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
       <StatusBar style="auto" />
-    </View>
+    </SafeAreaProvider>
   );
 }
 
@@ -40,10 +58,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
   },
   error: {
     color: 'red',
