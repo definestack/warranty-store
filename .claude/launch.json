@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sticky-todo",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/StickyDo.Widget/StickyDo.Widget/StickyDo.Widget.csproj"],
+      "port": 0
+    }
+  ]
+}
