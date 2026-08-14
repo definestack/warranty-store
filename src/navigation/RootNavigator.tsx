@@ -9,16 +9,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="MainTabs" component={MainTabNavigator} options={{ headerShown: false }} />
-      <Stack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: 'Item Detail' }} />
-      <Stack.Screen
-        name="AddEditItem"
-        component={AddEditItemScreen}
-        options={({ route }) => ({
-          title: route.params?.itemId ? 'Edit Item' : 'Add Item',
-        })}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+      <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
+      <Stack.Screen name="AddEditItem" component={AddEditItemScreen} />
     </Stack.Navigator>
   );
 }
