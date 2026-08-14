@@ -1,5 +1,6 @@
 export type MainTabParamList = {
   Home: undefined;
+  Add: undefined;
   Settings: undefined;
 };
 
