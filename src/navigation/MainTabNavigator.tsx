@@ -1,17 +1,17 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 
 import AppTabBar from '../components/AppTabBar';
 import HomeScreen from '../screens/HomeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import type { MainTabParamList, RootStackParamList } from '../types/navigation';
+import { useToastStore } from '../store/toastStore';
+import type { MainTabParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// "Add" is a navigation shortcut to the AddEditItem stack screen, not a real tab
-// content screen — its tabPress listener intercepts navigation before this renders.
-function AddPlaceholder() {
+// Categories/Reminders don't have screens yet — shown in the tab bar to match the
+// design, but tapping them just surfaces a toast instead of navigating nowhere.
+function ComingSoonPlaceholder() {
   return <View />;
 }
 
@@ -20,13 +20,24 @@ export default function MainTabNavigator() {
     <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <AppTabBar {...props} />}>
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
       <Tab.Screen
-        name="Add"
-        component={AddPlaceholder}
-        options={{ title: 'Add' }}
-        listeners={({ navigation }) => ({
+        name="Categories"
+        component={ComingSoonPlaceholder}
+        options={{ title: 'Categories' }}
+        listeners={() => ({
           tabPress: (event) => {
             event.preventDefault();
-            navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('AddEditItem', {});
+            useToastStore.getState().show('Categories is coming soon');
+          },
+        })}
+      />
+      <Tab.Screen
+        name="Reminders"
+        component={ComingSoonPlaceholder}
+        options={{ title: 'Reminders' }}
+        listeners={() => ({
+          tabPress: (event) => {
+            event.preventDefault();
+            useToastStore.getState().show('Reminders is coming soon');
           },
         })}
       />

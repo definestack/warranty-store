@@ -66,10 +66,8 @@ export default function SettingsScreen(_props: Props) {
           <SettingsRow icon="information-circle-outline" label="About Warranty Tracker" subtitle="Version 1.0.0" />
         </Card>
 
-        <Pressable>
-          <Card style={styles.signOut}>
-            <Text style={[styles.signOutText, { color: theme.danger }]}>Sign Out</Text>
-          </Card>
+        <Pressable style={[styles.signOut, { borderColor: theme.danger }]}>
+          <Text style={[styles.signOutText, { color: theme.danger }]}>Sign Out</Text>
         </Pressable>
       </ScrollView>
 
@@ -117,6 +115,8 @@ const styles = StyleSheet.create({
   },
   signOut: {
     minHeight: 52,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },

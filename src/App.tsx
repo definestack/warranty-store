@@ -1,6 +1,8 @@
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -46,11 +48,13 @@ function AppShell({ status, error }: { status: DbStatus; error: string | null })
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer theme={navigationTheme}>
-        <RootNavigator />
-      </NavigationContainer>
-      <Toast />
-      <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
+      <PaperProvider theme={theme.paper}>
+        <NavigationContainer theme={navigationTheme}>
+          <RootNavigator />
+        </NavigationContainer>
+        <Toast />
+        <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
+      </PaperProvider>
     </SafeAreaProvider>
   );
 }
@@ -70,13 +74,18 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <AppShell status={status} error={error} />
-    </ThemeProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <ThemeProvider>
+        <AppShell status={status} error={error} />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     alignItems: 'center',

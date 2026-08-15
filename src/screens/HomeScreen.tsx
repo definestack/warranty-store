@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { DrawerActions } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -10,8 +11,10 @@ import Card from '../components/Card';
 import ItemIcon from '../components/ItemIcon';
 import SelectModal from '../components/SelectModal';
 import { useAppTheme } from '../theme/ThemeContext';
+import type { AppTheme } from '../theme/palette';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
 import { CATEGORIES, PLACEHOLDER_ITEMS } from '../utils/mockData';
+import type { MockWarrantyStatus } from '../utils/mockData';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
@@ -20,10 +23,17 @@ type Props = CompositeScreenProps<
 
 const ALL_CATEGORIES = 'All Categories';
 
+const STATUS_TEXT_COLOR: Record<MockWarrantyStatus, keyof AppTheme> = {
+  active: 'success',
+  expiring: 'warning',
+  expired: 'danger',
+};
+
 export default function HomeScreen({ navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
+  const [searchVisible, setSearchVisible] = useState(false);
   const [category, setCategory] = useState(ALL_CATEGORIES);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
 
@@ -35,48 +45,79 @@ export default function HomeScreen({ navigation }: Props) {
     });
   }, [search, category]);
 
+  const overview = useMemo(() => {
+    const active = PLACEHOLDER_ITEMS.filter((item) => item.status === 'active').length;
+    const expiring = PLACEHOLDER_ITEMS.filter((item) => item.status === 'expiring').length;
+    const expired = PLACEHOLDER_ITEMS.filter((item) => item.status === 'expired').length;
+    return [
+      { key: 'active', label: 'Active', value: active, color: theme.success, bg: theme.successBg },
+      { key: 'expiring', label: 'Expiring Soon', value: expiring, color: theme.warning, bg: theme.warningBg },
+      { key: 'expired', label: 'Expired', value: expired, color: theme.danger, bg: theme.dangerBg },
+      { key: 'all', label: 'All Items', value: PLACEHOLDER_ITEMS.length, color: theme.primary, bg: theme.primaryContainer },
+    ];
+  }, [theme]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <View style={styles.brand}>
-          <Ionicons name="shield-checkmark" size={22} color={theme.primary} />
-          <Text style={[styles.brandText, { color: theme.text }]}>Warranty Tracker</Text>
-        </View>
-        <View style={styles.topBarActions}>
-          <Ionicons name="search" size={22} color={theme.text} style={styles.searchIcon} />
-          <Pressable
-            style={[styles.addCircle, { backgroundColor: theme.primary }]}
-            onPress={() => navigation.navigate('AddEditItem', {})}
-            accessibilityLabel="Add item"
-          >
-            <Ionicons name="add" size={22} color={theme.primaryText} />
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={[styles.searchBar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-        <Ionicons name="search" size={18} color={theme.mutedText} />
-        <TextInput
-          style={[styles.searchInput, { color: theme.text }]}
-          placeholder="Search items..."
-          placeholderTextColor={theme.mutedText}
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>My Items</Text>
-        <Pressable style={styles.categoryFilter} onPress={() => setCategoryModalVisible(true)}>
-          <Text style={[styles.categoryFilterText, { color: theme.subtleText }]}>{category}</Text>
-          <Ionicons name="chevron-down" size={16} color={theme.mutedText} />
+        <Pressable
+          hitSlop={12}
+          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+          accessibilityLabel="Open menu"
+        >
+          <Ionicons name="menu" size={24} color={theme.text} />
+        </Pressable>
+        <Text style={[styles.brandText, { color: theme.text }]}>Warranty Tracker</Text>
+        <Pressable
+          hitSlop={12}
+          onPress={() => setSearchVisible((visible) => !visible)}
+          accessibilityLabel="Search"
+        >
+          <Ionicons name="search" size={22} color={theme.text} />
         </Pressable>
       </View>
+
+      {searchVisible ? (
+        <View style={[styles.searchBar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+          <Ionicons name="search" size={18} color={theme.mutedText} />
+          <TextInput
+            autoFocus
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder="Search items..."
+            placeholderTextColor={theme.mutedText}
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+      ) : null}
 
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Overview</Text>
+            <View style={styles.overviewRow}>
+              {overview.map((stat) => (
+                <View key={stat.key} style={[styles.statCard, { backgroundColor: stat.bg }]}>
+                  <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
+                  <Text style={[styles.statLabel, { color: stat.color }]} numberOfLines={1}>
+                    {stat.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>My Items</Text>
+              <Pressable style={styles.categoryFilter} onPress={() => setCategoryModalVisible(true)}>
+                <Text style={[styles.categoryFilterText, { color: theme.subtleText }]}>{category}</Text>
+                <Ionicons name="chevron-down" size={16} color={theme.mutedText} />
+              </Pressable>
+            </View>
+          </View>
+        }
         renderItem={({ item }) => (
           <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>
             <Card style={styles.itemCard}>
@@ -88,15 +129,8 @@ export default function HomeScreen({ navigation }: Props) {
                 <Text style={[styles.itemMeta, { color: theme.subtleText }]}>
                   {item.category} • {item.brand}
                 </Text>
-                <Text
-                  style={[
-                    styles.itemWarranty,
-                    { color: item.status === 'active' ? theme.success : theme.warning },
-                  ]}
-                >
-                  {item.status === 'active'
-                    ? `Warranty valid till ${item.expiryDate}`
-                    : `Warranty expired on ${item.expiryDate}`}
+                <Text style={[styles.itemWarranty, { color: theme[STATUS_TEXT_COLOR[item.status]] as string }]}>
+                  {item.expiresIn}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.mutedText} />
@@ -132,29 +166,9 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
   },
-  brand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   brandText: {
     fontSize: 18,
     fontWeight: '700',
-  },
-  topBarActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  searchIcon: {
-    padding: 2,
-  },
-  addCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   searchBar: {
     flexDirection: 'row',
@@ -176,13 +190,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     marginTop: 20,
     marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
+    marginTop: 16,
+  },
+  overviewRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    gap: 2,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   categoryFilter: {
     flexDirection: 'row',

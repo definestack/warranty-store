@@ -7,17 +7,24 @@ import { useAppTheme } from '../theme/ThemeContext';
 interface ScreenHeaderProps {
   title: string;
   onBack?: () => void;
+  backIcon?: keyof typeof Ionicons.glyphMap;
   rightLabel?: string;
+  rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightPress?: () => void;
   rightDisabled?: boolean;
+  /** Whether the right control has a filled pill background. Defaults to true for a label, false for an icon-only control. */
+  rightFilled?: boolean;
 }
 
 export default function ScreenHeader({
   title,
   onBack,
+  backIcon = 'chevron-back',
   rightLabel,
+  rightIcon,
   onRightPress,
   rightDisabled,
+  rightFilled = rightLabel !== undefined,
 }: ScreenHeaderProps) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -28,7 +35,7 @@ export default function ScreenHeader({
         <View style={styles.side}>
           {onBack ? (
             <Pressable hitSlop={12} onPress={onBack} accessibilityLabel="Go back">
-              <Ionicons name="chevron-back" size={26} color={theme.text} />
+              <Ionicons name={backIcon} size={24} color={theme.text} />
             </Pressable>
           ) : null}
         </View>
@@ -36,24 +43,32 @@ export default function ScreenHeader({
           {title}
         </Text>
         <View style={[styles.side, styles.rightSide]}>
-          {rightLabel ? (
+          {rightLabel || rightIcon ? (
             <Pressable
               hitSlop={12}
               onPress={onRightPress}
               disabled={rightDisabled}
               style={[
-                styles.rightButton,
-                { backgroundColor: rightDisabled ? theme.surfaceAlt : theme.primary },
+                rightFilled && (rightIcon ? styles.rightIconButton : styles.rightLabelButton),
+                rightFilled && { backgroundColor: rightDisabled ? theme.surfaceAlt : theme.primary },
               ]}
             >
-              <Text
-                style={[
-                  styles.rightLabel,
-                  { color: rightDisabled ? theme.mutedText : theme.primaryText },
-                ]}
-              >
-                {rightLabel}
-              </Text>
+              {rightIcon ? (
+                <Ionicons
+                  name={rightIcon}
+                  size={rightFilled ? 18 : 22}
+                  color={rightDisabled ? theme.mutedText : rightFilled ? theme.primaryText : theme.text}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.rightLabel,
+                    { color: rightDisabled ? theme.mutedText : theme.primaryText },
+                  ]}
+                >
+                  {rightLabel}
+                </Text>
+              )}
             </Pressable>
           ) : null}
         </View>
@@ -71,7 +86,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   side: {
-    minWidth: 48,
+    minWidth: 40,
     justifyContent: 'center',
   },
   rightSide: {
@@ -83,7 +98,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-  rightButton: {
+  rightIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rightLabelButton: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 14,

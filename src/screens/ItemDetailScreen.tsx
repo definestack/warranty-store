@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Card from '../components/Card';
 import DetailRow from '../components/DetailRow';
@@ -22,7 +22,8 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
       <ScreenHeader
         title="Item Detail"
         onBack={() => navigation.goBack()}
-        rightLabel="Edit"
+        rightIcon="ellipsis-vertical"
+        rightFilled={false}
         onRightPress={() => navigation.navigate('AddEditItem', { itemId: item.id })}
       />
       <ScrollView contentContainerStyle={styles.content}>
@@ -49,6 +50,25 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
             onPress={() => {}}
           />
         </Card>
+
+        <View style={styles.notesSection}>
+          <Text style={[styles.notesLabel, { color: theme.text }]}>Notes</Text>
+          <Text style={[styles.notesText, { color: theme.subtleText }]}>
+            {item.notes ?? 'No notes added.'}
+          </Text>
+        </View>
+
+        <View style={styles.actions}>
+          <Pressable
+            style={[styles.actionButton, styles.actionButtonFilled, { backgroundColor: theme.primaryContainer }]}
+            onPress={() => navigation.navigate('AddEditItem', { itemId: item.id })}
+          >
+            <Text style={[styles.actionText, { color: theme.onPrimaryContainer }]}>Edit Item</Text>
+          </Pressable>
+          <Pressable style={[styles.actionButton, styles.actionButtonOutlined, { borderColor: theme.danger }]}>
+            <Text style={[styles.actionText, { color: theme.danger }]}>Mark as Expired</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
@@ -81,5 +101,37 @@ const styles = StyleSheet.create({
   },
   detailCard: {
     paddingVertical: 4,
+  },
+  notesSection: {
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  notesLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  notesText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonFilled: {},
+  actionButtonOutlined: {
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  actionText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

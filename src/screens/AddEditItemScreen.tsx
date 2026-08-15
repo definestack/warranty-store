@@ -22,6 +22,14 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+const WARRANTY_PERIOD_MONTHS: Record<string, number> = {
+  '6 Months': 6,
+  '1 Year': 12,
+  '2 Years': 24,
+  '3 Years': 36,
+  '5 Years': 60,
+};
+
 export default function AddEditItemScreen({ route, navigation }: Props) {
   const theme = useAppTheme();
   const existing = route.params?.itemId
@@ -39,6 +47,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const [warrantyPeriod, setWarrantyPeriod] = useState('');
   const [store, setStore] = useState(existing?.store ?? '');
   const [invoiceFileName, setInvoiceFileName] = useState(existing?.invoiceFileName);
+  const [notes, setNotes] = useState(existing?.notes ?? '');
   const [saving, setSaving] = useState(false);
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
@@ -81,8 +90,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       await createItem({
         name: trimmedName,
         purchaseDate: toIsoDate(purchaseDate),
-        warrantyMonths: 0,
+        warrantyMonths: WARRANTY_PERIOD_MONTHS[warrantyPeriod] ?? 0,
         category: category || undefined,
+        notes: notes.trim() || undefined,
       });
       useToastStore.getState().show('Item added');
       navigation.goBack();
@@ -99,7 +109,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       <ScreenHeader
         title={isEditing ? 'Edit Item' : 'Add Item'}
         onBack={() => navigation.goBack()}
-        rightLabel="Save"
+        backIcon="close"
+        rightIcon="checkmark"
+        rightFilled
         onRightPress={handleSave}
         rightDisabled={!name.trim() || saving}
       />
@@ -185,6 +197,23 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             onPress={handlePickInvoice}
           />
         </Card>
+
+        <View style={styles.field}>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>Notes</Text>
+          <TextInput
+            style={[
+              styles.textBox,
+              styles.notesBox,
+              { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text },
+            ]}
+            placeholder="Optional notes"
+            placeholderTextColor={theme.mutedText}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            textAlignVertical="top"
+          />
+        </View>
       </ScrollView>
 
       <SelectModal
@@ -268,6 +297,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     fontSize: 15,
+  },
+  notesBox: {
+    minHeight: 88,
+    paddingVertical: 12,
   },
   formCard: {
     paddingVertical: 4,
