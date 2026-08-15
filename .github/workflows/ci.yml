@@ -31,6 +31,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Expo doctor
+        run: npx expo-doctor
+
       - name: Build (Expo export)
         run: npx expo export --platform android
 

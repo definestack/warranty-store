@@ -30,7 +30,8 @@
         {
           "photosPermission": "Warranty Tracker uses your photos to attach invoice images to warranty items."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
