@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, Text, View } from 'react-native';
 
+import Toast from './components/Toast';
 import { initDatabase } from './db/database';
 import RootNavigator from './navigation/RootNavigator';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
@@ -48,6 +49,7 @@ function AppShell({ status, error }: { status: DbStatus; error: string | null })
       <NavigationContainer theme={navigationTheme}>
         <RootNavigator />
       </NavigationContainer>
+      <Toast />
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
     </SafeAreaProvider>
   );
