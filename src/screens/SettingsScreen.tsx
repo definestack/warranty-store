@@ -4,7 +4,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
-import ScreenBackdrop from '../components/ScreenBackdrop';
 import SectionHeader from '../components/SectionHeader';
 import SelectModal from '../components/SelectModal';
 import SettingsRow from '../components/SettingsRow';
@@ -32,7 +31,6 @@ export default function SettingsScreen(_props: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-      <ScreenBackdrop />
       <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
       <ScrollView contentContainerStyle={styles.content}>
         <SectionHeader title="Appearance" />

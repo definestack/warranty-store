@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import GlassSurface from './GlassSurface';
 import { useAppTheme } from '../theme/ThemeContext';
 
 interface ScreenHeaderProps {
@@ -24,44 +23,55 @@ export default function ScreenHeader({
   const insets = useSafeAreaInsets();
 
   return (
-    <GlassSurface style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.side}>
-        {onBack ? (
-          <Pressable hitSlop={12} onPress={onBack} accessibilityLabel="Go back">
-            <Ionicons name="chevron-back" size={26} color={theme.text} />
-          </Pressable>
-        ) : null}
-      </View>
-      <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-        {title}
-      </Text>
-      <View style={[styles.side, styles.rightSide]}>
-        {rightLabel ? (
-          <Pressable hitSlop={12} onPress={onRightPress} disabled={rightDisabled}>
-            <Text
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+      <View style={styles.row}>
+        <View style={styles.side}>
+          {onBack ? (
+            <Pressable hitSlop={12} onPress={onBack} accessibilityLabel="Go back">
+              <Ionicons name="chevron-back" size={26} color={theme.text} />
+            </Pressable>
+          ) : null}
+        </View>
+        <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+          {title}
+        </Text>
+        <View style={[styles.side, styles.rightSide]}>
+          {rightLabel ? (
+            <Pressable
+              hitSlop={12}
+              onPress={onRightPress}
+              disabled={rightDisabled}
               style={[
-                styles.rightLabel,
-                { color: rightDisabled ? theme.mutedText : theme.primary },
+                styles.rightButton,
+                { backgroundColor: rightDisabled ? theme.surfaceAlt : theme.primary },
               ]}
             >
-              {rightLabel}
-            </Text>
-          </Pressable>
-        ) : null}
+              <Text
+                style={[
+                  styles.rightLabel,
+                  { color: rightDisabled ? theme.mutedText : theme.primaryText },
+                ]}
+              >
+                {rightLabel}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
-    </GlassSurface>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: {},
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 56,
     paddingHorizontal: 16,
   },
   side: {
-    width: 48,
+    minWidth: 48,
     justifyContent: 'center',
   },
   rightSide: {
@@ -71,10 +81,15 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  rightButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 14,
   },
   rightLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

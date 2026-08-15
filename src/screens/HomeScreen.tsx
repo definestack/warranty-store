@@ -8,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
 import ItemIcon from '../components/ItemIcon';
-import ScreenBackdrop from '../components/ScreenBackdrop';
 import SelectModal from '../components/SelectModal';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
@@ -38,7 +37,6 @@ export default function HomeScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-      <ScreenBackdrop />
       <View style={styles.topBar}>
         <View style={styles.brand}>
           <Ionicons name="shield-checkmark" size={22} color={theme.primary} />

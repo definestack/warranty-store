@@ -22,16 +22,8 @@ export interface AppTheme {
   /** Rounded highlight pill behind the active bottom-tab icon/label. */
   tabActiveBg: string;
   headerBg: string;
+  /** Dimming scrim behind modal sheets. */
   overlay: string;
-  /** Backdrop gradient glow rendered behind glass surfaces, top of screen fading to transparent. */
-  backdropGradient: [string, string];
-  /** Tint overlay painted on top of the blur for the frosted-glass surfaces (cards, header, tab bar, sheets). */
-  glassOverlay: string;
-  /** Hairline highlight border on glass surfaces. */
-  glassBorder: string;
-  /** expo-blur tint mode and intensity for glass surfaces. */
-  blurTint: 'light' | 'dark';
-  blurIntensity: number;
 }
 
 export const lightTheme: AppTheme = {
@@ -56,11 +48,6 @@ export const lightTheme: AppTheme = {
   tabActiveBg: 'rgba(91, 95, 239, 0.12)',
   headerBg: '#F5F6FA',
   overlay: 'rgba(17, 24, 39, 0.35)',
-  backdropGradient: ['rgba(91, 95, 239, 0.20)', 'rgba(245, 246, 250, 0)'],
-  glassOverlay: 'rgba(255, 255, 255, 0.55)',
-  glassBorder: 'rgba(255, 255, 255, 0.6)',
-  blurTint: 'light',
-  blurIntensity: 40,
 };
 
 export const darkTheme: AppTheme = {
@@ -85,11 +72,6 @@ export const darkTheme: AppTheme = {
   tabActiveBg: 'rgba(129, 140, 248, 0.18)',
   headerBg: '#0D1526',
   overlay: 'rgba(0, 0, 0, 0.55)',
-  backdropGradient: ['rgba(129, 140, 248, 0.30)', 'rgba(13, 21, 38, 0)'],
-  glassOverlay: 'rgba(22, 32, 58, 0.55)',
-  glassBorder: 'rgba(255, 255, 255, 0.08)',
-  blurTint: 'dark',
-  blurIntensity: 35,
 };
 
 export const themes: Record<ThemeMode, AppTheme> = {

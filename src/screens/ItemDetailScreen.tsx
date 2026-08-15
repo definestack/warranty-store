@@ -4,7 +4,6 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Card from '../components/Card';
 import DetailRow from '../components/DetailRow';
 import ItemIcon from '../components/ItemIcon';
-import ScreenBackdrop from '../components/ScreenBackdrop';
 import ScreenHeader from '../components/ScreenHeader';
 import StatusBadge from '../components/StatusBadge';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -20,7 +19,6 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScreenBackdrop />
       <ScreenHeader
         title="Item Detail"
         onBack={() => navigation.goBack()}

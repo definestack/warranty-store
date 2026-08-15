@@ -7,7 +7,6 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 
 import Card from '../components/Card';
 import FormRow from '../components/FormRow';
-import ScreenBackdrop from '../components/ScreenBackdrop';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import { createItem } from '../db/warrantyRepository';
@@ -97,7 +96,6 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScreenBackdrop />
       <ScreenHeader
         title={isEditing ? 'Edit Item' : 'Add Item'}
         onBack={() => navigation.goBack()}

@@ -1,12 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 import type { ViewProps } from 'react-native';
 
-import GlassSurface from './GlassSurface';
+import Surface from './Surface';
 
 export default function Card({ style, ...props }: ViewProps) {
   return (
     <View style={styles.shadowWrapper}>
-      <GlassSurface style={[styles.card, style]} {...props} />
+      <Surface style={[styles.card, style]} {...props} />
     </View>
   );
 }

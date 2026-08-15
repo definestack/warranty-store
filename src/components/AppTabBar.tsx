@@ -3,7 +3,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import GlassSurface from './GlassSurface';
+import Surface from './Surface';
 import { useAppTheme } from '../theme/ThemeContext';
 
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
@@ -17,7 +17,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const insets = useSafeAreaInsets();
 
   return (
-    <GlassSurface style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <Surface style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
@@ -52,7 +52,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
           </Pressable>
         );
       })}
-    </GlassSurface>
+    </Surface>
   );
 }
 

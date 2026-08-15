@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { FlatList, Modal, Pressable, StyleSheet, Text } from 'react-native';
 
-import GlassSurface from './GlassSurface';
+import Surface from './Surface';
 import { useAppTheme } from '../theme/ThemeContext';
 
 interface SelectModalProps {
@@ -26,14 +25,9 @@ export default function SelectModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <BlurView
-          intensity={20}
-          tint={theme.blurTint}
-          style={StyleSheet.absoluteFill}
-        />
+      <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
         <Pressable onPress={() => {}}>
-          <GlassSurface style={styles.sheet}>
+          <Surface style={styles.sheet}>
             <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
             <FlatList
               data={options}
@@ -53,7 +47,7 @@ export default function SelectModal({
                 </Pressable>
               )}
             />
-          </GlassSurface>
+          </Surface>
         </Pressable>
       </Pressable>
     </Modal>
