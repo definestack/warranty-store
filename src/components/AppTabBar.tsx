@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import GlassSurface from './GlassSurface';
+import Surface from './Surface';
 import { useAppTheme } from '../theme/ThemeContext';
+import type { RootStackParamList } from '../types/navigation';
 
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Home: { active: 'home', inactive: 'home-outline' },
-  Add: { active: 'add-circle', inactive: 'add-circle-outline' },
+  Categories: { active: 'grid', inactive: 'grid-outline' },
+  Reminders: { active: 'notifications', inactive: 'notifications-outline' },
   Settings: { active: 'settings', inactive: 'settings-outline' },
 };
 
@@ -16,14 +19,18 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
 
+  const handleAddPress = () => {
+    // navigation here is the bottom-tab navigator; AddEditItem lives two levels up
+    // the tree (Tabs -> Drawer -> RootStack).
+    navigation.getParent()?.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('AddEditItem', {});
+  };
+
   return (
-    <GlassSurface style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <Surface style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
         const label = (options.title ?? route.name) as string;
-        const icons = TAB_ICONS[route.name] ?? TAB_ICONS.Home;
-        const color = isFocused ? theme.primary : theme.tabInactive;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -37,6 +44,9 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
           }
         };
 
+        const icons = TAB_ICONS[route.name] ?? TAB_ICONS.Home;
+        const color = isFocused ? theme.onPrimaryContainer : theme.tabInactive;
+
         return (
           <Pressable
             key={route.key}
@@ -47,12 +57,27 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
           >
             <View style={[styles.pill, isFocused && { backgroundColor: theme.tabActiveBg }]}>
               <Ionicons name={isFocused ? icons.active : icons.inactive} size={22} color={color} />
-              <Text style={[styles.label, { color }]}>{label}</Text>
             </View>
+            <Text
+              style={[styles.label, { color: isFocused ? theme.text : theme.tabInactive }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {label}
+            </Text>
           </Pressable>
         );
       })}
-    </GlassSurface>
+
+      <Pressable
+        onPress={handleAddPress}
+        accessibilityRole="button"
+        accessibilityLabel="Add item"
+        style={[styles.fab, { backgroundColor: theme.primary }]}
+      >
+        <Ionicons name="add" size={28} color={theme.primaryText} />
+      </Pressable>
+    </Surface>
   );
 }
 
@@ -65,16 +90,35 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 2,
   },
   pill: {
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 14,
+    justifyContent: 'center',
+    width: 56,
+    height: 32,
+    borderRadius: 16,
   },
   label: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  fab: {
+    position: 'absolute',
+    // Sits fully above the bar's own top edge (56px tall + 12px clearance), anchored
+    // to Surface's box directly rather than an extra wrapper view.
+    top: -68,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });

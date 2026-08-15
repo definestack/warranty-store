@@ -7,18 +7,28 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 
 import Card from '../components/Card';
 import FormRow from '../components/FormRow';
-import ScreenBackdrop from '../components/ScreenBackdrop';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
+import { createItem } from '../db/warrantyRepository';
+import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
 import { CATEGORIES, PLACEHOLDER_ITEMS, WARRANTY_PERIODS } from '../utils/mockData';
+import { toIsoDate } from '../utils/date';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
+
+const WARRANTY_PERIOD_MONTHS: Record<string, number> = {
+  '6 Months': 6,
+  '1 Year': 12,
+  '2 Years': 24,
+  '3 Years': 36,
+  '5 Years': 60,
+};
 
 export default function AddEditItemScreen({ route, navigation }: Props) {
   const theme = useAppTheme();
@@ -29,13 +39,16 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [name, setName] = useState(existing?.name ?? '');
+  const [nameError, setNameError] = useState<string | null>(null);
   const [category, setCategory] = useState(existing?.category ?? '');
   const [brand, setBrand] = useState(existing?.brand ?? '');
-  const [purchaseDate, setPurchaseDate] = useState<Date | undefined>();
+  const [purchaseDate, setPurchaseDate] = useState<Date>(new Date());
   const [price, setPrice] = useState(existing?.price?.replace(/[^0-9]/g, '') ?? '');
   const [warrantyPeriod, setWarrantyPeriod] = useState('');
   const [store, setStore] = useState(existing?.store ?? '');
   const [invoiceFileName, setInvoiceFileName] = useState(existing?.invoiceFileName);
+  const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [saving, setSaving] = useState(false);
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [periodModalVisible, setPeriodModalVisible] = useState(false);
@@ -59,14 +72,48 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     setInvoiceFileName('invoice.pdf');
   };
 
+  const handleSave = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setNameError('Name is required');
+      return;
+    }
+
+    if (isEditing) {
+      // Persisting edits lands in a later story; for now editing just returns.
+      navigation.goBack();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await createItem({
+        name: trimmedName,
+        purchaseDate: toIsoDate(purchaseDate),
+        warrantyMonths: WARRANTY_PERIOD_MONTHS[warrantyPeriod] ?? 0,
+        category: category || undefined,
+        notes: notes.trim() || undefined,
+      });
+      useToastStore.getState().show('Item added');
+      navigation.goBack();
+    } catch (err) {
+      console.error('Failed to save warranty item', err);
+      setNameError('Could not save item. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScreenBackdrop />
       <ScreenHeader
-        title="Add / Edit Item"
+        title={isEditing ? 'Edit Item' : 'Add Item'}
         onBack={() => navigation.goBack()}
-        rightLabel="Save"
-        onRightPress={() => navigation.goBack()}
+        backIcon="close"
+        rightIcon="checkmark"
+        rightFilled
+        onRightPress={handleSave}
+        rightDisabled={!name.trim() || saving}
       />
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable onPress={handlePickPhoto}>
@@ -92,13 +139,23 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           <TextInput
             style={[
               styles.textBox,
-              { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text },
+              {
+                backgroundColor: theme.surfaceAlt,
+                borderColor: nameError ? theme.danger : theme.border,
+                color: theme.text,
+              },
             ]}
             placeholder="e.g. Dell XPS 13 Laptop"
             placeholderTextColor={theme.mutedText}
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => {
+              setName(text);
+              if (nameError) setNameError(null);
+            }}
           />
+          {nameError ? (
+            <Text style={[styles.fieldError, { color: theme.danger }]}>{nameError}</Text>
+          ) : null}
         </View>
 
         <Card style={styles.formCard}>
@@ -113,7 +170,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           <FormRow
             label="Purchase Date"
             placeholder="Select date"
-            value={purchaseDate ? formatDate(purchaseDate) : undefined}
+            value={formatDate(purchaseDate)}
             icon="calendar-outline"
             onPress={() => setDatePickerVisible(true)}
           />
@@ -140,6 +197,23 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             onPress={handlePickInvoice}
           />
         </Card>
+
+        <View style={styles.field}>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>Notes</Text>
+          <TextInput
+            style={[
+              styles.textBox,
+              styles.notesBox,
+              { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text },
+            ]}
+            placeholder="Optional notes"
+            placeholderTextColor={theme.mutedText}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            textAlignVertical="top"
+          />
+        </View>
       </ScrollView>
 
       <SelectModal
@@ -160,7 +234,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       />
       {datePickerVisible ? (
         <DateTimePicker
-          value={purchaseDate ?? new Date()}
+          value={purchaseDate}
           mode="date"
           display="default"
           onChange={(_event, selectedDate) => {
@@ -214,12 +288,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  fieldError: {
+    fontSize: 13,
+  },
   textBox: {
     minHeight: 52,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     fontSize: 15,
+  },
+  notesBox: {
+    minHeight: 88,
+    paddingVertical: 12,
   },
   formCard: {
     paddingVertical: 4,

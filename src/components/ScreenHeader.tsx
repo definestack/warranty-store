@@ -1,65 +1,92 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import GlassSurface from './GlassSurface';
 import { useAppTheme } from '../theme/ThemeContext';
 
 interface ScreenHeaderProps {
   title: string;
   onBack?: () => void;
+  backIcon?: keyof typeof Ionicons.glyphMap;
   rightLabel?: string;
+  rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightPress?: () => void;
   rightDisabled?: boolean;
+  /** Whether the right control has a filled pill background. Defaults to true for a label, false for an icon-only control. */
+  rightFilled?: boolean;
 }
 
 export default function ScreenHeader({
   title,
   onBack,
+  backIcon = 'chevron-back',
   rightLabel,
+  rightIcon,
   onRightPress,
   rightDisabled,
+  rightFilled = rightLabel !== undefined,
 }: ScreenHeaderProps) {
   const theme = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <GlassSurface style={styles.container}>
-      <View style={styles.side}>
-        {onBack ? (
-          <Pressable hitSlop={12} onPress={onBack} accessibilityLabel="Go back">
-            <Ionicons name="chevron-back" size={26} color={theme.text} />
-          </Pressable>
-        ) : null}
-      </View>
-      <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-        {title}
-      </Text>
-      <View style={[styles.side, styles.rightSide]}>
-        {rightLabel ? (
-          <Pressable hitSlop={12} onPress={onRightPress} disabled={rightDisabled}>
-            <Text
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+      <View style={styles.row}>
+        <View style={styles.side}>
+          {onBack ? (
+            <Pressable hitSlop={12} onPress={onBack} accessibilityLabel="Go back">
+              <Ionicons name={backIcon} size={24} color={theme.text} />
+            </Pressable>
+          ) : null}
+        </View>
+        <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+          {title}
+        </Text>
+        <View style={[styles.side, styles.rightSide]}>
+          {rightLabel || rightIcon ? (
+            <Pressable
+              hitSlop={12}
+              onPress={onRightPress}
+              disabled={rightDisabled}
               style={[
-                styles.rightLabel,
-                { color: rightDisabled ? theme.mutedText : theme.primary },
+                rightFilled && (rightIcon ? styles.rightIconButton : styles.rightLabelButton),
+                rightFilled && { backgroundColor: rightDisabled ? theme.surfaceAlt : theme.primary },
               ]}
             >
-              {rightLabel}
-            </Text>
-          </Pressable>
-        ) : null}
+              {rightIcon ? (
+                <Ionicons
+                  name={rightIcon}
+                  size={rightFilled ? 18 : 22}
+                  color={rightDisabled ? theme.mutedText : rightFilled ? theme.primaryText : theme.text}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.rightLabel,
+                    { color: rightDisabled ? theme.mutedText : theme.primaryText },
+                  ]}
+                >
+                  {rightLabel}
+                </Text>
+              )}
+            </Pressable>
+          ) : null}
+        </View>
       </View>
-    </GlassSurface>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: {},
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 56,
     paddingHorizontal: 16,
   },
   side: {
-    width: 48,
+    minWidth: 40,
     justifyContent: 'center',
   },
   rightSide: {
@@ -69,10 +96,22 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  rightIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rightLabelButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 14,
   },
   rightLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

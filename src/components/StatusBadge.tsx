@@ -2,21 +2,29 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useAppTheme } from '../theme/ThemeContext';
 
-export type WarrantyStatus = 'active' | 'expired';
+export type WarrantyStatus = 'active' | 'expiring' | 'expired';
 
 interface StatusBadgeProps {
   status: WarrantyStatus;
 }
 
+const LABELS: Record<WarrantyStatus, string> = {
+  active: 'Active',
+  expiring: 'Expiring Soon',
+  expired: 'Expired',
+};
+
 export default function StatusBadge({ status }: StatusBadgeProps) {
   const theme = useAppTheme();
-  const isActive = status === 'active';
-  const backgroundColor = isActive ? theme.successBg : theme.warningBg;
-  const color = isActive ? theme.success : theme.warning;
+  const { backgroundColor, color } = {
+    active: { backgroundColor: theme.successBg, color: theme.success },
+    expiring: { backgroundColor: theme.warningBg, color: theme.warning },
+    expired: { backgroundColor: theme.dangerBg, color: theme.danger },
+  }[status];
 
   return (
     <View style={[styles.badge, { backgroundColor }]}>
-      <Text style={[styles.label, { color }]}>{isActive ? 'Active' : 'Expired'}</Text>
+      <Text style={[styles.label, { color }]}>{LABELS[status]}</Text>
     </View>
   );
 }

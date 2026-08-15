@@ -4,7 +4,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
-import ScreenBackdrop from '../components/ScreenBackdrop';
 import SectionHeader from '../components/SectionHeader';
 import SelectModal from '../components/SelectModal';
 import SettingsRow from '../components/SettingsRow';
@@ -32,7 +31,6 @@ export default function SettingsScreen(_props: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-      <ScreenBackdrop />
       <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
       <ScrollView contentContainerStyle={styles.content}>
         <SectionHeader title="Appearance" />
@@ -68,10 +66,8 @@ export default function SettingsScreen(_props: Props) {
           <SettingsRow icon="information-circle-outline" label="About Warranty Tracker" subtitle="Version 1.0.0" />
         </Card>
 
-        <Pressable>
-          <Card style={styles.signOut}>
-            <Text style={[styles.signOutText, { color: theme.danger }]}>Sign Out</Text>
-          </Card>
+        <Pressable style={[styles.signOut, { borderColor: theme.danger }]}>
+          <Text style={[styles.signOutText, { color: theme.danger }]}>Sign Out</Text>
         </Pressable>
       </ScrollView>
 
@@ -119,6 +115,8 @@ const styles = StyleSheet.create({
   },
   signOut: {
     minHeight: 52,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
