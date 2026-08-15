@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import GlassSurface from './GlassSurface';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -20,9 +21,10 @@ export default function ScreenHeader({
   rightDisabled,
 }: ScreenHeaderProps) {
   const theme = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <GlassSurface style={styles.container}>
+    <GlassSurface style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.side}>
         {onBack ? (
           <Pressable hitSlop={12} onPress={onBack} accessibilityLabel="Go back">

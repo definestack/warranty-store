@@ -30,7 +30,6 @@ export default function SelectModal({
         <BlurView
           intensity={20}
           tint={theme.blurTint}
-          experimentalBlurMethod="dimezisBlurView"
           style={StyleSheet.absoluteFill}
         />
         <Pressable onPress={() => {}}>

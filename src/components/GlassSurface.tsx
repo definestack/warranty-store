@@ -30,7 +30,6 @@ export default function GlassSurface({ style, children, ...props }: GlassSurface
       <BlurView
         intensity={theme.blurIntensity}
         tint={theme.blurTint}
-        experimentalBlurMethod="dimezisBlurView"
         style={StyleSheet.absoluteFill}
       />
       <View
