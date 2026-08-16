@@ -209,6 +209,13 @@ Avoid adding dependencies for trivial utilities.
 
 # Testing Expectations
 
+This project follows **Test-Driven Development (TDD)**:
+
+* For new business logic (`db/`, `services/`, `utils/`, store logic), write a failing test first, then implement the minimum code to make it pass, then refactor.
+* Prefer testing pure logic directly (date/expiry calculations, validation, repository behavior) over UI. Use Jest (`jest-expo` preset, see `jest.config.js`) with the manual mocks under `__mocks__/` for `expo-sqlite` and `expo-crypto`.
+* Run `npm test` before considering a feature done; all tests must pass.
+* Skip strict TDD only for trivial UI/copy tweaks with no logic to test.
+
 When implementing features:
 
 * Run TypeScript type checking.
