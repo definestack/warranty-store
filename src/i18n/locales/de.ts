@@ -78,6 +78,9 @@ const de: Messages = {
     cameraPermissionTitle: 'Kamerazugriff erforderlich',
     cameraPermissionMessage:
       'Warranty Store benötigt Kamerazugriff, um ein Foto deiner Rechnung aufzunehmen. Du kannst dies in den Einstellungen aktivieren.',
+    galleryPermissionTitle: 'Zugriff auf Fotomediathek erforderlich',
+    galleryPermissionMessage:
+      'Warranty Store benötigt Zugriff auf deine Fotomediathek, um ein Foto deiner Rechnung anzuhängen. Du kannst dies in den Einstellungen aktivieren.',
     openSettings: 'Einstellungen öffnen',
     invoiceSaveFailed: 'Rechnungsfoto konnte nicht gespeichert werden. Bitte erneut versuchen.',
     itemUpdated: 'Artikel aktualisiert',
@@ -100,7 +103,10 @@ const de: Messages = {
     store: 'Geschäft',
     storePlaceholder: 'Name des Geschäfts eingeben',
     invoiceBill: 'Rechnung / Beleg',
+    attachInvoice: 'Rechnung anhängen',
+    attachInvoiceTitle: 'Rechnung anhängen',
     takePhoto: 'Foto aufnehmen',
+    chooseFromGallery: 'Aus Galerie wählen',
     savingEllipsis: 'Wird gespeichert…',
     photoAttached: 'Foto angehängt',
     invoiceAttachedRetake: 'Rechnungsfoto angehängt · Zum Wiederholen tippen',

@@ -78,6 +78,9 @@ const fr: Messages = {
     cameraPermissionTitle: 'Autorisation de la caméra requise',
     cameraPermissionMessage:
       "Warranty Store a besoin d'accéder à la caméra pour photographier votre facture. Vous pouvez l'activer dans les Paramètres.",
+    galleryPermissionTitle: 'Autorisation de la photothèque requise',
+    galleryPermissionMessage:
+      "Warranty Store a besoin d'accéder à votre photothèque pour joindre une photo de votre facture. Vous pouvez l'activer dans les Paramètres.",
     openSettings: 'Ouvrir les paramètres',
     invoiceSaveFailed: "Impossible d'enregistrer la photo de la facture. Veuillez réessayer.",
     itemUpdated: 'Article mis à jour',
@@ -100,7 +103,10 @@ const fr: Messages = {
     store: 'Magasin',
     storePlaceholder: 'Entrez le nom du magasin',
     invoiceBill: 'Facture / Reçu',
+    attachInvoice: 'Joindre la facture',
+    attachInvoiceTitle: 'Joindre la facture',
     takePhoto: 'Prendre une photo',
+    chooseFromGallery: 'Choisir dans la galerie',
     savingEllipsis: 'Enregistrement…',
     photoAttached: 'Photo jointe',
     invoiceAttachedRetake: 'Photo de facture jointe · Touchez pour reprendre',
