@@ -26,3 +26,21 @@ export function formatIsoDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);
   return `${String(day).padStart(2, '0')} ${MONTH_LABELS[month - 1]} ${year}`;
 }
+
+export type WarrantyStatus = 'active' | 'expiring' | 'expired';
+
+const EXPIRING_SOON_DAYS = 30;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Classifies a warranty as active, expiring soon (within 30 days), or expired, relative to `referenceDate`. */
+export function getWarrantyStatus(expiryDate: string, referenceDate: Date = new Date()): WarrantyStatus {
+  const [year, month, day] = expiryDate.split('-').map(Number);
+  const expiry = new Date(year, month - 1, day);
+  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+
+  const daysUntilExpiry = Math.round((expiry.getTime() - today.getTime()) / MS_PER_DAY);
+
+  if (daysUntilExpiry < 0) return 'expired';
+  if (daysUntilExpiry <= EXPIRING_SOON_DAYS) return 'expiring';
+  return 'active';
+}
