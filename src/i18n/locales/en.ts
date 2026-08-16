@@ -76,6 +76,9 @@ const en = {
     cameraPermissionTitle: 'Camera permission needed',
     cameraPermissionMessage:
       'Warranty Store needs camera access to take a photo of your invoice. You can enable it in Settings.',
+    galleryPermissionTitle: 'Photo library permission needed',
+    galleryPermissionMessage:
+      'Warranty Store needs photo library access to attach a photo of your invoice. You can enable it in Settings.',
     openSettings: 'Open Settings',
     invoiceSaveFailed: 'Could not save invoice photo. Please try again.',
     itemUpdated: 'Item updated',
@@ -98,7 +101,10 @@ const en = {
     store: 'Store',
     storePlaceholder: 'Enter store name',
     invoiceBill: 'Invoice / Bill',
+    attachInvoice: 'Attach invoice',
+    attachInvoiceTitle: 'Attach Invoice',
     takePhoto: 'Take photo',
+    chooseFromGallery: 'Choose from Gallery',
     savingEllipsis: 'Saving…',
     photoAttached: 'Photo attached',
     invoiceAttachedRetake: 'Invoice photo attached · Tap to retake',

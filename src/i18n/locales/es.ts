@@ -78,6 +78,9 @@ const es: Messages = {
     cameraPermissionTitle: 'Se necesita permiso de cámara',
     cameraPermissionMessage:
       'Warranty Store necesita acceso a la cámara para fotografiar tu factura. Puedes habilitarlo en Ajustes.',
+    galleryPermissionTitle: 'Se necesita permiso de la galería de fotos',
+    galleryPermissionMessage:
+      'Warranty Store necesita acceso a tu galería de fotos para adjuntar una foto de tu factura. Puedes habilitarlo en Ajustes.',
     openSettings: 'Abrir Ajustes',
     invoiceSaveFailed: 'No se pudo guardar la foto de la factura. Inténtalo de nuevo.',
     itemUpdated: 'Artículo actualizado',
@@ -100,7 +103,10 @@ const es: Messages = {
     store: 'Tienda',
     storePlaceholder: 'Introduce el nombre de la tienda',
     invoiceBill: 'Factura / Recibo',
+    attachInvoice: 'Adjuntar factura',
+    attachInvoiceTitle: 'Adjuntar factura',
     takePhoto: 'Tomar foto',
+    chooseFromGallery: 'Elegir de la galería',
     savingEllipsis: 'Guardando…',
     photoAttached: 'Foto adjunta',
     invoiceAttachedRetake: 'Foto de factura adjunta · Toca para repetir',

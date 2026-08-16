@@ -24,7 +24,7 @@ import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
 import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useTranslation } from '../i18n/LocaleContext';
-import { saveInvoiceImage } from '../services/fileService';
+import { pickInvoiceFromCamera, pickInvoiceFromGallery } from '../services/imageService';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -123,34 +123,35 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   };
 
   const [attachingInvoice, setAttachingInvoice] = useState(false);
+  const [invoiceSourceModalVisible, setInvoiceSourceModalVisible] = useState(false);
 
-  const handleAttachInvoice = async () => {
+  const handleAttachInvoice = () => {
     if (attachingInvoice) return;
+    setInvoiceSourceModalVisible(true);
+  };
 
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(
-        t('addEditItem.cameraPermissionTitle'),
-        t('addEditItem.cameraPermissionMessage'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('addEditItem.openSettings'), onPress: () => Linking.openSettings() },
-        ]
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-    });
-
-    if (result.canceled || result.assets.length === 0) return;
-
+  const handlePickInvoiceSource = async (source: 'camera' | 'gallery') => {
+    setInvoiceSourceModalVisible(false);
     setAttachingInvoice(true);
     try {
-      const savedUri = await saveInvoiceImage(result.assets[0].uri);
-      setInvoiceUri(savedUri);
+      const result =
+        source === 'camera' ? await pickInvoiceFromCamera() : await pickInvoiceFromGallery();
+
+      if (result.status === 'success') {
+        setInvoiceUri(result.uri);
+      } else if (result.status === 'permission-denied') {
+        const isCamera = source === 'camera';
+        Alert.alert(
+          isCamera ? t('addEditItem.cameraPermissionTitle') : t('addEditItem.galleryPermissionTitle'),
+          isCamera
+            ? t('addEditItem.cameraPermissionMessage')
+            : t('addEditItem.galleryPermissionMessage'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('addEditItem.openSettings'), onPress: () => Linking.openSettings() },
+          ]
+        );
+      }
     } catch (err) {
       console.error('Failed to save invoice photo', err);
       useToastStore.getState().show(t('addEditItem.invoiceSaveFailed'));
@@ -326,7 +327,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           />
           <FormRow
             label={t('addEditItem.invoiceBill')}
-            placeholder={attachingInvoice ? t('addEditItem.savingEllipsis') : t('addEditItem.takePhoto')}
+            placeholder={attachingInvoice ? t('addEditItem.savingEllipsis') : t('addEditItem.attachInvoice')}
             value={invoiceUri ? t('addEditItem.photoAttached') : undefined}
             icon="camera-outline"
             onPress={handleAttachInvoice}
@@ -417,6 +418,16 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         selected={category}
         onSelect={setCategory}
         onClose={() => setCategoryModalVisible(false)}
+      />
+      <SelectModal
+        visible={invoiceSourceModalVisible}
+        title={t('addEditItem.attachInvoiceTitle')}
+        options={[
+          { value: 'camera', label: t('addEditItem.takePhoto') },
+          { value: 'gallery', label: t('addEditItem.chooseFromGallery') },
+        ]}
+        onSelect={(value) => handlePickInvoiceSource(value as 'camera' | 'gallery')}
+        onClose={() => setInvoiceSourceModalVisible(false)}
       />
       {datePickerVisible ? (
         <DateTimePicker
