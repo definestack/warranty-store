@@ -1,4 +1,12 @@
-import { addMonths, formatIsoDate, getWarrantyStatus, toIsoDate } from './date';
+import {
+  addMonths,
+  formatDaysRemaining,
+  formatIsoDate,
+  formatWarrantyDuration,
+  getDaysRemaining,
+  getWarrantyStatus,
+  toIsoDate,
+} from './date';
 
 describe('addMonths', () => {
   it('adds whole months within the same year', () => {
@@ -66,5 +74,64 @@ describe('getWarrantyStatus', () => {
 
   it('treats 31 days out as active', () => {
     expect(getWarrantyStatus('2026-06-20', today)).toBe('active');
+  });
+});
+
+describe('getDaysRemaining', () => {
+  const today = new Date(2026, 4, 20); // 20 May 2026, local time
+
+  it('returns a positive count for a future expiry', () => {
+    expect(getDaysRemaining('2026-05-30', today)).toBe(10);
+  });
+
+  it('returns zero when expiry is today', () => {
+    expect(getDaysRemaining('2026-05-20', today)).toBe(0);
+  });
+
+  it('returns a negative count for a past expiry', () => {
+    expect(getDaysRemaining('2026-05-10', today)).toBe(-10);
+  });
+});
+
+describe('formatDaysRemaining', () => {
+  const today = new Date(2026, 4, 20); // 20 May 2026, local time
+
+  it('formats a single day remaining without pluralizing', () => {
+    expect(formatDaysRemaining('2026-05-21', today)).toBe('Expires in 1 day');
+  });
+
+  it('formats multiple days remaining', () => {
+    expect(formatDaysRemaining('2026-05-30', today)).toBe('Expires in 10 days');
+  });
+
+  it('formats expiry today', () => {
+    expect(formatDaysRemaining('2026-05-20', today)).toBe('Expires today');
+  });
+
+  it('formats a single day since expiry without pluralizing', () => {
+    expect(formatDaysRemaining('2026-05-19', today)).toBe('Expired 1 day ago');
+  });
+
+  it('formats multiple days since expiry', () => {
+    expect(formatDaysRemaining('2026-05-10', today)).toBe('Expired 10 days ago');
+  });
+});
+
+describe('formatWarrantyDuration', () => {
+  it('formats a single month', () => {
+    expect(formatWarrantyDuration(1)).toBe('1 month');
+  });
+
+  it('formats multiple months', () => {
+    expect(formatWarrantyDuration(6)).toBe('6 months');
+  });
+
+  it('formats whole years as years', () => {
+    expect(formatWarrantyDuration(12)).toBe('1 year');
+    expect(formatWarrantyDuration(24)).toBe('2 years');
+  });
+
+  it('formats a non-whole-year month count as months even past a year', () => {
+    expect(formatWarrantyDuration(18)).toBe('18 months');
   });
 });
