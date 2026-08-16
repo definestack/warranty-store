@@ -28,3 +28,13 @@ export const ADD_BRAND_AND_PRICE_COLUMNS = `
 export const ADD_STORE_COLUMN = `
   ALTER TABLE warranty_items ADD COLUMN store TEXT;
 `;
+
+export const CREATE_INVOICE_IMAGES_TABLE = `
+  CREATE TABLE IF NOT EXISTS invoice_images (
+    id TEXT PRIMARY KEY NOT NULL,
+    item_id TEXT NOT NULL,
+    uri TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+`;

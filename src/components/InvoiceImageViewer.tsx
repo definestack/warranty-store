@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -15,14 +17,18 @@ const MAX_SCALE = 5;
 
 interface InvoiceImageViewerProps {
   visible: boolean;
-  uri: string;
+  images: string[];
+  initialIndex: number;
   onClose: () => void;
 }
 
-export default function InvoiceImageViewer({ visible, uri, onClose }: InvoiceImageViewerProps) {
-  const insets = useSafeAreaInsets();
-  const { t } = useTranslation();
+interface ZoomablePageProps {
+  uri: string;
+  width: number;
+  height: number;
+}
 
+function ZoomablePage({ uri, width, height }: ZoomablePageProps) {
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -84,25 +90,76 @@ export default function InvoiceImageViewer({ visible, uri, onClose }: InvoiceIma
     ],
   }));
 
-  const handleClose = () => {
-    resetTransform();
-    onClose();
+  return (
+    <GestureDetector gesture={composedGesture}>
+      <Animated.Image
+        source={{ uri }}
+        style={[{ width, height }, animatedImageStyle]}
+        resizeMode="contain"
+      />
+    </GestureDetector>
+  );
+}
+
+export default function InvoiceImageViewer({
+  visible,
+  images,
+  initialIndex,
+  onClose,
+}: InvoiceImageViewerProps) {
+  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const { width, height } = useWindowDimensions();
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [openCount, setOpenCount] = useState(0);
+
+  useEffect(() => {
+    if (visible) {
+      setCurrentIndex(initialIndex);
+      setOpenCount((count) => count + 1);
+    }
+  }, [visible, initialIndex]);
+
+  const handleMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / width);
+    setCurrentIndex(index);
   };
 
   return (
-    <Modal visible={visible} animationType="fade" onRequestClose={handleClose} statusBarTranslucent>
+    <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.container}>
-        <GestureDetector gesture={composedGesture}>
-          <Animated.Image source={{ uri }} style={[styles.image, animatedImageStyle]} resizeMode="contain" />
-        </GestureDetector>
+        <FlatList
+          key={openCount}
+          data={images}
+          keyExtractor={(uri, index) => `${index}-${uri}`}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          initialScrollIndex={initialIndex}
+          getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+          onMomentumScrollEnd={handleMomentumScrollEnd}
+          initialNumToRender={images.length}
+          renderItem={({ item }) => (
+            <View style={{ width, height }}>
+              <ZoomablePage uri={item} width={width} height={height} />
+            </View>
+          )}
+        />
         <Pressable
           hitSlop={12}
-          onPress={handleClose}
+          onPress={onClose}
           accessibilityLabel={t('common.close')}
           style={[styles.closeButton, { top: insets.top + 12 }]}
         >
           <Ionicons name="close" size={26} color="#ffffff" />
         </Pressable>
+        {images.length > 1 ? (
+          <View style={[styles.pageIndicator, { bottom: insets.bottom + 16 }]}>
+            <Text style={styles.pageIndicatorText}>
+              {t('common.pageOfTotal', { current: currentIndex + 1, total: images.length })}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </Modal>
   );
@@ -113,11 +170,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  image: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
   closeButton: {
     position: 'absolute',
     right: 16,
@@ -127,5 +179,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  pageIndicator: {
+    position: 'absolute',
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  pageIndicatorText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

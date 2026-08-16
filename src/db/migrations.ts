@@ -1,8 +1,10 @@
+import * as Crypto from 'expo-crypto';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   ADD_BRAND_AND_PRICE_COLUMNS,
   ADD_STORE_COLUMN,
+  CREATE_INVOICE_IMAGES_TABLE,
   CREATE_SCHEMA_MIGRATIONS_TABLE,
   CREATE_WARRANTY_ITEMS_TABLE,
 } from './schema';
@@ -33,6 +35,29 @@ export const migrations: Migration[] = [
     name: 'add_store_to_warranty_items',
     up: async (db) => {
       await db.execAsync(ADD_STORE_COLUMN);
+    },
+  },
+  {
+    version: 4,
+    name: 'add_invoice_images_table',
+    up: async (db) => {
+      await db.execAsync(CREATE_INVOICE_IMAGES_TABLE);
+
+      const legacyRows = await db.getAllAsync<{
+        id: string;
+        invoice_uri: string | null;
+        created_at: string;
+      }>('SELECT id, invoice_uri, created_at FROM warranty_items WHERE invoice_uri IS NOT NULL');
+
+      for (const row of legacyRows) {
+        await db.runAsync(
+          'INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at) VALUES (?, ?, ?, 0, ?)',
+          Crypto.randomUUID(),
+          row.id,
+          row.invoice_uri,
+          row.created_at
+        );
+      }
     },
   },
 ];

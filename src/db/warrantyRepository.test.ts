@@ -1,4 +1,5 @@
 import { getDatabase, initDatabase } from './database';
+import { saveInvoiceImagesForItem } from './invoiceImagesRepository';
 import {
   createItem,
   deleteItem,
@@ -19,6 +20,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await getDatabase().runAsync('DELETE FROM invoice_images');
   await getDatabase().runAsync('DELETE FROM warranty_items');
 });
 
@@ -42,7 +44,7 @@ describe('createItem', () => {
     expect(created.price).toBeUndefined();
     expect(created.store).toBeUndefined();
     expect(created.notes).toBeUndefined();
-    expect(created.invoiceUri).toBeUndefined();
+    expect(created.invoiceImages).toEqual([]);
   });
 
   it('persists optional fields when provided', async () => {
@@ -53,7 +55,6 @@ describe('createItem', () => {
       price: 24999.5,
       store: 'Croma',
       notes: 'Bought during the sale',
-      invoiceUri: 'file:///invoice.jpg',
     });
 
     expect(created.category).toBe('Appliances');
@@ -61,7 +62,6 @@ describe('createItem', () => {
     expect(created.price).toBe(24999.5);
     expect(created.store).toBe('Croma');
     expect(created.notes).toBe('Bought during the sale');
-    expect(created.invoiceUri).toBe('file:///invoice.jpg');
   });
 });
 
@@ -93,6 +93,17 @@ describe('getItemById', () => {
 
   it('returns null for an unknown id', async () => {
     expect(await getItemById('missing-id')).toBeNull();
+  });
+
+  it('includes invoice images ordered by sort order', async () => {
+    const created = await createItem(baseItem);
+    await saveInvoiceImagesForItem(created.id, [
+      { id: 'temp-1', uri: 'file:///1.jpg', isPersisted: false },
+      { id: 'temp-2', uri: 'file:///2.jpg', isPersisted: false },
+    ]);
+
+    const fetched = await getItemById(created.id);
+    expect(fetched?.invoiceImages.map((image) => image.uri)).toEqual(['file:///1.jpg', 'file:///2.jpg']);
   });
 });
 
@@ -144,5 +155,20 @@ describe('deleteItem', () => {
 
   it('does not throw when deleting an id that does not exist', async () => {
     await expect(deleteItem('missing-id')).resolves.toBeUndefined();
+  });
+
+  it('also removes the item invoice_images rows', async () => {
+    const created = await createItem(baseItem);
+    await saveInvoiceImagesForItem(created.id, [
+      { id: 'temp-1', uri: 'file:///1.jpg', isPersisted: false },
+    ]);
+
+    await deleteItem(created.id);
+
+    const rows = await getDatabase().getAllAsync(
+      'SELECT * FROM invoice_images WHERE item_id = ?',
+      created.id
+    );
+    expect(rows).toHaveLength(0);
   });
 });

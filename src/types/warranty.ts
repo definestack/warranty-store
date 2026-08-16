@@ -1,3 +1,11 @@
+export interface InvoiceImage {
+  id: string;
+  itemId: string;
+  uri: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface WarrantyItem {
   id: string;
   name: string;
@@ -9,14 +17,14 @@ export interface WarrantyItem {
   price?: number;
   store?: string;
   notes?: string;
-  invoiceUri?: string;
+  invoiceImages: InvoiceImage[];
   createdAt: string;
   updatedAt: string;
 }
 
 export type NewWarrantyItem = Omit<
   WarrantyItem,
-  'id' | 'expiryDate' | 'createdAt' | 'updatedAt'
+  'id' | 'expiryDate' | 'createdAt' | 'updatedAt' | 'invoiceImages'
 >;
 
 export type WarrantyItemUpdate = Partial<NewWarrantyItem>;

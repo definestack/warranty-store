@@ -1,6 +1,7 @@
 import { __setFileExists, getInfoAsync } from 'expo-file-system/legacy';
 
 import { getDatabase, initDatabase } from '../db/database';
+import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
 import * as warrantyRepository from '../db/warrantyRepository';
 import { createItem, getItemById } from '../db/warrantyRepository';
 import { useItemsStore } from './itemsStore';
@@ -10,6 +11,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  await getDatabase().runAsync('DELETE FROM invoice_images');
   await getDatabase().runAsync('DELETE FROM warranty_items');
   useItemsStore.setState({ items: [], loading: false, selectedItem: null, selectedItemLoading: false });
 });
@@ -126,19 +128,20 @@ describe('deleteItem', () => {
     expect(useItemsStore.getState().selectedItem?.id).toBe(kept.id);
   });
 
-  it('removes the associated invoice file when one is attached', async () => {
-    const created = await createItem({
-      name: 'Blender',
-      purchaseDate: '2026-01-15',
-      warrantyMonths: 12,
-      invoiceUri: 'file:///invoice.jpg',
-    });
+  it('removes every attached invoice file', async () => {
+    const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
+    await saveInvoiceImagesForItem(created.id, [
+      { id: 'temp-1', uri: 'file:///invoice-1.jpg', isPersisted: false },
+      { id: 'temp-2', uri: 'file:///invoice-2.jpg', isPersisted: false },
+    ]);
     await useItemsStore.getState().loadItems();
-    __setFileExists('file:///invoice.jpg', true);
+    __setFileExists('file:///invoice-1.jpg', true);
+    __setFileExists('file:///invoice-2.jpg', true);
 
     await useItemsStore.getState().deleteItem(created.id);
 
-    expect((await getInfoAsync('file:///invoice.jpg')).exists).toBe(false);
+    expect((await getInfoAsync('file:///invoice-1.jpg')).exists).toBe(false);
+    expect((await getInfoAsync('file:///invoice-2.jpg')).exists).toBe(false);
   });
 
   it('propagates the error and leaves state untouched when the DB delete fails', async () => {
