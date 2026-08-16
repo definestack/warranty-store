@@ -23,25 +23,23 @@ import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
 import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
+import { useTranslation } from '../i18n/LocaleContext';
 import { saveInvoiceImage } from '../services/fileService';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
 import type { WarrantyItem } from '../types/warranty';
-import { CATEGORIES, resolveCategory } from '../utils/categories';
-import { addMonths, formatIsoDate, fromIsoDate, toIsoDate } from '../utils/date';
+import { CATEGORIES, getCategoryLabel, resolveCategory } from '../utils/categories';
+import { addMonths, formatDate, formatIsoDate, fromIsoDate, toIsoDate } from '../utils/date';
 import { NOTES_MAX_LENGTH, parsePrice, parseWarrantyMonths } from '../utils/validation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
 export default function AddEditItemScreen({ route, navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { t, locale } = useTranslation();
   const itemId = route.params?.itemId;
   const isEditing = !!itemId;
 
@@ -101,10 +99,12 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     };
   }, [itemId]);
 
+  const categoryOptions = CATEGORIES.map((c) => ({ value: c, label: getCategoryLabel(c, t) }));
+
   const parsedWarrantyMonths = parseWarrantyMonths(warrantyMonths);
   const expiryPreview =
     parsedWarrantyMonths !== null
-      ? formatIsoDate(addMonths(toIsoDate(purchaseDate), parsedWarrantyMonths))
+      ? formatIsoDate(addMonths(toIsoDate(purchaseDate), parsedWarrantyMonths), locale)
       : null;
   const isFormValid = !!name.trim() && parsedWarrantyMonths !== null && !loadingExisting;
 
@@ -130,11 +130,11 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
-        'Camera permission needed',
-        'Warranty Store needs camera access to take a photo of your invoice. You can enable it in Settings.',
+        t('addEditItem.cameraPermissionTitle'),
+        t('addEditItem.cameraPermissionMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('addEditItem.openSettings'), onPress: () => Linking.openSettings() },
         ]
       );
       return;
@@ -153,7 +153,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       setInvoiceUri(savedUri);
     } catch (err) {
       console.error('Failed to save invoice photo', err);
-      useToastStore.getState().show('Could not save invoice photo. Please try again.');
+      useToastStore.getState().show(t('addEditItem.invoiceSaveFailed'));
     } finally {
       setAttachingInvoice(false);
     }
@@ -163,10 +163,8 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     const trimmedName = name.trim();
     const months = parseWarrantyMonths(warrantyMonths);
 
-    setNameError(trimmedName ? null : 'Name is required');
-    setWarrantyMonthsError(
-      months === null ? 'Enter warranty duration in whole months (e.g. 12)' : null
-    );
+    setNameError(trimmedName ? null : t('addEditItem.nameRequired'));
+    setWarrantyMonthsError(months === null ? t('addEditItem.warrantyMonthsInvalid') : null);
 
     if (!trimmedName || months === null) return;
 
@@ -192,7 +190,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         // reflect the edit immediately on goBack().
         await useItemsStore.getState().loadItems();
         await useItemsStore.getState().loadItemById(existing.id);
-        useToastStore.getState().show('Item updated');
+        useToastStore.getState().show(t('addEditItem.itemUpdated'));
       } else {
         await createItem({
           name: trimmedName,
@@ -209,12 +207,12 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         // focus listener — the Add FAB is reachable from any tab, so goBack()
         // won't always land back on a focused Home screen.
         await useItemsStore.getState().loadItems();
-        useToastStore.getState().show('Item added');
+        useToastStore.getState().show(t('addEditItem.itemAdded'));
       }
       navigation.goBack();
     } catch (err) {
       console.error('Failed to save warranty item', err);
-      setNameError('Could not save item. Please try again.');
+      setNameError(t('addEditItem.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -223,9 +221,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   if (notFound) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ScreenHeader title="Edit Item" onBack={() => navigation.goBack()} backIcon="close" />
+        <ScreenHeader title={t('addEditItem.editTitle')} onBack={() => navigation.goBack()} backIcon="close" />
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: theme.subtleText }]}>Item not found.</Text>
+          <Text style={[styles.emptyText, { color: theme.subtleText }]}>{t('addEditItem.notFound')}</Text>
         </View>
       </View>
     );
@@ -234,7 +232,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   if (loadingExisting) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ScreenHeader title="Edit Item" onBack={() => navigation.goBack()} backIcon="close" />
+        <ScreenHeader title={t('addEditItem.editTitle')} onBack={() => navigation.goBack()} backIcon="close" />
         <View style={styles.emptyState}>
           <ActivityIndicator color={theme.primary} />
         </View>
@@ -245,7 +243,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScreenHeader
-        title={isEditing ? 'Edit Item' : 'Add Item'}
+        title={isEditing ? t('addEditItem.editTitle') : t('addEditItem.addTitle')}
         onBack={() => navigation.goBack()}
         backIcon="close"
       />
@@ -261,15 +259,15 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             )}
             <View>
               <Text style={[styles.photoTitle, { color: theme.text }]}>
-                {photoUri ? 'Change Photo' : 'Add Photo'}
+                {photoUri ? t('addEditItem.changePhoto') : t('addEditItem.addPhoto')}
               </Text>
-              <Text style={[styles.photoSubtitle, { color: theme.subtleText }]}>Tap to upload</Text>
+              <Text style={[styles.photoSubtitle, { color: theme.subtleText }]}>{t('addEditItem.tapToUpload')}</Text>
             </View>
           </Card>
         </Pressable>
 
         <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>Item Name</Text>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.itemName')}</Text>
           <TextInput
             style={[
               styles.textBox,
@@ -279,7 +277,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
                 color: theme.text,
               },
             ]}
-            placeholder="e.g. Dell XPS 13 Laptop"
+            placeholder={t('addEditItem.itemNamePlaceholder')}
             placeholderTextColor={theme.mutedText}
             value={name}
             onChangeText={(text) => {
@@ -294,32 +292,42 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
         <Card style={styles.formCard}>
           <FormRow
-            label="Category"
-            placeholder="Select category"
-            value={category}
+            label={t('addEditItem.category')}
+            placeholder={t('category.selectCategory')}
+            value={category ? getCategoryLabel(category, t) : undefined}
             icon="chevron-down"
             onPress={() => setCategoryModalVisible(true)}
           />
-          <FormRow label="Brand" placeholder="Enter brand" value={brand} onChangeText={setBrand} />
           <FormRow
-            label="Purchase Date"
-            placeholder="Select date"
-            value={formatDate(purchaseDate)}
+            label={t('addEditItem.brand')}
+            placeholder={t('addEditItem.brandPlaceholder')}
+            value={brand}
+            onChangeText={setBrand}
+          />
+          <FormRow
+            label={t('addEditItem.purchaseDate')}
+            placeholder={t('addEditItem.selectDate')}
+            value={formatDate(purchaseDate, locale)}
             icon="calendar-outline"
             onPress={() => setDatePickerVisible(true)}
           />
           <FormRow
-            label="Purchase Price"
-            placeholder="Enter amount"
+            label={t('addEditItem.purchasePrice')}
+            placeholder={t('addEditItem.enterAmount')}
             value={price}
             onChangeText={setPrice}
             keyboardType="numeric"
           />
-          <FormRow label="Store" placeholder="Enter store name" value={store} onChangeText={setStore} />
           <FormRow
-            label="Invoice / Bill"
-            placeholder={attachingInvoice ? 'Saving…' : 'Take photo'}
-            value={invoiceUri ? 'Photo attached' : undefined}
+            label={t('addEditItem.store')}
+            placeholder={t('addEditItem.storePlaceholder')}
+            value={store}
+            onChangeText={setStore}
+          />
+          <FormRow
+            label={t('addEditItem.invoiceBill')}
+            placeholder={attachingInvoice ? t('addEditItem.savingEllipsis') : t('addEditItem.takePhoto')}
+            value={invoiceUri ? t('addEditItem.photoAttached') : undefined}
             icon="camera-outline"
             onPress={handleAttachInvoice}
           />
@@ -329,13 +337,13 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           <Pressable onPress={handleAttachInvoice} style={styles.invoiceThumbnailRow}>
             <Image source={{ uri: invoiceUri }} style={styles.invoiceThumbnail} />
             <Text style={[styles.invoiceThumbnailLabel, { color: theme.subtleText }]}>
-              Invoice photo attached · Tap to retake
+              {t('addEditItem.invoiceAttachedRetake')}
             </Text>
           </Pressable>
         ) : null}
 
         <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>Warranty (months)</Text>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.warrantyMonths')}</Text>
           <TextInput
             style={[
               styles.textBox,
@@ -345,7 +353,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
                 color: theme.text,
               },
             ]}
-            placeholder="e.g. 12"
+            placeholder={t('addEditItem.warrantyMonthsPlaceholder')}
             placeholderTextColor={theme.mutedText}
             value={warrantyMonths}
             onChangeText={(text) => {
@@ -358,20 +366,20 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             <Text style={[styles.fieldCaption, { color: theme.danger }]}>{warrantyMonthsError}</Text>
           ) : (
             <Text style={[styles.fieldCaption, { color: theme.subtleText }]}>
-              {expiryPreview ? `Expires ${expiryPreview}` : 'Expiry date will be calculated automatically'}
+              {expiryPreview ? t('addEditItem.expiresPreview', { date: expiryPreview }) : t('addEditItem.expiryAutoCalc')}
             </Text>
           )}
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>Notes</Text>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.notes')}</Text>
           <TextInput
             style={[
               styles.textBox,
               styles.notesBox,
               { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text },
             ]}
-            placeholder="Optional notes"
+            placeholder={t('addEditItem.notesPlaceholder')}
             placeholderTextColor={theme.mutedText}
             value={notes}
             onChangeText={setNotes}
@@ -397,15 +405,15 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
               { color: isFormValid && !saving ? theme.primaryText : theme.mutedText },
             ]}
           >
-            {saving ? 'Saving…' : 'Save Item'}
+            {saving ? t('addEditItem.savingEllipsis') : t('addEditItem.save')}
           </Text>
         </Pressable>
       </Surface>
 
       <SelectModal
         visible={categoryModalVisible}
-        title="Select category"
-        options={CATEGORIES}
+        title={t('category.selectCategory')}
+        options={categoryOptions}
         selected={category}
         onSelect={setCategory}
         onClose={() => setCategoryModalVisible(false)}

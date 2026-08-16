@@ -32,7 +32,8 @@
           "cameraPermission": "Warranty Tracker uses your camera to take photos of invoices for your warranty items."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-localization"
     ]
   }
 }

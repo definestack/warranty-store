@@ -8,6 +8,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import Toast from './components/Toast';
 import { initDatabase } from './db/database';
+import { LocaleProvider, useTranslation } from './i18n/LocaleContext';
 import RootNavigator from './navigation/RootNavigator';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 
@@ -15,11 +16,12 @@ type DbStatus = 'loading' | 'ready' | 'error';
 
 function AppShell({ status, error }: { status: DbStatus; error: string | null }) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
 
   if (status === 'loading') {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Text style={{ color: theme.text }}>Initializing database…</Text>
+        <Text style={{ color: theme.text }}>{t('common.initializingDatabase')}</Text>
         <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
       </View>
     );
@@ -28,7 +30,7 @@ function AppShell({ status, error }: { status: DbStatus; error: string | null })
   if (status === 'error') {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Text style={[styles.error, { color: theme.danger }]}>Database error: {error}</Text>
+        <Text style={[styles.error, { color: theme.danger }]}>{t('common.databaseError', { error })}</Text>
         <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
       </View>
     );
@@ -75,9 +77,11 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <ThemeProvider>
-        <AppShell status={status} error={error} />
-      </ThemeProvider>
+      <LocaleProvider>
+        <ThemeProvider>
+          <AppShell status={status} error={error} />
+        </ThemeProvider>
+      </LocaleProvider>
     </GestureHandlerRootView>
   );
 }

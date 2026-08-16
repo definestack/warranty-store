@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTranslation } from '../i18n/LocaleContext';
 import { useAppTheme } from '../theme/ThemeContext';
 
 interface ScreenHeaderProps {
@@ -28,13 +29,14 @@ export default function ScreenHeader({
 }: ScreenHeaderProps) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.row}>
         <View style={styles.side}>
           {onBack ? (
-            <Pressable hitSlop={12} onPress={onBack} accessibilityLabel="Go back">
+            <Pressable hitSlop={12} onPress={onBack} accessibilityLabel={t('nav.goBack')}>
               <Ionicons name={backIcon} size={24} color={theme.text} />
             </Pressable>
           ) : null}

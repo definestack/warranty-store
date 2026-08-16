@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useTranslation } from '../i18n/LocaleContext';
 import { useAppTheme } from '../theme/ThemeContext';
 
 export type WarrantyStatus = 'active' | 'expiring' | 'expired';
@@ -8,14 +9,15 @@ interface StatusBadgeProps {
   status: WarrantyStatus;
 }
 
-const LABELS: Record<WarrantyStatus, string> = {
-  active: 'Active',
-  expiring: 'Expiring Soon',
-  expired: 'Expired',
+const LABEL_KEYS: Record<WarrantyStatus, string> = {
+  active: 'status.active',
+  expiring: 'status.expiringSoon',
+  expired: 'status.expired',
 };
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { backgroundColor, color } = {
     active: { backgroundColor: theme.successBg, color: theme.success },
     expiring: { backgroundColor: theme.warningBg, color: theme.warning },
@@ -24,7 +26,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <View style={[styles.badge, { backgroundColor }]}>
-      <Text style={[styles.label, { color }]}>{LABELS[status]}</Text>
+      <Text style={[styles.label, { color }]}>{t(LABEL_KEYS[status])}</Text>
     </View>
   );
 }

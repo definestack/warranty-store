@@ -8,11 +8,12 @@ import DetailRow from '../components/DetailRow';
 import ItemIcon from '../components/ItemIcon';
 import ScreenHeader from '../components/ScreenHeader';
 import StatusBadge from '../components/StatusBadge';
+import { useTranslation } from '../i18n/LocaleContext';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
-import { DEFAULT_CATEGORY } from '../utils/categories';
+import { DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
 import { formatDaysRemaining, formatIsoDate, formatWarrantyDuration, getWarrantyStatus } from '../utils/date';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ItemDetail'>;
@@ -24,6 +25,7 @@ function formatPrice(price: number): string {
 export default function ItemDetailScreen({ route, navigation }: Props) {
   const { itemId } = route.params;
   const theme = useAppTheme();
+  const { t, locale } = useTranslation();
   const item = useItemsStore((state) => state.selectedItem);
   const loading = useItemsStore((state) => state.selectedItemLoading);
   const loadItemById = useItemsStore((state) => state.loadItemById);
@@ -39,12 +41,12 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
   if (!item) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ScreenHeader title="Item Detail" onBack={() => navigation.goBack()} />
+        <ScreenHeader title={t('itemDetail.title')} onBack={() => navigation.goBack()} />
         <View style={styles.emptyState}>
           {loading ? (
             <ActivityIndicator color={theme.primary} />
           ) : (
-            <Text style={[styles.emptyText, { color: theme.subtleText }]}>Item not found.</Text>
+            <Text style={[styles.emptyText, { color: theme.subtleText }]}>{t('itemDetail.notFound')}</Text>
           )}
         </View>
       </View>
@@ -58,22 +60,22 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
     setDeleting(true);
     try {
       await deleteItem(item.id);
-      useToastStore.getState().show('Item deleted');
+      useToastStore.getState().show(t('itemDetail.itemDeleted'));
       navigation.navigate('MainTabs');
     } catch (err) {
       console.error('Failed to delete warranty item', err);
-      useToastStore.getState().show('Could not delete item. Please try again.');
+      useToastStore.getState().show(t('itemDetail.deleteFailed'));
       setDeleting(false);
     }
   };
 
   const handleDeletePress = () => {
     Alert.alert(
-      'Delete item?',
-      `"${item.name}" and its details will be permanently removed.`,
+      t('itemDetail.deleteConfirmTitle'),
+      t('itemDetail.deleteConfirmMessage', { name: item.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: handleConfirmDelete },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.delete'), style: 'destructive', onPress: handleConfirmDelete },
       ]
     );
   };
@@ -81,7 +83,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScreenHeader
-        title="Item Detail"
+        title={t('itemDetail.title')}
         onBack={() => navigation.goBack()}
         rightIcon="ellipsis-vertical"
         rightFilled={false}
@@ -92,33 +94,41 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           <ItemIcon category={category} size={56} />
           <View style={styles.summaryInfo}>
             <Text style={[styles.itemName, { color: theme.text }]}>{item.name}</Text>
-            <Text style={[styles.itemMeta, { color: theme.subtleText }]}>{category}</Text>
+            <Text style={[styles.itemMeta, { color: theme.subtleText }]}>{getCategoryLabel(category, t)}</Text>
             <StatusBadge status={status} />
             <Text style={[styles.daysRemaining, { color: theme.subtleText }]}>
-              {formatDaysRemaining(item.expiryDate)} · {formatIsoDate(item.expiryDate)}
+              {formatDaysRemaining(item.expiryDate, t)} · {formatIsoDate(item.expiryDate, locale)}
             </Text>
           </View>
         </Card>
 
         <Card style={styles.detailCard}>
-          {item.brand ? <DetailRow icon="pricetag-outline" label="Brand" value={item.brand} /> : null}
-          <DetailRow icon="calendar-outline" label="Purchase Date" value={formatIsoDate(item.purchaseDate)} />
+          {item.brand ? <DetailRow icon="pricetag-outline" label={t('itemDetail.brand')} value={item.brand} /> : null}
+          <DetailRow
+            icon="calendar-outline"
+            label={t('itemDetail.purchaseDate')}
+            value={formatIsoDate(item.purchaseDate, locale)}
+          />
           {item.price !== undefined ? (
-            <DetailRow icon="cash-outline" label="Purchase Price" value={formatPrice(item.price)} />
+            <DetailRow icon="cash-outline" label={t('itemDetail.purchasePrice')} value={formatPrice(item.price)} />
           ) : null}
-          {item.store ? <DetailRow icon="storefront-outline" label="Store" value={item.store} /> : null}
+          {item.store ? <DetailRow icon="storefront-outline" label={t('itemDetail.store')} value={item.store} /> : null}
           <DetailRow
             icon="time-outline"
-            label="Warranty Period"
-            value={formatWarrantyDuration(item.warrantyMonths)}
+            label={t('itemDetail.warrantyPeriod')}
+            value={formatWarrantyDuration(item.warrantyMonths, t)}
           />
-          <DetailRow icon="checkmark-circle-outline" label="Warranty Valid Till" value={formatIsoDate(item.expiryDate)} />
+          <DetailRow
+            icon="checkmark-circle-outline"
+            label={t('itemDetail.warrantyValidTill')}
+            value={formatIsoDate(item.expiryDate, locale)}
+          />
         </Card>
 
         <View style={styles.notesSection}>
-          <Text style={[styles.notesLabel, { color: theme.text }]}>Notes</Text>
+          <Text style={[styles.notesLabel, { color: theme.text }]}>{t('itemDetail.notes')}</Text>
           <Text style={[styles.notesText, { color: theme.subtleText }]}>
-            {item.notes ?? 'No notes added.'}
+            {item.notes ?? t('itemDetail.noNotes')}
           </Text>
         </View>
 
@@ -127,7 +137,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
             style={[styles.actionButton, styles.actionButtonFilled, { backgroundColor: theme.primaryContainer }]}
             onPress={() => navigation.navigate('AddEditItem', { itemId: item.id })}
           >
-            <Text style={[styles.actionText, { color: theme.onPrimaryContainer }]}>Edit Item</Text>
+            <Text style={[styles.actionText, { color: theme.onPrimaryContainer }]}>{t('itemDetail.editItem')}</Text>
           </Pressable>
           <Pressable
             style={[styles.actionButton, styles.actionButtonOutlined, { borderColor: theme.danger }]}
@@ -135,7 +145,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
             disabled={deleting}
           >
             <Text style={[styles.actionText, { color: theme.danger }]}>
-              {deleting ? 'Deleting…' : 'Delete Item'}
+              {deleting ? t('itemDetail.deleting') : t('itemDetail.deleteItem')}
             </Text>
           </Pressable>
         </View>
