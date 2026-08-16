@@ -5,7 +5,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,6 +23,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
 import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
+import { saveInvoiceImage } from '../services/fileService';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -56,7 +59,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const [warrantyMonths, setWarrantyMonths] = useState('');
   const [warrantyMonthsError, setWarrantyMonthsError] = useState<string | null>(null);
   const [store, setStore] = useState('');
-  const [invoiceFileName, setInvoiceFileName] = useState<string | undefined>();
+  const [invoiceUri, setInvoiceUri] = useState<string | undefined>();
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -83,6 +86,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         setPrice(item.price !== undefined ? String(item.price) : '');
         setWarrantyMonths(String(item.warrantyMonths));
         setStore(item.store ?? '');
+        setInvoiceUri(item.invoiceUri);
         setNotes(item.notes ?? '');
       } catch (err) {
         console.error('Failed to load warranty item for editing', err);
@@ -118,8 +122,41 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     }
   };
 
-  const handlePickInvoice = () => {
-    setInvoiceFileName('invoice.pdf');
+  const [attachingInvoice, setAttachingInvoice] = useState(false);
+
+  const handleAttachInvoice = async () => {
+    if (attachingInvoice) return;
+
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Camera permission needed',
+        'Warranty Store needs camera access to take a photo of your invoice. You can enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+
+    if (result.canceled || result.assets.length === 0) return;
+
+    setAttachingInvoice(true);
+    try {
+      const savedUri = await saveInvoiceImage(result.assets[0].uri);
+      setInvoiceUri(savedUri);
+    } catch (err) {
+      console.error('Failed to save invoice photo', err);
+      useToastStore.getState().show('Could not save invoice photo. Please try again.');
+    } finally {
+      setAttachingInvoice(false);
+    }
   };
 
   const handleSave = async () => {
@@ -148,6 +185,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           brand: trimmedBrand,
           price: parsedPrice,
           store: trimmedStore,
+          invoiceUri,
           notes: notes.trim() || undefined,
         });
         // Refresh both the list and the detail screen's selected item so they
@@ -164,6 +202,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           brand: trimmedBrand,
           price: parsedPrice,
           store: trimmedStore,
+          invoiceUri,
           notes: notes.trim() || undefined,
         });
         // Refresh Home's store directly here rather than relying solely on its
@@ -279,12 +318,21 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           <FormRow label="Store" placeholder="Enter store name" value={store} onChangeText={setStore} />
           <FormRow
             label="Invoice / Bill"
-            placeholder="Upload file"
-            value={invoiceFileName}
-            icon="cloud-upload-outline"
-            onPress={handlePickInvoice}
+            placeholder={attachingInvoice ? 'Saving…' : 'Take photo'}
+            value={invoiceUri ? 'Photo attached' : undefined}
+            icon="camera-outline"
+            onPress={handleAttachInvoice}
           />
         </Card>
+
+        {invoiceUri ? (
+          <Pressable onPress={handleAttachInvoice} style={styles.invoiceThumbnailRow}>
+            <Image source={{ uri: invoiceUri }} style={styles.invoiceThumbnail} />
+            <Text style={[styles.invoiceThumbnailLabel, { color: theme.subtleText }]}>
+              Invoice photo attached · Tap to retake
+            </Text>
+          </Pressable>
+        ) : null}
 
         <View style={styles.field}>
           <Text style={[styles.fieldLabel, { color: theme.text }]}>Warranty (months)</Text>
@@ -442,6 +490,21 @@ const styles = StyleSheet.create({
   },
   formCard: {
     paddingVertical: 4,
+  },
+  invoiceThumbnailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: -8,
+  },
+  invoiceThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+  },
+  invoiceThumbnailLabel: {
+    fontSize: 13,
+    flexShrink: 1,
   },
   saveBar: {
     paddingHorizontal: 16,

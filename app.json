@@ -28,7 +28,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Warranty Tracker uses your photos to attach invoice images to warranty items."
+          "photosPermission": "Warranty Tracker uses your photos to attach invoice images to warranty items.",
+          "cameraPermission": "Warranty Tracker uses your camera to take photos of invoices for your warranty items."
         }
       ],
       "expo-font"
