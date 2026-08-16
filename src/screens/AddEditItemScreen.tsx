@@ -4,17 +4,20 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
 import FormRow from '../components/FormRow';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
+import Surface from '../components/Surface';
 import { createItem } from '../db/warrantyRepository';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
-import { CATEGORIES, PLACEHOLDER_ITEMS, WARRANTY_PERIODS } from '../utils/mockData';
-import { toIsoDate } from '../utils/date';
+import { CATEGORIES, PLACEHOLDER_ITEMS } from '../utils/mockData';
+import { addMonths, formatIsoDate, toIsoDate } from '../utils/date';
+import { parseWarrantyMonths } from '../utils/validation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
 
@@ -22,16 +25,9 @@ function formatDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-const WARRANTY_PERIOD_MONTHS: Record<string, number> = {
-  '6 Months': 6,
-  '1 Year': 12,
-  '2 Years': 24,
-  '3 Years': 36,
-  '5 Years': 60,
-};
-
 export default function AddEditItemScreen({ route, navigation }: Props) {
   const theme = useAppTheme();
+  const insets = useSafeAreaInsets();
   const existing = route.params?.itemId
     ? PLACEHOLDER_ITEMS.find((entry) => entry.id === route.params.itemId)
     : undefined;
@@ -44,15 +40,22 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const [brand, setBrand] = useState(existing?.brand ?? '');
   const [purchaseDate, setPurchaseDate] = useState<Date>(new Date());
   const [price, setPrice] = useState(existing?.price?.replace(/[^0-9]/g, '') ?? '');
-  const [warrantyPeriod, setWarrantyPeriod] = useState('');
+  const [warrantyMonths, setWarrantyMonths] = useState('');
+  const [warrantyMonthsError, setWarrantyMonthsError] = useState<string | null>(null);
   const [store, setStore] = useState(existing?.store ?? '');
   const [invoiceFileName, setInvoiceFileName] = useState(existing?.invoiceFileName);
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [saving, setSaving] = useState(false);
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
-  const [periodModalVisible, setPeriodModalVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+
+  const parsedWarrantyMonths = parseWarrantyMonths(warrantyMonths);
+  const expiryPreview =
+    parsedWarrantyMonths !== null
+      ? formatIsoDate(addMonths(toIsoDate(purchaseDate), parsedWarrantyMonths))
+      : null;
+  const isFormValid = !!name.trim() && parsedWarrantyMonths !== null;
 
   const handlePickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -74,10 +77,14 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
   const handleSave = async () => {
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      setNameError('Name is required');
-      return;
-    }
+    const months = parseWarrantyMonths(warrantyMonths);
+
+    setNameError(trimmedName ? null : 'Name is required');
+    setWarrantyMonthsError(
+      months === null ? 'Enter warranty duration in whole months (e.g. 12)' : null
+    );
+
+    if (!trimmedName || months === null) return;
 
     if (isEditing) {
       // Persisting edits lands in a later story; for now editing just returns.
@@ -90,7 +97,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       await createItem({
         name: trimmedName,
         purchaseDate: toIsoDate(purchaseDate),
-        warrantyMonths: WARRANTY_PERIOD_MONTHS[warrantyPeriod] ?? 0,
+        warrantyMonths: months,
         category: category || undefined,
         notes: notes.trim() || undefined,
       });
@@ -110,10 +117,6 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         title={isEditing ? 'Edit Item' : 'Add Item'}
         onBack={() => navigation.goBack()}
         backIcon="close"
-        rightIcon="checkmark"
-        rightFilled
-        onRightPress={handleSave}
-        rightDisabled={!name.trim() || saving}
       />
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable onPress={handlePickPhoto}>
@@ -154,7 +157,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             }}
           />
           {nameError ? (
-            <Text style={[styles.fieldError, { color: theme.danger }]}>{nameError}</Text>
+            <Text style={[styles.fieldCaption, { color: theme.danger }]}>{nameError}</Text>
           ) : null}
         </View>
 
@@ -181,13 +184,6 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             onChangeText={setPrice}
             keyboardType="numeric"
           />
-          <FormRow
-            label="Warranty Period"
-            placeholder="Select duration"
-            value={warrantyPeriod}
-            icon="chevron-down"
-            onPress={() => setPeriodModalVisible(true)}
-          />
           <FormRow label="Store" placeholder="Enter store name" value={store} onChangeText={setStore} />
           <FormRow
             label="Invoice / Bill"
@@ -197,6 +193,35 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             onPress={handlePickInvoice}
           />
         </Card>
+
+        <View style={styles.field}>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>Warranty (months)</Text>
+          <TextInput
+            style={[
+              styles.textBox,
+              {
+                backgroundColor: theme.surfaceAlt,
+                borderColor: warrantyMonthsError ? theme.danger : theme.border,
+                color: theme.text,
+              },
+            ]}
+            placeholder="e.g. 12"
+            placeholderTextColor={theme.mutedText}
+            value={warrantyMonths}
+            onChangeText={(text) => {
+              setWarrantyMonths(text);
+              if (warrantyMonthsError) setWarrantyMonthsError(null);
+            }}
+            keyboardType="numeric"
+          />
+          {warrantyMonthsError ? (
+            <Text style={[styles.fieldCaption, { color: theme.danger }]}>{warrantyMonthsError}</Text>
+          ) : (
+            <Text style={[styles.fieldCaption, { color: theme.subtleText }]}>
+              {expiryPreview ? `Expires ${expiryPreview}` : 'Expiry date will be calculated automatically'}
+            </Text>
+          )}
+        </View>
 
         <View style={styles.field}>
           <Text style={[styles.fieldLabel, { color: theme.text }]}>Notes</Text>
@@ -216,6 +241,26 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         </View>
       </ScrollView>
 
+      <Surface style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable
+          onPress={handleSave}
+          disabled={!isFormValid || saving}
+          style={[
+            styles.saveButton,
+            { backgroundColor: isFormValid && !saving ? theme.primary : theme.surfaceAlt },
+          ]}
+        >
+          <Text
+            style={[
+              styles.saveButtonText,
+              { color: isFormValid && !saving ? theme.primaryText : theme.mutedText },
+            ]}
+          >
+            {saving ? 'Saving…' : 'Save Item'}
+          </Text>
+        </Pressable>
+      </Surface>
+
       <SelectModal
         visible={categoryModalVisible}
         title="Select category"
@@ -223,14 +268,6 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         selected={category}
         onSelect={setCategory}
         onClose={() => setCategoryModalVisible(false)}
-      />
-      <SelectModal
-        visible={periodModalVisible}
-        title="Select warranty period"
-        options={WARRANTY_PERIODS}
-        selected={warrantyPeriod}
-        onSelect={setWarrantyPeriod}
-        onClose={() => setPeriodModalVisible(false)}
       />
       {datePickerVisible ? (
         <DateTimePicker
@@ -288,7 +325,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  fieldError: {
+  fieldCaption: {
     fontSize: 13,
   },
   textBox: {
@@ -304,5 +341,22 @@ const styles = StyleSheet.create({
   },
   formCard: {
     paddingVertical: 4,
+  },
+  saveBar: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+  },
+  saveButton: {
+    minHeight: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
