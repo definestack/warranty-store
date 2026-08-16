@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
-import { getAllItems, getItemById } from '../db/warrantyRepository';
+import { deleteItem as deleteItemRow, getAllItems, getItemById } from '../db/warrantyRepository';
+import { deleteInvoiceFile } from '../services/fileService';
 import type { WarrantyItem } from '../types/warranty';
 
 interface ItemsState {
@@ -10,9 +11,10 @@ interface ItemsState {
   selectedItem: WarrantyItem | null;
   selectedItemLoading: boolean;
   loadItemById: (id: string) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
 }
 
-export const useItemsStore = create<ItemsState>((set) => ({
+export const useItemsStore = create<ItemsState>((set, get) => ({
   items: [],
   loading: false,
   loadItems: async () => {
@@ -36,5 +38,20 @@ export const useItemsStore = create<ItemsState>((set) => ({
       console.error('Failed to load warranty item', err);
       set({ selectedItem: null, selectedItemLoading: false });
     }
+  },
+  deleteItem: async (id: string) => {
+    const state = get();
+    const item = state.items.find((i) => i.id === id) ?? (state.selectedItem?.id === id ? state.selectedItem : null);
+
+    await deleteItemRow(id);
+
+    if (item?.invoiceUri) {
+      await deleteInvoiceFile(item.invoiceUri);
+    }
+
+    set((s) => ({
+      items: s.items.filter((i) => i.id !== id),
+      selectedItem: s.selectedItem?.id === id ? null : s.selectedItem,
+    }));
   },
 }));

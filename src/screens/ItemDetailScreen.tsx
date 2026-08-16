@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Card from '../components/Card';
 import DetailRow from '../components/DetailRow';
@@ -9,6 +9,7 @@ import ItemIcon from '../components/ItemIcon';
 import ScreenHeader from '../components/ScreenHeader';
 import StatusBadge from '../components/StatusBadge';
 import { useItemsStore } from '../store/itemsStore';
+import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
 import { DEFAULT_CATEGORY } from '../utils/categories';
@@ -26,6 +27,8 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
   const item = useItemsStore((state) => state.selectedItem);
   const loading = useItemsStore((state) => state.selectedItemLoading);
   const loadItemById = useItemsStore((state) => state.loadItemById);
+  const deleteItem = useItemsStore((state) => state.deleteItem);
+  const [deleting, setDeleting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -50,6 +53,30 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
 
   const status = getWarrantyStatus(item.expiryDate);
   const category = item.category ?? DEFAULT_CATEGORY;
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteItem(item.id);
+      useToastStore.getState().show('Item deleted');
+      navigation.navigate('MainTabs');
+    } catch (err) {
+      console.error('Failed to delete warranty item', err);
+      useToastStore.getState().show('Could not delete item. Please try again.');
+      setDeleting(false);
+    }
+  };
+
+  const handleDeletePress = () => {
+    Alert.alert(
+      'Delete item?',
+      `"${item.name}" and its details will be permanently removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: handleConfirmDelete },
+      ]
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -102,8 +129,14 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           >
             <Text style={[styles.actionText, { color: theme.onPrimaryContainer }]}>Edit Item</Text>
           </Pressable>
-          <Pressable style={[styles.actionButton, styles.actionButtonOutlined, { borderColor: theme.danger }]}>
-            <Text style={[styles.actionText, { color: theme.danger }]}>Delete Item</Text>
+          <Pressable
+            style={[styles.actionButton, styles.actionButtonOutlined, { borderColor: theme.danger }]}
+            onPress={handleDeletePress}
+            disabled={deleting}
+          >
+            <Text style={[styles.actionText, { color: theme.danger }]}>
+              {deleting ? 'Deleting…' : 'Delete Item'}
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
