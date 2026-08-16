@@ -18,7 +18,7 @@ import type { RootStackParamList } from '../types/navigation';
 import { CATEGORIES, resolveCategory } from '../utils/categories';
 import { PLACEHOLDER_ITEMS } from '../utils/mockData';
 import { addMonths, formatIsoDate, toIsoDate } from '../utils/date';
-import { parseWarrantyMonths } from '../utils/validation';
+import { NOTES_MAX_LENGTH, parseWarrantyMonths } from '../utils/validation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
 
@@ -238,6 +238,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             onChangeText={setNotes}
             multiline
             textAlignVertical="top"
+            maxLength={NOTES_MAX_LENGTH}
           />
         </View>
       </ScrollView>
