@@ -34,13 +34,38 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** Classifies a warranty as active, expiring soon (within 30 days), or expired, relative to `referenceDate`. */
 export function getWarrantyStatus(expiryDate: string, referenceDate: Date = new Date()): WarrantyStatus {
-  const [year, month, day] = expiryDate.split('-').map(Number);
-  const expiry = new Date(year, month - 1, day);
-  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
-
-  const daysUntilExpiry = Math.round((expiry.getTime() - today.getTime()) / MS_PER_DAY);
+  const daysUntilExpiry = getDaysRemaining(expiryDate, referenceDate);
 
   if (daysUntilExpiry < 0) return 'expired';
   if (daysUntilExpiry <= EXPIRING_SOON_DAYS) return 'expiring';
   return 'active';
+}
+
+/** Days between `referenceDate` and `expiryDate`; negative once the warranty has expired. */
+export function getDaysRemaining(expiryDate: string, referenceDate: Date = new Date()): number {
+  const [year, month, day] = expiryDate.split('-').map(Number);
+  const expiry = new Date(year, month - 1, day);
+  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+
+  return Math.round((expiry.getTime() - today.getTime()) / MS_PER_DAY);
+}
+
+/** Human-readable days-remaining label, e.g. "Expires in 10 days" or "Expired 1 day ago". */
+export function formatDaysRemaining(expiryDate: string, referenceDate: Date = new Date()): string {
+  const days = getDaysRemaining(expiryDate, referenceDate);
+
+  if (days === 0) return 'Expires today';
+  if (days > 0) return `Expires in ${days} day${days === 1 ? '' : 's'}`;
+
+  const daysAgo = Math.abs(days);
+  return `Expired ${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
+}
+
+/** Formats a warranty duration in months as e.g. "6 months" or "2 years" for whole-year durations. */
+export function formatWarrantyDuration(months: number): string {
+  if (months >= 12 && months % 12 === 0) {
+    const years = months / 12;
+    return `${years} year${years === 1 ? '' : 's'}`;
+  }
+  return `${months} month${months === 1 ? '' : 's'}`;
 }

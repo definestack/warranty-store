@@ -1,21 +1,51 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Card from '../components/Card';
 import DetailRow from '../components/DetailRow';
 import ItemIcon from '../components/ItemIcon';
 import ScreenHeader from '../components/ScreenHeader';
 import StatusBadge from '../components/StatusBadge';
+import { useItemsStore } from '../store/itemsStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
-import { PLACEHOLDER_ITEMS } from '../utils/mockData';
+import { DEFAULT_CATEGORY } from '../utils/categories';
+import { formatDaysRemaining, formatIsoDate, formatWarrantyDuration, getWarrantyStatus } from '../utils/date';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ItemDetail'>;
 
 export default function ItemDetailScreen({ route, navigation }: Props) {
   const { itemId } = route.params;
   const theme = useAppTheme();
-  const item = PLACEHOLDER_ITEMS.find((entry) => entry.id === itemId) ?? PLACEHOLDER_ITEMS[0];
+  const item = useItemsStore((state) => state.selectedItem);
+  const loading = useItemsStore((state) => state.selectedItemLoading);
+  const loadItemById = useItemsStore((state) => state.loadItemById);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadItemById(itemId);
+    }, [loadItemById, itemId])
+  );
+
+  if (!item) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ScreenHeader title="Item Detail" onBack={() => navigation.goBack()} />
+        <View style={styles.emptyState}>
+          {loading ? (
+            <ActivityIndicator color={theme.primary} />
+          ) : (
+            <Text style={[styles.emptyText, { color: theme.subtleText }]}>Item not found.</Text>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  const status = getWarrantyStatus(item.expiryDate);
+  const category = item.category ?? DEFAULT_CATEGORY;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -28,27 +58,25 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
       />
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.summaryCard}>
-          <ItemIcon category={item.category} size={56} />
+          <ItemIcon category={category} size={56} />
           <View style={styles.summaryInfo}>
             <Text style={[styles.itemName, { color: theme.text }]}>{item.name}</Text>
-            <Text style={[styles.itemMeta, { color: theme.subtleText }]}>
-              {item.category} • {item.brand}
+            <Text style={[styles.itemMeta, { color: theme.subtleText }]}>{category}</Text>
+            <StatusBadge status={status} />
+            <Text style={[styles.daysRemaining, { color: theme.subtleText }]}>
+              {formatDaysRemaining(item.expiryDate)} · {formatIsoDate(item.expiryDate)}
             </Text>
-            <StatusBadge status={item.status} />
           </View>
         </Card>
 
         <Card style={styles.detailCard}>
-          <DetailRow icon="calendar-outline" label="Purchase Date" value={item.purchaseDate} />
-          <DetailRow icon="checkmark-circle-outline" label="Warranty Valid Till" value={item.expiryDate} />
-          <DetailRow icon="pricetag-outline" label="Purchase Price" value={item.price} />
-          <DetailRow icon="storefront-outline" label="Store" value={item.store} />
+          <DetailRow icon="calendar-outline" label="Purchase Date" value={formatIsoDate(item.purchaseDate)} />
           <DetailRow
-            icon="document-text-outline"
-            label="Invoice / Bill"
-            value={item.invoiceFileName}
-            onPress={() => {}}
+            icon="time-outline"
+            label="Warranty Period"
+            value={formatWarrantyDuration(item.warrantyMonths)}
           />
+          <DetailRow icon="checkmark-circle-outline" label="Warranty Valid Till" value={formatIsoDate(item.expiryDate)} />
         </Card>
 
         <View style={styles.notesSection}>
@@ -66,7 +94,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
             <Text style={[styles.actionText, { color: theme.onPrimaryContainer }]}>Edit Item</Text>
           </Pressable>
           <Pressable style={[styles.actionButton, styles.actionButtonOutlined, { borderColor: theme.danger }]}>
-            <Text style={[styles.actionText, { color: theme.danger }]}>Mark as Expired</Text>
+            <Text style={[styles.actionText, { color: theme.danger }]}>Delete Item</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -81,6 +109,14 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     gap: 16,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 15,
   },
   summaryCard: {
     flexDirection: 'row',
@@ -98,6 +134,9 @@ const styles = StyleSheet.create({
   },
   itemMeta: {
     fontSize: 14,
+  },
+  daysRemaining: {
+    fontSize: 13,
   },
   detailCard: {
     paddingVertical: 4,
