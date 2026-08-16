@@ -1,21 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions } from '@react-navigation/native';
+import { DrawerActions, useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
 import ItemIcon from '../components/ItemIcon';
 import SelectModal from '../components/SelectModal';
+import { useItemsStore } from '../store/itemsStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { AppTheme } from '../theme/palette';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
-import { CATEGORIES } from '../utils/categories';
-import { PLACEHOLDER_ITEMS } from '../utils/mockData';
-import type { MockWarrantyStatus } from '../utils/mockData';
+import type { WarrantyItem } from '../types/warranty';
+import { CATEGORIES, DEFAULT_CATEGORY } from '../utils/categories';
+import { formatIsoDate, getWarrantyStatus } from '../utils/date';
+import type { WarrantyStatus } from '../utils/date';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
@@ -24,39 +26,60 @@ type Props = CompositeScreenProps<
 
 const ALL_CATEGORIES = 'All Categories';
 
-const STATUS_TEXT_COLOR: Record<MockWarrantyStatus, keyof AppTheme> = {
+const STATUS_TEXT_COLOR: Record<WarrantyStatus, keyof AppTheme> = {
   active: 'success',
   expiring: 'warning',
   expired: 'danger',
 };
 
+function expiryLabel(item: WarrantyItem, status: WarrantyStatus): string {
+  return status === 'expired'
+    ? `Expired on ${formatIsoDate(item.expiryDate)}`
+    : `Expires ${formatIsoDate(item.expiryDate)}`;
+}
+
 export default function HomeScreen({ navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const allItems = useItemsStore((state) => state.items);
+  const loadItems = useItemsStore((state) => state.loadItems);
   const [search, setSearch] = useState('');
   const [searchVisible, setSearchVisible] = useState(false);
   const [category, setCategory] = useState(ALL_CATEGORIES);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadItems();
+    }, [loadItems])
+  );
+
   const items = useMemo(() => {
-    return PLACEHOLDER_ITEMS.filter((item) => {
-      const matchesCategory = category === ALL_CATEGORIES || item.category === category;
+    return allItems.filter((item) => {
+      const itemCategory = item.category ?? DEFAULT_CATEGORY;
+      const matchesCategory = category === ALL_CATEGORIES || itemCategory === category;
       const matchesSearch = item.name.toLowerCase().includes(search.trim().toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [search, category]);
+  }, [allItems, search, category]);
 
   const overview = useMemo(() => {
-    const active = PLACEHOLDER_ITEMS.filter((item) => item.status === 'active').length;
-    const expiring = PLACEHOLDER_ITEMS.filter((item) => item.status === 'expiring').length;
-    const expired = PLACEHOLDER_ITEMS.filter((item) => item.status === 'expired').length;
+    let active = 0;
+    let expiring = 0;
+    let expired = 0;
+    for (const item of allItems) {
+      const status = getWarrantyStatus(item.expiryDate);
+      if (status === 'active') active += 1;
+      else if (status === 'expiring') expiring += 1;
+      else expired += 1;
+    }
     return [
       { key: 'active', label: 'Active', value: active, color: theme.success, bg: theme.successBg },
       { key: 'expiring', label: 'Expiring Soon', value: expiring, color: theme.warning, bg: theme.warningBg },
       { key: 'expired', label: 'Expired', value: expired, color: theme.danger, bg: theme.dangerBg },
-      { key: 'all', label: 'All Items', value: PLACEHOLDER_ITEMS.length, color: theme.primary, bg: theme.primaryContainer },
+      { key: 'all', label: 'All Items', value: allItems.length, color: theme.primary, bg: theme.primaryContainer },
     ];
-  }, [theme]);
+  }, [allItems, theme]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
@@ -119,27 +142,48 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           </View>
         }
-        renderItem={({ item }) => (
-          <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>
-            <Card style={styles.itemCard}>
-              <ItemIcon category={item.category} />
-              <View style={styles.itemInfo}>
-                <Text style={[styles.itemName, { color: theme.text }]} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={[styles.itemMeta, { color: theme.subtleText }]}>
-                  {item.category} • {item.brand}
-                </Text>
-                <Text style={[styles.itemWarranty, { color: theme[STATUS_TEXT_COLOR[item.status]] as string }]}>
-                  {item.expiresIn}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.mutedText} />
-            </Card>
-          </Pressable>
-        )}
+        renderItem={({ item }) => {
+          const status = getWarrantyStatus(item.expiryDate);
+          const itemCategory = item.category ?? DEFAULT_CATEGORY;
+          return (
+            <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>
+              <Card style={styles.itemCard}>
+                <ItemIcon category={itemCategory} />
+                <View style={styles.itemInfo}>
+                  <Text style={[styles.itemName, { color: theme.text }]} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.itemMeta, { color: theme.subtleText }]}>{itemCategory}</Text>
+                  <Text style={[styles.itemWarranty, { color: theme[STATUS_TEXT_COLOR[status]] as string }]}>
+                    {expiryLabel(item, status)}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.mutedText} />
+              </Card>
+            </Pressable>
+          );
+        }}
         ListEmptyComponent={
-          <Text style={[styles.emptyText, { color: theme.subtleText }]}>No warranty items yet.</Text>
+          allItems.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="file-tray-outline" size={40} color={theme.mutedText} />
+              <Text style={[styles.emptyText, { color: theme.subtleText }]}>No warranty items yet.</Text>
+              <Text style={[styles.emptySubtext, { color: theme.mutedText }]}>
+                Add your first item to start tracking its warranty.
+              </Text>
+              <Pressable
+                style={[styles.emptyCta, { backgroundColor: theme.primary }]}
+                onPress={() => navigation.navigate('AddEditItem', {})}
+              >
+                <Ionicons name="add" size={18} color={theme.primaryText} />
+                <Text style={[styles.emptyCtaText, { color: theme.primaryText }]}>Add Item</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={[styles.emptyText, { color: theme.subtleText }]}>
+              No items match your search.
+            </Text>
+          )
         }
       />
 
@@ -259,5 +303,28 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: 'center',
     marginTop: 32,
+  },
+  emptyState: {
+    alignItems: 'center',
+    marginTop: 32,
+    gap: 6,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  emptyCtaText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
