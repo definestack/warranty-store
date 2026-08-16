@@ -450,7 +450,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
                       { backgroundColor: theme.primary, borderColor: theme.surfaceAlt },
                     ]}
                   >
-                    <Ionicons name="sync-outline" size={10} color={theme.primaryText} />
+                    <Ionicons name="sync-outline" size={9} color={theme.primaryText} />
                   </Pressable>
                   <Pressable
                     hitSlop={8}
@@ -462,7 +462,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
                       { backgroundColor: theme.danger, borderColor: theme.surfaceAlt },
                     ]}
                   >
-                    <Ionicons name="close" size={12} color="#ffffff" />
+                    <Ionicons name="close" size={11} color="#ffffff" />
                   </Pressable>
                 </View>
                 <View style={styles.invoicePageReorderRow}>
@@ -704,20 +704,20 @@ const styles = StyleSheet.create({
   },
   invoicePageBadge: {
     position: 'absolute',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   invoicePageRemove: {
-    top: -9,
-    right: -9,
+    top: 2,
+    right: 2,
   },
   invoicePageReplace: {
-    top: -9,
-    left: -9,
+    top: 2,
+    left: 2,
   },
   invoicePageReorderRow: {
     flexDirection: 'row',
