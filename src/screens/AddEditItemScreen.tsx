@@ -434,7 +434,12 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         </Card>
 
         {invoiceDrafts.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.invoicePageRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.invoicePageScroll}
+            contentContainerStyle={styles.invoicePageRow}
+          >
             {invoiceDrafts.map((draft, index) => (
               <View key={draft.id} style={[styles.invoicePageCard, { backgroundColor: theme.surfaceAlt }]}>
                 <View style={styles.invoicePageImageWrapper}>
@@ -680,10 +685,12 @@ const styles = StyleSheet.create({
   formCard: {
     paddingVertical: 4,
   },
+  invoicePageScroll: {
+    marginTop: -8,
+  },
   invoicePageRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: -8,
   },
   invoicePageCard: {
     width: 72,
