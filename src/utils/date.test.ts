@@ -3,6 +3,7 @@ import {
   formatDaysRemaining,
   formatIsoDate,
   formatWarrantyDuration,
+  fromIsoDate,
   getDaysRemaining,
   getWarrantyStatus,
   toIsoDate,
@@ -36,6 +37,19 @@ describe('toIsoDate', () => {
   it('pads single-digit months and days', () => {
     const date = new Date(2026, 0, 5); // 5 Jan 2026
     expect(toIsoDate(date)).toBe('2026-01-05');
+  });
+});
+
+describe('fromIsoDate', () => {
+  it('parses an ISO date string into a local Date', () => {
+    const date = fromIsoDate('2026-05-09');
+    expect(date.getFullYear()).toBe(2026);
+    expect(date.getMonth()).toBe(4);
+    expect(date.getDate()).toBe(9);
+  });
+
+  it('round-trips with toIsoDate', () => {
+    expect(toIsoDate(fromIsoDate('2026-01-05'))).toBe('2026-01-05');
   });
 });
 

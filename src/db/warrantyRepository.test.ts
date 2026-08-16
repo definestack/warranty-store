@@ -38,6 +38,9 @@ describe('createItem', () => {
     const created = await createItem(baseItem);
 
     expect(created.category).toBeUndefined();
+    expect(created.brand).toBeUndefined();
+    expect(created.price).toBeUndefined();
+    expect(created.store).toBeUndefined();
     expect(created.notes).toBeUndefined();
     expect(created.invoiceUri).toBeUndefined();
   });
@@ -46,11 +49,17 @@ describe('createItem', () => {
     const created = await createItem({
       ...baseItem,
       category: 'Appliances',
+      brand: 'LG',
+      price: 24999.5,
+      store: 'Croma',
       notes: 'Bought during the sale',
       invoiceUri: 'file:///invoice.jpg',
     });
 
     expect(created.category).toBe('Appliances');
+    expect(created.brand).toBe('LG');
+    expect(created.price).toBe(24999.5);
+    expect(created.store).toBe('Croma');
     expect(created.notes).toBe('Bought during the sale');
     expect(created.invoiceUri).toBe('file:///invoice.jpg');
   });
@@ -102,6 +111,21 @@ describe('updateItem', () => {
     const updated = await updateItem(created.id, { purchaseDate: '2026-06-01' });
 
     expect(updated.expiryDate).toBe('2027-06-01');
+  });
+
+  it('persists brand and price updates', async () => {
+    const created = await createItem(baseItem);
+    const updated = await updateItem(created.id, { brand: 'Bosch', price: 32000 });
+
+    expect(updated.brand).toBe('Bosch');
+    expect(updated.price).toBe(32000);
+  });
+
+  it('persists store updates', async () => {
+    const created = await createItem(baseItem);
+    const updated = await updateItem(created.id, { store: 'Amazon India' });
+
+    expect(updated.store).toBe('Amazon India');
   });
 
   it('throws for an unknown id', async () => {

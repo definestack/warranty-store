@@ -1,6 +1,6 @@
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 
-import { runMigrations } from './migrations';
+import { migrations, runMigrations } from './migrations';
 
 async function freshDb(): Promise<SQLiteDatabase> {
   return openDatabaseAsync('test.db');
@@ -24,7 +24,17 @@ describe('runMigrations', () => {
     const row = await db.getFirstAsync<{ version: number }>(
       'SELECT MAX(version) as version FROM schema_migrations'
     );
-    expect(row?.version).toBe(1);
+    const latestVersion = Math.max(...migrations.map((migration) => migration.version));
+    expect(row?.version).toBe(latestVersion);
+  });
+
+  it('adds the brand, price, and store columns', async () => {
+    const db = await freshDb();
+    await runMigrations(db);
+
+    const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(warranty_items)');
+    const columnNames = columns.map((column) => column.name);
+    expect(columnNames).toEqual(expect.arrayContaining(['brand', 'price', 'store']));
   });
 
   it('is idempotent when run more than once', async () => {
@@ -33,6 +43,6 @@ describe('runMigrations', () => {
     await runMigrations(db);
 
     const rows = await db.getAllAsync('SELECT * FROM schema_migrations');
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(migrations.length);
   });
 });

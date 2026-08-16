@@ -2,8 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
@@ -11,15 +20,15 @@ import FormRow from '../components/FormRow';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
-import { createItem } from '../db/warrantyRepository';
+import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
+import type { WarrantyItem } from '../types/warranty';
 import { CATEGORIES, resolveCategory } from '../utils/categories';
-import { PLACEHOLDER_ITEMS } from '../utils/mockData';
-import { addMonths, formatIsoDate, toIsoDate } from '../utils/date';
-import { NOTES_MAX_LENGTH, parseWarrantyMonths } from '../utils/validation';
+import { addMonths, formatIsoDate, fromIsoDate, toIsoDate } from '../utils/date';
+import { NOTES_MAX_LENGTH, parsePrice, parseWarrantyMonths } from '../utils/validation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
 
@@ -30,34 +39,70 @@ function formatDate(date: Date): string {
 export default function AddEditItemScreen({ route, navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const existing = route.params?.itemId
-    ? PLACEHOLDER_ITEMS.find((entry) => entry.id === route.params.itemId)
-    : undefined;
-  const isEditing = !!existing;
+  const itemId = route.params?.itemId;
+  const isEditing = !!itemId;
+
+  const [existing, setExisting] = useState<WarrantyItem | null>(null);
+  const [loadingExisting, setLoadingExisting] = useState(isEditing);
+  const [notFound, setNotFound] = useState(false);
 
   const [photoUri, setPhotoUri] = useState<string | undefined>();
-  const [name, setName] = useState(existing?.name ?? '');
+  const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
-  const [category, setCategory] = useState(existing?.category ?? '');
-  const [brand, setBrand] = useState(existing?.brand ?? '');
+  const [category, setCategory] = useState('');
+  const [brand, setBrand] = useState('');
   const [purchaseDate, setPurchaseDate] = useState<Date>(new Date());
-  const [price, setPrice] = useState(existing?.price?.replace(/[^0-9]/g, '') ?? '');
+  const [price, setPrice] = useState('');
   const [warrantyMonths, setWarrantyMonths] = useState('');
   const [warrantyMonthsError, setWarrantyMonthsError] = useState<string | null>(null);
-  const [store, setStore] = useState(existing?.store ?? '');
-  const [invoiceFileName, setInvoiceFileName] = useState(existing?.invoiceFileName);
-  const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [store, setStore] = useState('');
+  const [invoiceFileName, setInvoiceFileName] = useState<string | undefined>();
+  const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+
+  useEffect(() => {
+    if (!itemId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const item = await getItemById(itemId);
+        if (cancelled) return;
+        if (!item) {
+          setNotFound(true);
+          return;
+        }
+        setExisting(item);
+        setName(item.name);
+        setCategory(item.category ?? '');
+        setBrand(item.brand ?? '');
+        setPurchaseDate(fromIsoDate(item.purchaseDate));
+        setPrice(item.price !== undefined ? String(item.price) : '');
+        setWarrantyMonths(String(item.warrantyMonths));
+        setStore(item.store ?? '');
+        setNotes(item.notes ?? '');
+      } catch (err) {
+        console.error('Failed to load warranty item for editing', err);
+        if (!cancelled) setNotFound(true);
+      } finally {
+        if (!cancelled) setLoadingExisting(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [itemId]);
 
   const parsedWarrantyMonths = parseWarrantyMonths(warrantyMonths);
   const expiryPreview =
     parsedWarrantyMonths !== null
       ? formatIsoDate(addMonths(toIsoDate(purchaseDate), parsedWarrantyMonths))
       : null;
-  const isFormValid = !!name.trim() && parsedWarrantyMonths !== null;
+  const isFormValid = !!name.trim() && parsedWarrantyMonths !== null && !loadingExisting;
 
   const handlePickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -88,26 +133,45 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
     if (!trimmedName || months === null) return;
 
-    if (isEditing) {
-      // Persisting edits lands in a later story; for now editing just returns.
-      navigation.goBack();
-      return;
-    }
+    const trimmedBrand = brand.trim() || undefined;
+    const parsedPrice = parsePrice(price);
+    const trimmedStore = store.trim() || undefined;
 
     setSaving(true);
     try {
-      await createItem({
-        name: trimmedName,
-        purchaseDate: toIsoDate(purchaseDate),
-        warrantyMonths: months,
-        category: resolveCategory(category),
-        notes: notes.trim() || undefined,
-      });
-      // Refresh Home's store directly here rather than relying solely on its
-      // focus listener — the Add FAB is reachable from any tab, so goBack()
-      // won't always land back on a focused Home screen.
-      await useItemsStore.getState().loadItems();
-      useToastStore.getState().show('Item added');
+      if (isEditing && existing) {
+        await updateItem(existing.id, {
+          name: trimmedName,
+          purchaseDate: toIsoDate(purchaseDate),
+          warrantyMonths: months,
+          category: resolveCategory(category),
+          brand: trimmedBrand,
+          price: parsedPrice,
+          store: trimmedStore,
+          notes: notes.trim() || undefined,
+        });
+        // Refresh both the list and the detail screen's selected item so they
+        // reflect the edit immediately on goBack().
+        await useItemsStore.getState().loadItems();
+        await useItemsStore.getState().loadItemById(existing.id);
+        useToastStore.getState().show('Item updated');
+      } else {
+        await createItem({
+          name: trimmedName,
+          purchaseDate: toIsoDate(purchaseDate),
+          warrantyMonths: months,
+          category: resolveCategory(category),
+          brand: trimmedBrand,
+          price: parsedPrice,
+          store: trimmedStore,
+          notes: notes.trim() || undefined,
+        });
+        // Refresh Home's store directly here rather than relying solely on its
+        // focus listener — the Add FAB is reachable from any tab, so goBack()
+        // won't always land back on a focused Home screen.
+        await useItemsStore.getState().loadItems();
+        useToastStore.getState().show('Item added');
+      }
       navigation.goBack();
     } catch (err) {
       console.error('Failed to save warranty item', err);
@@ -116,6 +180,28 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       setSaving(false);
     }
   };
+
+  if (notFound) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ScreenHeader title="Edit Item" onBack={() => navigation.goBack()} backIcon="close" />
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyText, { color: theme.subtleText }]}>Item not found.</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (loadingExisting) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ScreenHeader title="Edit Item" onBack={() => navigation.goBack()} backIcon="close" />
+        <View style={styles.emptyState}>
+          <ActivityIndicator color={theme.primary} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -294,6 +380,14 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 15,
   },
   content: {
     padding: 16,

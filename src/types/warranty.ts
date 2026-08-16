@@ -5,6 +5,9 @@ export interface WarrantyItem {
   warrantyMonths: number;
   expiryDate: string;
   category?: string;
+  brand?: string;
+  price?: number;
+  store?: string;
   notes?: string;
   invoiceUri?: string;
   createdAt: string;

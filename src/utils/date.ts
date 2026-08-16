@@ -17,6 +17,12 @@ export function toIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Parses a YYYY-MM-DD string into a local Date (inverse of `toIsoDate`, avoids UTC day-shift). */
+export function fromIsoDate(isoDate: string): Date {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 const MONTH_LABELS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];

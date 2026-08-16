@@ -19,3 +19,12 @@ export const CREATE_WARRANTY_ITEMS_TABLE = `
     updated_at TEXT NOT NULL
   );
 `;
+
+export const ADD_BRAND_AND_PRICE_COLUMNS = `
+  ALTER TABLE warranty_items ADD COLUMN brand TEXT;
+  ALTER TABLE warranty_items ADD COLUMN price REAL;
+`;
+
+export const ADD_STORE_COLUMN = `
+  ALTER TABLE warranty_items ADD COLUMN store TEXT;
+`;
