@@ -8,3 +8,11 @@ export function parseWarrantyMonths(value: string): number | null {
   const parsed = Number(trimmed);
   return parsed > 0 ? parsed : null;
 }
+
+/** Parses an optional price form input; returns undefined when empty or invalid (price is not required). */
+export function parsePrice(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}

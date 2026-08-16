@@ -28,7 +28,7 @@ import type { RootStackParamList } from '../types/navigation';
 import type { WarrantyItem } from '../types/warranty';
 import { CATEGORIES, resolveCategory } from '../utils/categories';
 import { addMonths, formatIsoDate, fromIsoDate, toIsoDate } from '../utils/date';
-import { NOTES_MAX_LENGTH, parseWarrantyMonths } from '../utils/validation';
+import { NOTES_MAX_LENGTH, parsePrice, parseWarrantyMonths } from '../utils/validation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
 
@@ -78,7 +78,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         setExisting(item);
         setName(item.name);
         setCategory(item.category ?? '');
+        setBrand(item.brand ?? '');
         setPurchaseDate(fromIsoDate(item.purchaseDate));
+        setPrice(item.price !== undefined ? String(item.price) : '');
         setWarrantyMonths(String(item.warrantyMonths));
         setNotes(item.notes ?? '');
       } catch (err) {
@@ -130,6 +132,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
     if (!trimmedName || months === null) return;
 
+    const trimmedBrand = brand.trim() || undefined;
+    const parsedPrice = parsePrice(price);
+
     setSaving(true);
     try {
       if (isEditing && existing) {
@@ -138,6 +143,8 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           purchaseDate: toIsoDate(purchaseDate),
           warrantyMonths: months,
           category: resolveCategory(category),
+          brand: trimmedBrand,
+          price: parsedPrice,
           notes: notes.trim() || undefined,
         });
         // Refresh both the list and the detail screen's selected item so they
@@ -151,6 +158,8 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           purchaseDate: toIsoDate(purchaseDate),
           warrantyMonths: months,
           category: resolveCategory(category),
+          brand: trimmedBrand,
+          price: parsedPrice,
           notes: notes.trim() || undefined,
         });
         // Refresh Home's store directly here rather than relying solely on its

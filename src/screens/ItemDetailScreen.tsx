@@ -16,6 +16,10 @@ import { formatDaysRemaining, formatIsoDate, formatWarrantyDuration, getWarranty
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ItemDetail'>;
 
+function formatPrice(price: number): string {
+  return `₹${price.toLocaleString('en-IN')}`;
+}
+
 export default function ItemDetailScreen({ route, navigation }: Props) {
   const { itemId } = route.params;
   const theme = useAppTheme();
@@ -70,7 +74,11 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
         </Card>
 
         <Card style={styles.detailCard}>
+          {item.brand ? <DetailRow icon="pricetag-outline" label="Brand" value={item.brand} /> : null}
           <DetailRow icon="calendar-outline" label="Purchase Date" value={formatIsoDate(item.purchaseDate)} />
+          {item.price !== undefined ? (
+            <DetailRow icon="cash-outline" label="Purchase Price" value={formatPrice(item.price)} />
+          ) : null}
           <DetailRow
             icon="time-outline"
             label="Warranty Period"
