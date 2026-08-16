@@ -1,10 +1,12 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
 import DetailRow from '../components/DetailRow';
+import InvoiceImageViewer from '../components/InvoiceImageViewer';
 import ItemIcon from '../components/ItemIcon';
 import ScreenHeader from '../components/ScreenHeader';
 import StatusBadge from '../components/StatusBadge';
@@ -25,12 +27,14 @@ function formatPrice(price: number): string {
 export default function ItemDetailScreen({ route, navigation }: Props) {
   const { itemId } = route.params;
   const theme = useAppTheme();
+  const insets = useSafeAreaInsets();
   const { t, locale } = useTranslation();
   const item = useItemsStore((state) => state.selectedItem);
   const loading = useItemsStore((state) => state.selectedItemLoading);
   const loadItemById = useItemsStore((state) => state.loadItemById);
   const deleteItem = useItemsStore((state) => state.deleteItem);
   const [deleting, setDeleting] = useState(false);
+  const [invoiceViewerVisible, setInvoiceViewerVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,7 +93,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
         rightFilled={false}
         onRightPress={() => navigation.navigate('AddEditItem', { itemId: item.id })}
       />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         <Card style={styles.summaryCard}>
           <ItemIcon category={category} size={56} />
           <View style={styles.summaryInfo}>
@@ -132,6 +136,22 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           </Text>
         </View>
 
+        {item.invoiceUri ? (
+          <View style={styles.notesSection}>
+            <Text style={[styles.notesLabel, { color: theme.text }]}>{t('itemDetail.invoice')}</Text>
+            <Pressable
+              style={styles.invoiceThumbnailRow}
+              onPress={() => setInvoiceViewerVisible(true)}
+              accessibilityLabel={t('itemDetail.invoice')}
+            >
+              <Image source={{ uri: item.invoiceUri }} style={styles.invoiceThumbnail} />
+              <Text style={[styles.notesText, { color: theme.subtleText }]}>
+                {t('itemDetail.viewInvoiceHint')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.actions}>
           <Pressable
             style={[styles.actionButton, styles.actionButtonFilled, { backgroundColor: theme.primaryContainer }]}
@@ -150,6 +170,13 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
       </ScrollView>
+      {item.invoiceUri ? (
+        <InvoiceImageViewer
+          visible={invoiceViewerVisible}
+          uri={item.invoiceUri}
+          onClose={() => setInvoiceViewerVisible(false)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -204,6 +231,16 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  invoiceThumbnailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  invoiceThumbnail: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
   },
   actions: {
     flexDirection: 'row',
