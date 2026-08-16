@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Surface from './Surface';
+import { useTranslation } from '../i18n/LocaleContext';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
 
@@ -18,6 +19,7 @@ const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inacti
 export default function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const handleAddPress = () => {
     // navigation here is the bottom-tab navigator; AddEditItem lives two levels up
@@ -72,7 +74,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
       <Pressable
         onPress={handleAddPress}
         accessibilityRole="button"
-        accessibilityLabel="Add item"
+        accessibilityLabel={t('nav.addItem')}
         style={[styles.fab, { backgroundColor: theme.primary }]}
       >
         <Ionicons name="add" size={28} color={theme.primaryText} />

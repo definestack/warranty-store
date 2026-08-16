@@ -1,3 +1,5 @@
+import type { TranslateFn } from '../i18n/i18n';
+
 /** Adds `months` to an ISO date string (YYYY-MM-DD) and returns an ISO date string. */
 export function addMonths(isoDate: string, months: number): string {
   const date = new Date(isoDate);
@@ -23,14 +25,19 @@ export function fromIsoDate(isoDate: string): Date {
   return new Date(year, month - 1, day);
 }
 
-const MONTH_LABELS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+// Intl resolves the bare "en" tag to US month-first ordering; map it to "en-GB" so
+// English keeps the day-first "20 May 2026" style the rest of the app's UI uses.
+const DATE_FORMAT_LOCALES: Record<string, string> = { en: 'en-GB' };
 
-/** Formats an ISO date string (YYYY-MM-DD) as "20 May 2026" without any timezone conversion. */
-export function formatIsoDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-').map(Number);
-  return `${String(day).padStart(2, '0')} ${MONTH_LABELS[month - 1]} ${year}`;
+/** Formats a Date using Intl in the given locale, e.g. "20 May 2026". */
+export function formatDate(date: Date, locale = 'en'): string {
+  const intlLocale = DATE_FORMAT_LOCALES[locale] ?? locale;
+  return new Intl.DateTimeFormat(intlLocale, { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+}
+
+/** Formats an ISO date string (YYYY-MM-DD) in the given locale, without any timezone conversion. */
+export function formatIsoDate(isoDate: string, locale = 'en'): string {
+  return formatDate(fromIsoDate(isoDate), locale);
 }
 
 export type WarrantyStatus = 'active' | 'expiring' | 'expired';
@@ -57,21 +64,19 @@ export function getDaysRemaining(expiryDate: string, referenceDate: Date = new D
 }
 
 /** Human-readable days-remaining label, e.g. "Expires in 10 days" or "Expired 1 day ago". */
-export function formatDaysRemaining(expiryDate: string, referenceDate: Date = new Date()): string {
+export function formatDaysRemaining(expiryDate: string, t: TranslateFn, referenceDate: Date = new Date()): string {
   const days = getDaysRemaining(expiryDate, referenceDate);
 
-  if (days === 0) return 'Expires today';
-  if (days > 0) return `Expires in ${days} day${days === 1 ? '' : 's'}`;
+  if (days === 0) return t('date.expiresToday');
+  if (days > 0) return t('date.expiresIn', { count: days });
 
-  const daysAgo = Math.abs(days);
-  return `Expired ${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
+  return t('date.expiredAgo', { count: Math.abs(days) });
 }
 
 /** Formats a warranty duration in months as e.g. "6 months" or "2 years" for whole-year durations. */
-export function formatWarrantyDuration(months: number): string {
+export function formatWarrantyDuration(months: number, t: TranslateFn): string {
   if (months >= 12 && months % 12 === 0) {
-    const years = months / 12;
-    return `${years} year${years === 1 ? '' : 's'}`;
+    return t('duration.years', { count: months / 12 });
   }
-  return `${months} month${months === 1 ? '' : 's'}`;
+  return t('duration.months', { count: months });
 }

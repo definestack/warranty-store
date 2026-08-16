@@ -10,12 +10,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import ItemIcon from '../components/ItemIcon';
 import SelectModal from '../components/SelectModal';
+import { useTranslation } from '../i18n/LocaleContext';
+import type { TranslateFn } from '../i18n/i18n';
 import { useItemsStore } from '../store/itemsStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { AppTheme } from '../theme/palette';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
 import type { WarrantyItem } from '../types/warranty';
-import { CATEGORIES, DEFAULT_CATEGORY } from '../utils/categories';
+import { CATEGORIES, DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
 import { formatIsoDate, getWarrantyStatus } from '../utils/date';
 import type { WarrantyStatus } from '../utils/date';
 
@@ -24,7 +26,7 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const ALL_CATEGORIES = 'All Categories';
+const ALL_CATEGORIES = 'all';
 
 const STATUS_TEXT_COLOR: Record<WarrantyStatus, keyof AppTheme> = {
   active: 'success',
@@ -32,15 +34,15 @@ const STATUS_TEXT_COLOR: Record<WarrantyStatus, keyof AppTheme> = {
   expired: 'danger',
 };
 
-function expiryLabel(item: WarrantyItem, status: WarrantyStatus): string {
-  return status === 'expired'
-    ? `Expired on ${formatIsoDate(item.expiryDate)}`
-    : `Expires ${formatIsoDate(item.expiryDate)}`;
+function expiryLabel(item: WarrantyItem, status: WarrantyStatus, t: TranslateFn, locale: string): string {
+  const date = formatIsoDate(item.expiryDate, locale);
+  return status === 'expired' ? t('home.expiredOn', { date }) : t('home.expiresOn', { date });
 }
 
 export default function HomeScreen({ navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { t, locale } = useTranslation();
   const allItems = useItemsStore((state) => state.items);
   const loadItems = useItemsStore((state) => state.loadItems);
   const [search, setSearch] = useState('');
@@ -74,12 +76,34 @@ export default function HomeScreen({ navigation }: Props) {
       else expired += 1;
     }
     return [
-      { key: 'active', label: 'Active', value: active, color: theme.success, bg: theme.successBg },
-      { key: 'expiring', label: 'Expiring Soon', value: expiring, color: theme.warning, bg: theme.warningBg },
-      { key: 'expired', label: 'Expired', value: expired, color: theme.danger, bg: theme.dangerBg },
-      { key: 'all', label: 'All Items', value: allItems.length, color: theme.primary, bg: theme.primaryContainer },
+      { key: 'active', label: t('status.active'), value: active, color: theme.success, bg: theme.successBg },
+      {
+        key: 'expiring',
+        label: t('status.expiringSoon'),
+        value: expiring,
+        color: theme.warning,
+        bg: theme.warningBg,
+      },
+      { key: 'expired', label: t('status.expired'), value: expired, color: theme.danger, bg: theme.dangerBg },
+      {
+        key: 'all',
+        label: t('status.allItems'),
+        value: allItems.length,
+        color: theme.primary,
+        bg: theme.primaryContainer,
+      },
     ];
-  }, [allItems, theme]);
+  }, [allItems, theme, t]);
+
+  const categoryOptions = useMemo(
+    () => [
+      { value: ALL_CATEGORIES, label: t('category.allCategories') },
+      ...CATEGORIES.map((c) => ({ value: c, label: getCategoryLabel(c, t) })),
+    ],
+    [t]
+  );
+  const categoryLabel =
+    category === ALL_CATEGORIES ? t('category.allCategories') : getCategoryLabel(category, t);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
@@ -87,15 +111,15 @@ export default function HomeScreen({ navigation }: Props) {
         <Pressable
           hitSlop={12}
           onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-          accessibilityLabel="Open menu"
+          accessibilityLabel={t('nav.openMenu')}
         >
           <Ionicons name="menu" size={24} color={theme.text} />
         </Pressable>
-        <Text style={[styles.brandText, { color: theme.text }]}>Warranty Tracker</Text>
+        <Text style={[styles.brandText, { color: theme.text }]}>{t('common.appName')}</Text>
         <Pressable
           hitSlop={12}
           onPress={() => setSearchVisible((visible) => !visible)}
-          accessibilityLabel="Search"
+          accessibilityLabel={t('home.search')}
         >
           <Ionicons name="search" size={22} color={theme.text} />
         </Pressable>
@@ -107,7 +131,7 @@ export default function HomeScreen({ navigation }: Props) {
           <TextInput
             autoFocus
             style={[styles.searchInput, { color: theme.text }]}
-            placeholder="Search items..."
+            placeholder={t('home.searchPlaceholder')}
             placeholderTextColor={theme.mutedText}
             value={search}
             onChangeText={setSearch}
@@ -121,7 +145,7 @@ export default function HomeScreen({ navigation }: Props) {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Overview</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.overview')}</Text>
             <View style={styles.overviewRow}>
               {overview.map((stat) => (
                 <View key={stat.key} style={[styles.statCard, { backgroundColor: stat.bg }]}>
@@ -134,9 +158,9 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
 
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>My Items</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.myItems')}</Text>
               <Pressable style={styles.categoryFilter} onPress={() => setCategoryModalVisible(true)}>
-                <Text style={[styles.categoryFilterText, { color: theme.subtleText }]}>{category}</Text>
+                <Text style={[styles.categoryFilterText, { color: theme.subtleText }]}>{categoryLabel}</Text>
                 <Ionicons name="chevron-down" size={16} color={theme.mutedText} />
               </Pressable>
             </View>
@@ -153,9 +177,11 @@ export default function HomeScreen({ navigation }: Props) {
                   <Text style={[styles.itemName, { color: theme.text }]} numberOfLines={1}>
                     {item.name}
                   </Text>
-                  <Text style={[styles.itemMeta, { color: theme.subtleText }]}>{itemCategory}</Text>
+                  <Text style={[styles.itemMeta, { color: theme.subtleText }]}>
+                    {getCategoryLabel(itemCategory, t)}
+                  </Text>
                   <Text style={[styles.itemWarranty, { color: theme[STATUS_TEXT_COLOR[status]] as string }]}>
-                    {expiryLabel(item, status)}
+                    {expiryLabel(item, status, t, locale)}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.mutedText} />
@@ -167,30 +193,26 @@ export default function HomeScreen({ navigation }: Props) {
           allItems.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="file-tray-outline" size={40} color={theme.mutedText} />
-              <Text style={[styles.emptyText, { color: theme.subtleText }]}>No warranty items yet.</Text>
-              <Text style={[styles.emptySubtext, { color: theme.mutedText }]}>
-                Add your first item to start tracking its warranty.
-              </Text>
+              <Text style={[styles.emptyText, { color: theme.subtleText }]}>{t('home.emptyTitle')}</Text>
+              <Text style={[styles.emptySubtext, { color: theme.mutedText }]}>{t('home.emptySubtitle')}</Text>
               <Pressable
                 style={[styles.emptyCta, { backgroundColor: theme.primary }]}
                 onPress={() => navigation.navigate('AddEditItem', {})}
               >
                 <Ionicons name="add" size={18} color={theme.primaryText} />
-                <Text style={[styles.emptyCtaText, { color: theme.primaryText }]}>Add Item</Text>
+                <Text style={[styles.emptyCtaText, { color: theme.primaryText }]}>{t('home.addItem')}</Text>
               </Pressable>
             </View>
           ) : (
-            <Text style={[styles.emptyText, { color: theme.subtleText }]}>
-              No items match your search.
-            </Text>
+            <Text style={[styles.emptyText, { color: theme.subtleText }]}>{t('home.noSearchResults')}</Text>
           )
         }
       />
 
       <SelectModal
         visible={categoryModalVisible}
-        title="Filter by category"
-        options={[ALL_CATEGORIES, ...CATEGORIES]}
+        title={t('category.filterByCategory')}
+        options={categoryOptions}
         selected={category}
         onSelect={setCategory}
         onClose={() => setCategoryModalVisible(false)}

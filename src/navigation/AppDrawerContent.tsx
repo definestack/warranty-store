@@ -4,27 +4,29 @@ import { DrawerContentScrollView } from '@react-navigation/drawer';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useTranslation } from '../i18n/LocaleContext';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
 
 interface DrawerItemConfig {
   key: string;
-  label: string;
+  labelKey: string;
   icon: keyof typeof Ionicons.glyphMap;
   /** Tab to navigate to within MainTabNavigator, or undefined if the destination doesn't exist yet. */
   tab?: keyof MainTabParamList;
 }
 
 const ITEMS: DrawerItemConfig[] = [
-  { key: 'home', label: 'Home', icon: 'home-outline', tab: 'Home' },
-  { key: 'categories', label: 'Categories', icon: 'grid-outline' },
-  { key: 'reminders', label: 'Reminders', icon: 'notifications-outline' },
-  { key: 'reports', label: 'Reports', icon: 'bar-chart-outline' },
-  { key: 'settings', label: 'Settings', icon: 'settings-outline', tab: 'Settings' },
+  { key: 'home', labelKey: 'nav.home', icon: 'home-outline', tab: 'Home' },
+  { key: 'categories', labelKey: 'nav.categories', icon: 'grid-outline' },
+  { key: 'reminders', labelKey: 'nav.reminders', icon: 'notifications-outline' },
+  { key: 'reports', labelKey: 'nav.reports', icon: 'bar-chart-outline' },
+  { key: 'settings', labelKey: 'nav.settings', icon: 'settings-outline', tab: 'Settings' },
 ];
 
 export default function AppDrawerContent(props: DrawerContentComponentProps) {
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const rootNavigation = props.navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
 
   // props.state is the drawer's own state (just a single "Tabs" route) — the active
@@ -41,7 +43,7 @@ export default function AppDrawerContent(props: DrawerContentComponentProps) {
     >
       <View style={styles.header}>
         <Ionicons name="shield-checkmark" size={26} color={theme.primary} />
-        <Text style={[styles.brand, { color: theme.text }]}>Warranty Tracker</Text>
+        <Text style={[styles.brand, { color: theme.text }]}>{t('common.appName')}</Text>
       </View>
 
       <View style={styles.section}>
@@ -72,7 +74,7 @@ export default function AppDrawerContent(props: DrawerContentComponentProps) {
                   isActive && styles.itemLabelActive,
                 ]}
               >
-                {item.label}
+                {t(item.labelKey)}
               </Text>
             </Pressable>
           );
@@ -84,7 +86,7 @@ export default function AppDrawerContent(props: DrawerContentComponentProps) {
       <View style={styles.section}>
         <Pressable disabled style={styles.item}>
           <Ionicons name="help-circle-outline" size={22} color={theme.mutedText} />
-          <Text style={[styles.itemLabel, { color: theme.mutedText }]}>Help & Feedback</Text>
+          <Text style={[styles.itemLabel, { color: theme.mutedText }]}>{t('nav.helpFeedback')}</Text>
         </Pressable>
       </View>
 
@@ -93,7 +95,7 @@ export default function AppDrawerContent(props: DrawerContentComponentProps) {
       <View style={styles.section}>
         <Pressable style={styles.item} onPress={() => rootNavigation?.goBack()}>
           <Ionicons name="log-out-outline" size={22} color={theme.danger} />
-          <Text style={[styles.itemLabel, { color: theme.danger }]}>Sign out</Text>
+          <Text style={[styles.itemLabel, { color: theme.danger }]}>{t('nav.signOut')}</Text>
         </Pressable>
       </View>
     </DrawerContentScrollView>

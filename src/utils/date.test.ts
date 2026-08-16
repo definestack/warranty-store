@@ -1,3 +1,5 @@
+import { i18n } from '../i18n/i18n';
+import type { TranslateFn } from '../i18n/i18n';
 import {
   addMonths,
   formatDaysRemaining,
@@ -8,6 +10,8 @@ import {
   getWarrantyStatus,
   toIsoDate,
 } from './date';
+
+const t: TranslateFn = (scope, options) => i18n.t(scope, { locale: 'en', ...options });
 
 describe('addMonths', () => {
   it('adds whole months within the same year', () => {
@@ -54,12 +58,17 @@ describe('fromIsoDate', () => {
 });
 
 describe('formatIsoDate', () => {
-  it('formats an ISO date as "D MMM YYYY"', () => {
+  it('formats an ISO date as "D MMM YYYY" using the English locale by default', () => {
     expect(formatIsoDate('2026-05-20')).toBe('20 May 2026');
   });
 
   it('pads single-digit days', () => {
     expect(formatIsoDate('2026-05-01')).toBe('01 May 2026');
+  });
+
+  it('formats the month name in the requested locale', () => {
+    expect(formatIsoDate('2026-05-20', 'fr')).toBe('20 mai 2026');
+    expect(formatIsoDate('2026-05-20', 'de')).toBe('20. Mai 2026');
   });
 });
 
@@ -111,41 +120,41 @@ describe('formatDaysRemaining', () => {
   const today = new Date(2026, 4, 20); // 20 May 2026, local time
 
   it('formats a single day remaining without pluralizing', () => {
-    expect(formatDaysRemaining('2026-05-21', today)).toBe('Expires in 1 day');
+    expect(formatDaysRemaining('2026-05-21', t, today)).toBe('Expires in 1 day');
   });
 
   it('formats multiple days remaining', () => {
-    expect(formatDaysRemaining('2026-05-30', today)).toBe('Expires in 10 days');
+    expect(formatDaysRemaining('2026-05-30', t, today)).toBe('Expires in 10 days');
   });
 
   it('formats expiry today', () => {
-    expect(formatDaysRemaining('2026-05-20', today)).toBe('Expires today');
+    expect(formatDaysRemaining('2026-05-20', t, today)).toBe('Expires today');
   });
 
   it('formats a single day since expiry without pluralizing', () => {
-    expect(formatDaysRemaining('2026-05-19', today)).toBe('Expired 1 day ago');
+    expect(formatDaysRemaining('2026-05-19', t, today)).toBe('Expired 1 day ago');
   });
 
   it('formats multiple days since expiry', () => {
-    expect(formatDaysRemaining('2026-05-10', today)).toBe('Expired 10 days ago');
+    expect(formatDaysRemaining('2026-05-10', t, today)).toBe('Expired 10 days ago');
   });
 });
 
 describe('formatWarrantyDuration', () => {
   it('formats a single month', () => {
-    expect(formatWarrantyDuration(1)).toBe('1 month');
+    expect(formatWarrantyDuration(1, t)).toBe('1 month');
   });
 
   it('formats multiple months', () => {
-    expect(formatWarrantyDuration(6)).toBe('6 months');
+    expect(formatWarrantyDuration(6, t)).toBe('6 months');
   });
 
   it('formats whole years as years', () => {
-    expect(formatWarrantyDuration(12)).toBe('1 year');
-    expect(formatWarrantyDuration(24)).toBe('2 years');
+    expect(formatWarrantyDuration(12, t)).toBe('1 year');
+    expect(formatWarrantyDuration(24, t)).toBe('2 years');
   });
 
   it('formats a non-whole-year month count as months even past a year', () => {
-    expect(formatWarrantyDuration(18)).toBe('18 months');
+    expect(formatWarrantyDuration(18, t)).toBe('18 months');
   });
 });

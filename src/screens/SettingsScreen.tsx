@@ -7,37 +7,48 @@ import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import SelectModal from '../components/SelectModal';
 import SettingsRow from '../components/SettingsRow';
+import { useLanguagePreference, useTranslation } from '../i18n/LocaleContext';
+import { LANGUAGE_ENDONYMS, SUPPORTED_LOCALES } from '../i18n/i18n';
 import { useAppTheme, useThemePreference } from '../theme/ThemeContext';
 import type { ThemePreference } from '../theme/ThemeContext';
 import type { MainTabParamList } from '../types/navigation';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Settings'>;
 
-const THEME_OPTIONS: Record<string, ThemePreference> = {
-  'System Default': 'system',
-  Light: 'light',
-  Dark: 'dark',
-};
+const APP_VERSION = '1.0.0';
 
 export default function SettingsScreen(_props: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const { preference, setPreference } = useThemePreference();
+  const { t } = useTranslation();
+  const { preference: themePreference, setPreference: setThemePreference } = useThemePreference();
+  const { preference: languagePreference, setPreference: setLanguagePreference } = useLanguagePreference();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
-  const [language, setLanguage] = useState('English');
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
-  const themeLabel = Object.keys(THEME_OPTIONS).find((key) => THEME_OPTIONS[key] === preference) ?? 'System Default';
+  const themeOptions: { value: ThemePreference; label: string }[] = [
+    { value: 'system', label: t('common.systemDefault') },
+    { value: 'light', label: t('settings.themeLight') },
+    { value: 'dark', label: t('settings.themeDark') },
+  ];
+  const languageOptions = [
+    { value: 'system', label: t('common.systemDefault') },
+    ...SUPPORTED_LOCALES.map((locale) => ({ value: locale, label: LANGUAGE_ENDONYMS[locale] })),
+  ];
+
+  const themeLabel = themeOptions.find((option) => option.value === themePreference)?.label ?? t('common.systemDefault');
+  const languageLabel =
+    languageOptions.find((option) => option.value === languagePreference)?.label ?? t('common.systemDefault');
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-      <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{t('settings.title')}</Text>
       <ScrollView contentContainerStyle={styles.content}>
-        <SectionHeader title="Appearance" />
+        <SectionHeader title={t('settings.appearance')} />
         <Card style={styles.card}>
           <SettingsRow
             icon="contrast-outline"
-            label="Theme"
+            label={t('settings.theme')}
             trailingText={themeLabel}
             chevron="down"
             onPress={() => setThemeModalVisible(true)}
@@ -45,46 +56,50 @@ export default function SettingsScreen(_props: Props) {
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsRow
             icon="globe-outline"
-            label="Language"
-            trailingText={language}
+            label={t('settings.language')}
+            trailingText={languageLabel}
             chevron="down"
             onPress={() => setLanguageModalVisible(true)}
           />
         </Card>
 
-        <SectionHeader title="General" />
+        <SectionHeader title={t('settings.general')} />
         <Card style={styles.card}>
-          <SettingsRow icon="cloud-upload-outline" label="Backup & Restore" chevron="forward" onPress={() => {}} />
+          <SettingsRow icon="cloud-upload-outline" label={t('settings.backupRestore')} chevron="forward" onPress={() => {}} />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <SettingsRow icon="download-outline" label="Export Data" chevron="forward" onPress={() => {}} />
+          <SettingsRow icon="download-outline" label={t('settings.exportData')} chevron="forward" onPress={() => {}} />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <SettingsRow icon="notifications-outline" label="Reminders" chevron="forward" onPress={() => {}} />
+          <SettingsRow icon="notifications-outline" label={t('settings.reminders')} chevron="forward" onPress={() => {}} />
         </Card>
 
-        <SectionHeader title="About" />
+        <SectionHeader title={t('settings.about')} />
         <Card style={styles.card}>
-          <SettingsRow icon="information-circle-outline" label="About Warranty Tracker" subtitle="Version 1.0.0" />
+          <SettingsRow
+            icon="information-circle-outline"
+            label={t('settings.aboutApp')}
+            subtitle={t('settings.version', { version: APP_VERSION })}
+          />
         </Card>
 
         <Pressable style={[styles.signOut, { borderColor: theme.danger }]}>
-          <Text style={[styles.signOutText, { color: theme.danger }]}>Sign Out</Text>
+          <Text style={[styles.signOutText, { color: theme.danger }]}>{t('settings.signOut')}</Text>
         </Pressable>
       </ScrollView>
 
       <SelectModal
         visible={themeModalVisible}
-        title="Theme"
-        options={Object.keys(THEME_OPTIONS)}
-        selected={themeLabel}
-        onSelect={(label) => setPreference(THEME_OPTIONS[label])}
+        title={t('settings.theme')}
+        options={themeOptions}
+        selected={themePreference}
+        onSelect={(value) => setThemePreference(value as ThemePreference)}
         onClose={() => setThemeModalVisible(false)}
       />
       <SelectModal
         visible={languageModalVisible}
-        title="Language"
-        options={['English']}
-        selected={language}
-        onSelect={setLanguage}
+        title={t('settings.language')}
+        options={languageOptions}
+        selected={languagePreference}
+        onSelect={(value) => setLanguagePreference(value as typeof languagePreference)}
         onClose={() => setLanguageModalVisible(false)}
       />
     </View>

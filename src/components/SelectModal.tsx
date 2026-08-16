@@ -4,10 +4,15 @@ import { FlatList, Modal, Pressable, StyleSheet, Text } from 'react-native';
 import Surface from './Surface';
 import { useAppTheme } from '../theme/ThemeContext';
 
+export interface SelectOption {
+  label: string;
+  value: string;
+}
+
 interface SelectModalProps {
   visible: boolean;
   title: string;
-  options: string[];
+  options: SelectOption[];
   selected?: string;
   onSelect: (value: string) => void;
   onClose: () => void;
@@ -31,17 +36,17 @@ export default function SelectModal({
             <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
             <FlatList
               data={options}
-              keyExtractor={(item) => item}
+              keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
                 <Pressable
                   style={[styles.option, { borderBottomColor: theme.border }]}
                   onPress={() => {
-                    onSelect(item);
+                    onSelect(item.value);
                     onClose();
                   }}
                 >
-                  <Text style={[styles.optionText, { color: theme.text }]}>{item}</Text>
-                  {item === selected ? (
+                  <Text style={[styles.optionText, { color: theme.text }]}>{item.label}</Text>
+                  {item.value === selected ? (
                     <Ionicons name="checkmark" size={20} color={theme.primary} />
                   ) : null}
                 </Pressable>
