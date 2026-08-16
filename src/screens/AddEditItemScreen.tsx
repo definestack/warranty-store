@@ -130,14 +130,65 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
   const [attachingInvoice, setAttachingInvoice] = useState(false);
   const [invoiceSourceModalVisible, setInvoiceSourceModalVisible] = useState(false);
+  const [replaceTargetIndex, setReplaceTargetIndex] = useState<number | null>(null);
 
   const handleAttachInvoice = () => {
     if (attachingInvoice) return;
+    setReplaceTargetIndex(null);
     setInvoiceSourceModalVisible(true);
+  };
+
+  const handleReplaceInvoicePage = (index: number) => {
+    if (attachingInvoice) return;
+    setReplaceTargetIndex(index);
+    setInvoiceSourceModalVisible(true);
+  };
+
+  const showInvoicePermissionAlert = (source: 'camera' | 'gallery') => {
+    const isCamera = source === 'camera';
+    Alert.alert(
+      isCamera ? t('addEditItem.cameraPermissionTitle') : t('addEditItem.galleryPermissionTitle'),
+      isCamera ? t('addEditItem.cameraPermissionMessage') : t('addEditItem.galleryPermissionMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('addEditItem.openSettings'), onPress: () => Linking.openSettings() },
+      ]
+    );
   };
 
   const handlePickInvoiceSource = async (source: 'camera' | 'gallery') => {
     setInvoiceSourceModalVisible(false);
+    const targetIndex = replaceTargetIndex;
+    setReplaceTargetIndex(null);
+
+    if (targetIndex !== null) {
+      setAttachingInvoice(true);
+      try {
+        const result =
+          source === 'camera' ? await pickInvoiceFromCamera() : await pickInvoiceFromGallery(1);
+
+        if (result.status === 'success' && result.uris.length > 0) {
+          const [newUri] = result.uris;
+          const oldDraft = invoiceDrafts[targetIndex];
+          if (oldDraft && !oldDraft.isPersisted) {
+            await deleteInvoiceFile(oldDraft.uri);
+          }
+          setInvoiceDrafts((drafts) =>
+            drafts.map((draft, i) =>
+              i === targetIndex ? { id: Crypto.randomUUID(), uri: newUri, isPersisted: false } : draft
+            )
+          );
+        } else if (result.status === 'permission-denied') {
+          showInvoicePermissionAlert(source);
+        }
+      } catch (err) {
+        console.error('Failed to replace invoice photo', err);
+        useToastStore.getState().show(t('addEditItem.invoiceSaveFailed'));
+      } finally {
+        setAttachingInvoice(false);
+      }
+      return;
+    }
 
     const remainingCapacity = MAX_INVOICE_PAGES - invoiceDrafts.length;
     if (remainingCapacity <= 0) {
@@ -162,17 +213,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           ...uris.map((uri) => ({ id: Crypto.randomUUID(), uri, isPersisted: false })),
         ]);
       } else if (result.status === 'permission-denied') {
-        const isCamera = source === 'camera';
-        Alert.alert(
-          isCamera ? t('addEditItem.cameraPermissionTitle') : t('addEditItem.galleryPermissionTitle'),
-          isCamera
-            ? t('addEditItem.cameraPermissionMessage')
-            : t('addEditItem.galleryPermissionMessage'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            { text: t('addEditItem.openSettings'), onPress: () => Linking.openSettings() },
-          ]
-        );
+        showInvoicePermissionAlert(source);
       }
     } catch (err) {
       console.error('Failed to save invoice photo', err);
@@ -399,6 +440,15 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
                 <Image source={{ uri: draft.uri }} style={styles.invoicePageThumbnail} />
                 <Pressable
                   hitSlop={8}
+                  disabled={attachingInvoice}
+                  onPress={() => handleReplaceInvoicePage(index)}
+                  accessibilityLabel={t('addEditItem.replacePage')}
+                  style={[styles.invoicePageReplace, { backgroundColor: theme.primary }]}
+                >
+                  <Ionicons name="sync-outline" size={12} color={theme.primaryText} />
+                </Pressable>
+                <Pressable
+                  hitSlop={8}
                   onPress={() => handleRemoveInvoicePage(index)}
                   accessibilityLabel={t('addEditItem.removePage')}
                   style={[styles.invoicePageRemove, { backgroundColor: theme.danger }]}
@@ -524,13 +574,20 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       />
       <SelectModal
         visible={invoiceSourceModalVisible}
-        title={t('addEditItem.attachInvoiceTitle')}
+        title={
+          replaceTargetIndex !== null
+            ? t('addEditItem.replaceInvoiceTitle')
+            : t('addEditItem.attachInvoiceTitle')
+        }
         options={[
           { value: 'camera', label: t('addEditItem.takePhoto') },
           { value: 'gallery', label: t('addEditItem.chooseFromGallery') },
         ]}
         onSelect={(value) => handlePickInvoiceSource(value as 'camera' | 'gallery')}
-        onClose={() => setInvoiceSourceModalVisible(false)}
+        onClose={() => {
+          setInvoiceSourceModalVisible(false);
+          setReplaceTargetIndex(null);
+        }}
       />
       {datePickerVisible ? (
         <DateTimePicker
@@ -634,6 +691,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 2,
     right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  invoicePageReplace: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
     width: 20,
     height: 20,
     borderRadius: 10,
