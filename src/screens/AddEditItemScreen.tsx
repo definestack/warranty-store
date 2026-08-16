@@ -437,24 +437,34 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.invoicePageRow}>
             {invoiceDrafts.map((draft, index) => (
               <View key={draft.id} style={[styles.invoicePageCard, { backgroundColor: theme.surfaceAlt }]}>
-                <Image source={{ uri: draft.uri }} style={styles.invoicePageThumbnail} />
-                <Pressable
-                  hitSlop={8}
-                  disabled={attachingInvoice}
-                  onPress={() => handleReplaceInvoicePage(index)}
-                  accessibilityLabel={t('addEditItem.replacePage')}
-                  style={[styles.invoicePageReplace, { backgroundColor: theme.primary }]}
-                >
-                  <Ionicons name="sync-outline" size={12} color={theme.primaryText} />
-                </Pressable>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => handleRemoveInvoicePage(index)}
-                  accessibilityLabel={t('addEditItem.removePage')}
-                  style={[styles.invoicePageRemove, { backgroundColor: theme.danger }]}
-                >
-                  <Ionicons name="close" size={14} color="#ffffff" />
-                </Pressable>
+                <View style={styles.invoicePageImageWrapper}>
+                  <Image source={{ uri: draft.uri }} style={styles.invoicePageThumbnail} />
+                  <Pressable
+                    hitSlop={8}
+                    disabled={attachingInvoice}
+                    onPress={() => handleReplaceInvoicePage(index)}
+                    accessibilityLabel={t('addEditItem.replacePage')}
+                    style={[
+                      styles.invoicePageBadge,
+                      styles.invoicePageReplace,
+                      { backgroundColor: theme.primary, borderColor: theme.surfaceAlt },
+                    ]}
+                  >
+                    <Ionicons name="sync-outline" size={10} color={theme.primaryText} />
+                  </Pressable>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() => handleRemoveInvoicePage(index)}
+                    accessibilityLabel={t('addEditItem.removePage')}
+                    style={[
+                      styles.invoicePageBadge,
+                      styles.invoicePageRemove,
+                      { backgroundColor: theme.danger, borderColor: theme.surfaceAlt },
+                    ]}
+                  >
+                    <Ionicons name="close" size={12} color="#ffffff" />
+                  </Pressable>
+                </View>
                 <View style={styles.invoicePageReorderRow}>
                   <Pressable
                     hitSlop={6}
@@ -682,30 +692,32 @@ const styles = StyleSheet.create({
     gap: 4,
     alignItems: 'center',
   },
+  invoicePageImageWrapper: {
+    position: 'relative',
+    width: 60,
+    height: 60,
+  },
   invoicePageThumbnail: {
     width: 60,
     height: 60,
     borderRadius: 8,
   },
-  invoicePageRemove: {
+  invoicePageBadge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  invoicePageRemove: {
+    top: -6,
+    right: -6,
+  },
   invoicePageReplace: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: -6,
+    left: -6,
   },
   invoicePageReorderRow: {
     flexDirection: 'row',
