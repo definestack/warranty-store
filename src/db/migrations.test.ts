@@ -28,13 +28,13 @@ describe('runMigrations', () => {
     expect(row?.version).toBe(latestVersion);
   });
 
-  it('adds the brand and price columns', async () => {
+  it('adds the brand, price, and store columns', async () => {
     const db = await freshDb();
     await runMigrations(db);
 
     const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(warranty_items)');
     const columnNames = columns.map((column) => column.name);
-    expect(columnNames).toEqual(expect.arrayContaining(['brand', 'price']));
+    expect(columnNames).toEqual(expect.arrayContaining(['brand', 'price', 'store']));
   });
 
   it('is idempotent when run more than once', async () => {

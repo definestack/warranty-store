@@ -82,6 +82,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         setPurchaseDate(fromIsoDate(item.purchaseDate));
         setPrice(item.price !== undefined ? String(item.price) : '');
         setWarrantyMonths(String(item.warrantyMonths));
+        setStore(item.store ?? '');
         setNotes(item.notes ?? '');
       } catch (err) {
         console.error('Failed to load warranty item for editing', err);
@@ -134,6 +135,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
     const trimmedBrand = brand.trim() || undefined;
     const parsedPrice = parsePrice(price);
+    const trimmedStore = store.trim() || undefined;
 
     setSaving(true);
     try {
@@ -145,6 +147,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           category: resolveCategory(category),
           brand: trimmedBrand,
           price: parsedPrice,
+          store: trimmedStore,
           notes: notes.trim() || undefined,
         });
         // Refresh both the list and the detail screen's selected item so they
@@ -160,6 +163,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           category: resolveCategory(category),
           brand: trimmedBrand,
           price: parsedPrice,
+          store: trimmedStore,
           notes: notes.trim() || undefined,
         });
         // Refresh Home's store directly here rather than relying solely on its

@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   ADD_BRAND_AND_PRICE_COLUMNS,
+  ADD_STORE_COLUMN,
   CREATE_SCHEMA_MIGRATIONS_TABLE,
   CREATE_WARRANTY_ITEMS_TABLE,
 } from './schema';
@@ -25,6 +26,13 @@ export const migrations: Migration[] = [
     name: 'add_brand_and_price_to_warranty_items',
     up: async (db) => {
       await db.execAsync(ADD_BRAND_AND_PRICE_COLUMNS);
+    },
+  },
+  {
+    version: 3,
+    name: 'add_store_to_warranty_items',
+    up: async (db) => {
+      await db.execAsync(ADD_STORE_COLUMN);
     },
   },
 ];

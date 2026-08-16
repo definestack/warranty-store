@@ -17,6 +17,7 @@ interface WarrantyItemRow {
   category: string | null;
   brand: string | null;
   price: number | null;
+  store: string | null;
   notes: string | null;
   invoice_uri: string | null;
   created_at: string;
@@ -33,6 +34,7 @@ function mapRowToItem(row: WarrantyItemRow): WarrantyItem {
     category: row.category ?? undefined,
     brand: row.brand ?? undefined,
     price: row.price ?? undefined,
+    store: row.store ?? undefined,
     notes: row.notes ?? undefined,
     invoiceUri: row.invoice_uri ?? undefined,
     createdAt: row.created_at,
@@ -48,8 +50,8 @@ export async function createItem(input: NewWarrantyItem): Promise<WarrantyItem> 
 
   await db.runAsync(
     `INSERT INTO warranty_items
-      (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, notes, invoice_uri, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, store, notes, invoice_uri, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
     input.name,
     input.purchaseDate,
@@ -58,6 +60,7 @@ export async function createItem(input: NewWarrantyItem): Promise<WarrantyItem> 
     input.category ?? null,
     input.brand ?? null,
     input.price ?? null,
+    input.store ?? null,
     input.notes ?? null,
     input.invoiceUri ?? null,
     timestamp,
@@ -105,7 +108,7 @@ export async function updateItem(
   await db.runAsync(
     `UPDATE warranty_items
      SET name = ?, purchase_date = ?, warranty_months = ?, expiry_date = ?,
-         category = ?, brand = ?, price = ?, notes = ?, invoice_uri = ?, updated_at = ?
+         category = ?, brand = ?, price = ?, store = ?, notes = ?, invoice_uri = ?, updated_at = ?
      WHERE id = ?`,
     merged.name,
     merged.purchaseDate,
@@ -114,6 +117,7 @@ export async function updateItem(
     merged.category ?? null,
     merged.brand ?? null,
     merged.price ?? null,
+    merged.store ?? null,
     merged.notes ?? null,
     merged.invoiceUri ?? null,
     updatedAt,

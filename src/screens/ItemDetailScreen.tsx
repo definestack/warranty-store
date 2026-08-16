@@ -79,6 +79,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           {item.price !== undefined ? (
             <DetailRow icon="cash-outline" label="Purchase Price" value={formatPrice(item.price)} />
           ) : null}
+          {item.store ? <DetailRow icon="storefront-outline" label="Store" value={item.store} /> : null}
           <DetailRow
             icon="time-outline"
             label="Warranty Period"
