@@ -16,3 +16,13 @@ export function toIsoDate(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+const MONTH_LABELS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/** Formats an ISO date string (YYYY-MM-DD) as "20 May 2026" without any timezone conversion. */
+export function formatIsoDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return `${String(day).padStart(2, '0')} ${MONTH_LABELS[month - 1]} ${year}`;
+}
