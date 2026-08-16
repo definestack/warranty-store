@@ -30,6 +30,9 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# Claude Code impact-analysis hook state (per-turn, not project config)
+.claude/.impact-analysis-done
+
 # local env files
 .env*.local
 

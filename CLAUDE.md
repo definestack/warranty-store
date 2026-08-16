@@ -4,6 +4,12 @@ Guidance for Claude when working in this repository.
 
 Always follow all rules defined in `.claude/rules/` (e.g. UI/design, API, git commit rules) in addition to the guidance in this file.
 
+## Impact Analysis (Required Before Every Task)
+
+Before starting any task — before writing or editing any code — invoke the `impact-analysis` skill (`.claude/skills/impact-analysis/SKILL.md`). It assesses scope, business-logic changes, breaking changes, and data/migration risk, and reports severity (Low/Medium/High) before implementation begins.
+
+For Medium or High severity findings, pause and confirm the approach with the user before making changes. Trivial Low-severity tasks only need a one-line note, not a full report.
+
 ## Project Overview
 
 Warranty Store is an **offline-first Android application** for tracking product warranties and invoice receipts.
