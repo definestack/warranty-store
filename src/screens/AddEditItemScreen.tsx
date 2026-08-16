@@ -12,6 +12,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
 import { createItem } from '../db/warrantyRepository';
+import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
@@ -102,6 +103,10 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         category: resolveCategory(category),
         notes: notes.trim() || undefined,
       });
+      // Refresh Home's store directly here rather than relying solely on its
+      // focus listener — the Add FAB is reachable from any tab, so goBack()
+      // won't always land back on a focused Home screen.
+      await useItemsStore.getState().loadItems();
       useToastStore.getState().show('Item added');
       navigation.goBack();
     } catch (err) {
