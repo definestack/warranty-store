@@ -712,12 +712,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   invoicePageRemove: {
-    top: -6,
-    right: -6,
+    top: -9,
+    right: -9,
   },
   invoicePageReplace: {
-    top: -6,
-    left: -6,
+    top: -9,
+    left: -9,
   },
   invoicePageReorderRow: {
     flexDirection: 'row',
