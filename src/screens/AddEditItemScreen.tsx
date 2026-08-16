@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
@@ -22,9 +23,12 @@ import FormRow from '../components/FormRow';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
+import type { InvoiceImageDraft } from '../db/invoiceImagesRepository';
+import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
 import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useTranslation } from '../i18n/LocaleContext';
-import { pickInvoiceFromCamera, pickInvoiceFromGallery } from '../services/imageService';
+import { deleteInvoiceFile } from '../services/fileService';
+import { MAX_INVOICE_PAGES, pickInvoiceFromCamera, pickInvoiceFromGallery } from '../services/imageService';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -57,7 +61,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const [warrantyMonths, setWarrantyMonths] = useState('');
   const [warrantyMonthsError, setWarrantyMonthsError] = useState<string | null>(null);
   const [store, setStore] = useState('');
-  const [invoiceUri, setInvoiceUri] = useState<string | undefined>();
+  const [invoiceDrafts, setInvoiceDrafts] = useState<InvoiceImageDraft[]>([]);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -84,7 +88,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         setPrice(item.price !== undefined ? String(item.price) : '');
         setWarrantyMonths(String(item.warrantyMonths));
         setStore(item.store ?? '');
-        setInvoiceUri(item.invoiceUri);
+        setInvoiceDrafts(
+          item.invoiceImages.map((image) => ({ id: image.id, uri: image.uri, isPersisted: true }))
+        );
         setNotes(item.notes ?? '');
       } catch (err) {
         console.error('Failed to load warranty item for editing', err);
@@ -132,13 +138,29 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
   const handlePickInvoiceSource = async (source: 'camera' | 'gallery') => {
     setInvoiceSourceModalVisible(false);
+
+    const remainingCapacity = MAX_INVOICE_PAGES - invoiceDrafts.length;
+    if (remainingCapacity <= 0) {
+      useToastStore.getState().show(t('addEditItem.maxPagesReached', { max: MAX_INVOICE_PAGES }));
+      return;
+    }
+
     setAttachingInvoice(true);
     try {
       const result =
-        source === 'camera' ? await pickInvoiceFromCamera() : await pickInvoiceFromGallery();
+        source === 'camera'
+          ? await pickInvoiceFromCamera()
+          : await pickInvoiceFromGallery(remainingCapacity);
 
       if (result.status === 'success') {
-        setInvoiceUri(result.uri);
+        const uris = result.uris.slice(0, remainingCapacity);
+        if (result.uris.length > uris.length) {
+          useToastStore.getState().show(t('addEditItem.maxPagesReached', { max: MAX_INVOICE_PAGES }));
+        }
+        setInvoiceDrafts((drafts) => [
+          ...drafts,
+          ...uris.map((uri) => ({ id: Crypto.randomUUID(), uri, isPersisted: false })),
+        ]);
       } else if (result.status === 'permission-denied') {
         const isCamera = source === 'camera';
         Alert.alert(
@@ -160,6 +182,25 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     }
   };
 
+  const handleRemoveInvoicePage = async (index: number) => {
+    const draft = invoiceDrafts[index];
+    if (!draft) return;
+    if (!draft.isPersisted) {
+      await deleteInvoiceFile(draft.uri);
+    }
+    setInvoiceDrafts((drafts) => drafts.filter((_, i) => i !== index));
+  };
+
+  const handleMoveInvoicePage = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    setInvoiceDrafts((drafts) => {
+      if (targetIndex < 0 || targetIndex >= drafts.length) return drafts;
+      const next = [...drafts];
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next;
+    });
+  };
+
   const handleSave = async () => {
     const trimmedName = name.trim();
     const months = parseWarrantyMonths(warrantyMonths);
@@ -175,6 +216,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
     setSaving(true);
     try {
+      let itemId: string;
       if (isEditing && existing) {
         await updateItem(existing.id, {
           name: trimmedName,
@@ -184,16 +226,11 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           brand: trimmedBrand,
           price: parsedPrice,
           store: trimmedStore,
-          invoiceUri,
           notes: notes.trim() || undefined,
         });
-        // Refresh both the list and the detail screen's selected item so they
-        // reflect the edit immediately on goBack().
-        await useItemsStore.getState().loadItems();
-        await useItemsStore.getState().loadItemById(existing.id);
-        useToastStore.getState().show(t('addEditItem.itemUpdated'));
+        itemId = existing.id;
       } else {
-        await createItem({
+        const created = await createItem({
           name: trimmedName,
           purchaseDate: toIsoDate(purchaseDate),
           warrantyMonths: months,
@@ -201,9 +238,26 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           brand: trimmedBrand,
           price: parsedPrice,
           store: trimmedStore,
-          invoiceUri,
           notes: notes.trim() || undefined,
         });
+        itemId = created.id;
+      }
+
+      try {
+        const { removedUris } = await saveInvoiceImagesForItem(itemId, invoiceDrafts);
+        await Promise.all(removedUris.map((uri) => deleteInvoiceFile(uri)));
+      } catch (err) {
+        console.error('Failed to save invoice pages', err);
+        useToastStore.getState().show(t('addEditItem.invoiceSaveFailed'));
+      }
+
+      if (isEditing) {
+        // Refresh both the list and the detail screen's selected item so they
+        // reflect the edit immediately on goBack().
+        await useItemsStore.getState().loadItems();
+        await useItemsStore.getState().loadItemById(itemId);
+        useToastStore.getState().show(t('addEditItem.itemUpdated'));
+      } else {
         // Refresh Home's store directly here rather than relying solely on its
         // focus listener — the Add FAB is reachable from any tab, so goBack()
         // won't always land back on a focused Home screen.
@@ -328,19 +382,68 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           <FormRow
             label={t('addEditItem.invoiceBill')}
             placeholder={attachingInvoice ? t('addEditItem.savingEllipsis') : t('addEditItem.attachInvoice')}
-            value={invoiceUri ? t('addEditItem.photoAttached') : undefined}
+            value={
+              invoiceDrafts.length > 0
+                ? t('addEditItem.pagesAttached', { count: invoiceDrafts.length })
+                : undefined
+            }
             icon="camera-outline"
             onPress={handleAttachInvoice}
           />
         </Card>
 
-        {invoiceUri ? (
-          <Pressable onPress={handleAttachInvoice} style={styles.invoiceThumbnailRow}>
-            <Image source={{ uri: invoiceUri }} style={styles.invoiceThumbnail} />
-            <Text style={[styles.invoiceThumbnailLabel, { color: theme.subtleText }]}>
-              {t('addEditItem.invoiceAttachedRetake')}
-            </Text>
-          </Pressable>
+        {invoiceDrafts.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.invoicePageRow}>
+            {invoiceDrafts.map((draft, index) => (
+              <View key={draft.id} style={[styles.invoicePageCard, { backgroundColor: theme.surfaceAlt }]}>
+                <Image source={{ uri: draft.uri }} style={styles.invoicePageThumbnail} />
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => handleRemoveInvoicePage(index)}
+                  accessibilityLabel={t('addEditItem.removePage')}
+                  style={[styles.invoicePageRemove, { backgroundColor: theme.danger }]}
+                >
+                  <Ionicons name="close" size={14} color="#ffffff" />
+                </Pressable>
+                <View style={styles.invoicePageReorderRow}>
+                  <Pressable
+                    hitSlop={6}
+                    disabled={index === 0}
+                    onPress={() => handleMoveInvoicePage(index, -1)}
+                    accessibilityLabel={t('addEditItem.movePageLeft')}
+                  >
+                    <Ionicons
+                      name="chevron-back"
+                      size={16}
+                      color={index === 0 ? theme.mutedText : theme.text}
+                    />
+                  </Pressable>
+                  <Text style={[styles.invoicePageNumber, { color: theme.subtleText }]}>{index + 1}</Text>
+                  <Pressable
+                    hitSlop={6}
+                    disabled={index === invoiceDrafts.length - 1}
+                    onPress={() => handleMoveInvoicePage(index, 1)}
+                    accessibilityLabel={t('addEditItem.movePageRight')}
+                  >
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={index === invoiceDrafts.length - 1 ? theme.mutedText : theme.text}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+            {invoiceDrafts.length < MAX_INVOICE_PAGES ? (
+              <Pressable
+                onPress={handleAttachInvoice}
+                accessibilityLabel={t('addEditItem.addPage')}
+                style={[styles.invoicePageAddTile, { borderColor: theme.border }]}
+              >
+                <Ionicons name="add" size={22} color={theme.subtleText} />
+              </Pressable>
+            ) : null}
+          </ScrollView>
         ) : null}
 
         <View style={styles.field}>
@@ -510,20 +613,52 @@ const styles = StyleSheet.create({
   formCard: {
     paddingVertical: 4,
   },
-  invoiceThumbnailRow: {
+  invoicePageRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
     marginTop: -8,
   },
-  invoiceThumbnail: {
-    width: 40,
-    height: 40,
+  invoicePageCard: {
+    width: 72,
+    borderRadius: 12,
+    padding: 6,
+    gap: 4,
+    alignItems: 'center',
+  },
+  invoicePageThumbnail: {
+    width: 60,
+    height: 60,
     borderRadius: 8,
   },
-  invoiceThumbnailLabel: {
-    fontSize: 13,
-    flexShrink: 1,
+  invoicePageRemove: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  invoicePageReorderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 2,
+  },
+  invoicePageNumber: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  invoicePageAddTile: {
+    width: 72,
+    height: 84,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveBar: {
     paddingHorizontal: 16,

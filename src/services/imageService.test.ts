@@ -14,7 +14,8 @@ describe('pickInvoiceFromCamera', () => {
 
     expect(result.status).toBe('success');
     if (result.status === 'success') {
-      expect(result.uri).toMatch(/^file:\/\/\/mock-documents\/invoices\/invoice-[0-9a-f-]+\.jpg$/);
+      expect(result.uris).toHaveLength(1);
+      expect(result.uris[0]).toMatch(/^file:\/\/\/mock-documents\/invoices\/invoice-[0-9a-f-]+\.jpg$/);
     }
   });
 
@@ -42,8 +43,38 @@ describe('pickInvoiceFromGallery', () => {
 
     expect(result.status).toBe('success');
     if (result.status === 'success') {
-      expect(result.uri).toMatch(/^file:\/\/\/mock-documents\/invoices\/invoice-[0-9a-f-]+\.jpg$/);
+      expect(result.uris).toHaveLength(1);
+      expect(result.uris[0]).toMatch(/^file:\/\/\/mock-documents\/invoices\/invoice-[0-9a-f-]+\.jpg$/);
     }
+  });
+
+  it('copies every selected photo into app storage when multiple are picked', async () => {
+    (ImagePicker.launchImageLibraryAsync as jest.Mock).mockResolvedValueOnce({
+      canceled: false,
+      assets: [
+        { uri: 'file:///mock-gallery/photo-1.jpg' },
+        { uri: 'file:///mock-gallery/photo-2.jpg' },
+        { uri: 'file:///mock-gallery/photo-3.jpg' },
+      ],
+    });
+
+    const result = await pickInvoiceFromGallery();
+
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.uris).toHaveLength(3);
+      for (const uri of result.uris) {
+        expect(uri).toMatch(/^file:\/\/\/mock-documents\/invoices\/invoice-[0-9a-f-]+\.jpg$/);
+      }
+    }
+  });
+
+  it('passes the selection limit and multi-select flag through to the picker', async () => {
+    await pickInvoiceFromGallery(5);
+
+    expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ allowsMultipleSelection: true, selectionLimit: 5 })
+    );
   });
 
   it('returns permission-denied without launching the picker when permission is refused', async () => {

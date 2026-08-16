@@ -45,8 +45,8 @@ export const useItemsStore = create<ItemsState>((set, get) => ({
 
     await deleteItemRow(id);
 
-    if (item?.invoiceUri) {
-      await deleteInvoiceFile(item.invoiceUri);
+    if (item?.invoiceImages.length) {
+      await Promise.all(item.invoiceImages.map((image) => deleteInvoiceFile(image.uri)));
     }
 
     set((s) => ({

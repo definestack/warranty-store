@@ -7,6 +7,7 @@ import type {
   WarrantyItemUpdate,
 } from '../types/warranty';
 import { getDatabase } from './database';
+import { getImagesForItem, getImagesForItems } from './invoiceImagesRepository';
 
 interface WarrantyItemRow {
   id: string;
@@ -19,12 +20,11 @@ interface WarrantyItemRow {
   price: number | null;
   store: string | null;
   notes: string | null;
-  invoice_uri: string | null;
   created_at: string;
   updated_at: string;
 }
 
-function mapRowToItem(row: WarrantyItemRow): WarrantyItem {
+function mapRowToItem(row: WarrantyItemRow, invoiceImages: WarrantyItem['invoiceImages']): WarrantyItem {
   return {
     id: row.id,
     name: row.name,
@@ -36,7 +36,7 @@ function mapRowToItem(row: WarrantyItemRow): WarrantyItem {
     price: row.price ?? undefined,
     store: row.store ?? undefined,
     notes: row.notes ?? undefined,
-    invoiceUri: row.invoice_uri ?? undefined,
+    invoiceImages,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -50,8 +50,8 @@ export async function createItem(input: NewWarrantyItem): Promise<WarrantyItem> 
 
   await db.runAsync(
     `INSERT INTO warranty_items
-      (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, store, notes, invoice_uri, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, store, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
     input.name,
     input.purchaseDate,
@@ -62,7 +62,6 @@ export async function createItem(input: NewWarrantyItem): Promise<WarrantyItem> 
     input.price ?? null,
     input.store ?? null,
     input.notes ?? null,
-    input.invoiceUri ?? null,
     timestamp,
     timestamp
   );
@@ -79,7 +78,8 @@ export async function getAllItems(): Promise<WarrantyItem[]> {
   const rows = await db.getAllAsync<WarrantyItemRow>(
     'SELECT * FROM warranty_items ORDER BY created_at DESC'
   );
-  return rows.map(mapRowToItem);
+  const imagesByItem = await getImagesForItems(rows.map((row) => row.id));
+  return rows.map((row) => mapRowToItem(row, imagesByItem.get(row.id) ?? []));
 }
 
 export async function getItemById(id: string): Promise<WarrantyItem | null> {
@@ -88,7 +88,9 @@ export async function getItemById(id: string): Promise<WarrantyItem | null> {
     'SELECT * FROM warranty_items WHERE id = ?',
     id
   );
-  return row ? mapRowToItem(row) : null;
+  if (!row) return null;
+  const invoiceImages = await getImagesForItem(id);
+  return mapRowToItem(row, invoiceImages);
 }
 
 export async function updateItem(
@@ -108,7 +110,7 @@ export async function updateItem(
   await db.runAsync(
     `UPDATE warranty_items
      SET name = ?, purchase_date = ?, warranty_months = ?, expiry_date = ?,
-         category = ?, brand = ?, price = ?, store = ?, notes = ?, invoice_uri = ?, updated_at = ?
+         category = ?, brand = ?, price = ?, store = ?, notes = ?, updated_at = ?
      WHERE id = ?`,
     merged.name,
     merged.purchaseDate,
@@ -119,7 +121,6 @@ export async function updateItem(
     merged.price ?? null,
     merged.store ?? null,
     merged.notes ?? null,
-    merged.invoiceUri ?? null,
     updatedAt,
     id
   );
@@ -129,5 +130,8 @@ export async function updateItem(
 
 export async function deleteItem(id: string): Promise<void> {
   const db = getDatabase();
-  await db.runAsync('DELETE FROM warranty_items WHERE id = ?', id);
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM invoice_images WHERE item_id = ?', id);
+    await db.runAsync('DELETE FROM warranty_items WHERE id = ?', id);
+  });
 }

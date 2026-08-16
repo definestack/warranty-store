@@ -35,6 +35,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
   const deleteItem = useItemsStore((state) => state.deleteItem);
   const [deleting, setDeleting] = useState(false);
   const [invoiceViewerVisible, setInvoiceViewerVisible] = useState(false);
+  const [invoiceViewerIndex, setInvoiceViewerIndex] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,19 +137,26 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           </Text>
         </View>
 
-        {item.invoiceUri ? (
+        {item.invoiceImages.length > 0 ? (
           <View style={styles.notesSection}>
             <Text style={[styles.notesLabel, { color: theme.text }]}>{t('itemDetail.invoice')}</Text>
-            <Pressable
-              style={styles.invoiceThumbnailRow}
-              onPress={() => setInvoiceViewerVisible(true)}
-              accessibilityLabel={t('itemDetail.invoice')}
-            >
-              <Image source={{ uri: item.invoiceUri }} style={styles.invoiceThumbnail} />
-              <Text style={[styles.notesText, { color: theme.subtleText }]}>
-                {t('itemDetail.viewInvoiceHint')}
-              </Text>
-            </Pressable>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.invoiceThumbnailRow}>
+              {item.invoiceImages.map((image, index) => (
+                <Pressable
+                  key={image.id}
+                  onPress={() => {
+                    setInvoiceViewerIndex(index);
+                    setInvoiceViewerVisible(true);
+                  }}
+                  accessibilityLabel={t('itemDetail.invoice')}
+                >
+                  <Image source={{ uri: image.uri }} style={styles.invoiceThumbnail} />
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Text style={[styles.notesText, { color: theme.subtleText }]}>
+              {t('itemDetail.viewInvoiceHint')}
+            </Text>
           </View>
         ) : null}
 
@@ -170,10 +178,11 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
       </ScrollView>
-      {item.invoiceUri ? (
+      {item.invoiceImages.length > 0 ? (
         <InvoiceImageViewer
           visible={invoiceViewerVisible}
-          uri={item.invoiceUri}
+          images={item.invoiceImages.map((image) => image.uri)}
+          initialIndex={invoiceViewerIndex}
           onClose={() => setInvoiceViewerVisible(false)}
         />
       ) : null}
