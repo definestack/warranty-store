@@ -17,8 +17,6 @@ export interface MockWarrantyItem {
   notes?: string;
 }
 
-export const CATEGORIES = ['Electronics', 'Furniture', 'Appliances', 'Vehicles', 'Other'];
-
 export const WARRANTY_PERIODS = ['6 Months', '1 Year', '2 Years', '3 Years', '5 Years'];
 
 export const PLACEHOLDER_ITEMS: MockWarrantyItem[] = [

@@ -13,7 +13,8 @@ import SelectModal from '../components/SelectModal';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { AppTheme } from '../theme/palette';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
-import { CATEGORIES, PLACEHOLDER_ITEMS } from '../utils/mockData';
+import { CATEGORIES } from '../utils/categories';
+import { PLACEHOLDER_ITEMS } from '../utils/mockData';
 import type { MockWarrantyStatus } from '../utils/mockData';
 
 type Props = CompositeScreenProps<

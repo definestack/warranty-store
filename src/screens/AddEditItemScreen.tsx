@@ -15,7 +15,8 @@ import { createItem } from '../db/warrantyRepository';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
-import { CATEGORIES, PLACEHOLDER_ITEMS } from '../utils/mockData';
+import { CATEGORIES, resolveCategory } from '../utils/categories';
+import { PLACEHOLDER_ITEMS } from '../utils/mockData';
 import { addMonths, formatIsoDate, toIsoDate } from '../utils/date';
 import { parseWarrantyMonths } from '../utils/validation';
 
@@ -98,7 +99,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         name: trimmedName,
         purchaseDate: toIsoDate(purchaseDate),
         warrantyMonths: months,
-        category: category || undefined,
+        category: resolveCategory(category),
         notes: notes.trim() || undefined,
       });
       useToastStore.getState().show('Item added');
