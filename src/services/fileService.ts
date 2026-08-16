@@ -6,8 +6,11 @@ import {
   getInfoAsync,
   makeDirectoryAsync,
 } from 'expo-file-system/legacy';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 const INVOICES_DIR = `${documentDirectory}invoices/`;
+const MAX_DIMENSION = 1600;
+const COMPRESSION_QUALITY = 0.8;
 
 async function ensureInvoicesDirExists(): Promise<void> {
   const dirInfo = await getInfoAsync(INVOICES_DIR);
@@ -16,10 +19,47 @@ async function ensureInvoicesDirExists(): Promise<void> {
   }
 }
 
+/**
+ * Resizes/compresses images above MAX_DIMENSION so invoice photos don't
+ * consume excessive device storage. Images already within the threshold are
+ * returned unchanged to avoid a needless re-encode.
+ */
+async function compressIfNeeded(sourceUri: string): Promise<string> {
+  const context = ImageManipulator.manipulate(sourceUri);
+  const original = await context.renderAsync();
+
+  if (original.width <= MAX_DIMENSION && original.height <= MAX_DIMENSION) {
+    original.release();
+    context.release();
+    return sourceUri;
+  }
+
+  const resizeTarget =
+    original.width >= original.height ? { width: MAX_DIMENSION } : { height: MAX_DIMENSION };
+  const resized = await context.reset().resize(resizeTarget).renderAsync();
+  const result = await resized.saveAsync({ compress: COMPRESSION_QUALITY, format: SaveFormat.JPEG });
+
+  original.release();
+  resized.release();
+  context.release();
+
+  return result.uri;
+}
+
 export async function saveInvoiceImage(sourceUri: string): Promise<string> {
   await ensureInvoicesDirExists();
   const destinationUri = `${INVOICES_DIR}invoice-${Crypto.randomUUID()}.jpg`;
-  await copyAsync({ from: sourceUri, to: destinationUri });
+
+  let uriToCopy = sourceUri;
+  try {
+    uriToCopy = await compressIfNeeded(sourceUri);
+  } catch (err) {
+    if (__DEV__) {
+      console.warn('Invoice image compression failed, saving original file', err);
+    }
+  }
+
+  await copyAsync({ from: uriToCopy, to: destinationUri });
   return destinationUri;
 }
 

@@ -1,10 +1,17 @@
 import * as legacyFileSystem from 'expo-file-system/legacy';
 import { __resetMockFileSystem, __setFileExists, getInfoAsync } from 'expo-file-system/legacy';
+import {
+  __resetImageManipulatorMock,
+  __setManipulateShouldFail,
+  __setMockImageSize,
+  ImageManipulator,
+} from 'expo-image-manipulator';
 
 import { deleteInvoiceFile, saveInvoiceImage } from './fileService';
 
 beforeEach(() => {
   __resetMockFileSystem();
+  __resetImageManipulatorMock();
 });
 
 describe('deleteInvoiceFile', () => {
@@ -64,5 +71,52 @@ describe('saveInvoiceImage', () => {
     const second = await saveInvoiceImage('file:///camera-tmp/photo.jpg');
 
     expect(first).not.toBe(second);
+  });
+
+  it('resizes and compresses images larger than the max dimension before saving', async () => {
+    __setMockImageSize({ width: 3200, height: 2400 });
+    const copySpy = jest.spyOn(legacyFileSystem, 'copyAsync');
+
+    const savedUri = await saveInvoiceImage('file:///camera-tmp/large.jpg');
+
+    expect((await getInfoAsync(savedUri)).exists).toBe(true);
+    const copiedFrom = copySpy.mock.calls[0][0].from;
+    expect(copiedFrom).toMatch(/^file:\/\/\/mock-cache\/compressed-1600x1200-q0\.8\.jpg$/);
+
+    copySpy.mockRestore();
+  });
+
+  it('does not resize or compress images already within the max dimension', async () => {
+    __setMockImageSize({ width: 800, height: 600 });
+    const copySpy = jest.spyOn(legacyFileSystem, 'copyAsync');
+
+    await saveInvoiceImage('file:///camera-tmp/small.jpg');
+
+    expect(copySpy.mock.calls[0][0].from).toBe('file:///camera-tmp/small.jpg');
+
+    copySpy.mockRestore();
+  });
+
+  it('falls back to the original file when compression fails, logging a dev warning', async () => {
+    __setManipulateShouldFail(true);
+    const copySpy = jest.spyOn(legacyFileSystem, 'copyAsync');
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const savedUri = await saveInvoiceImage('file:///camera-tmp/broken.jpg');
+
+    expect((await getInfoAsync(savedUri)).exists).toBe(true);
+    expect(copySpy.mock.calls[0][0].from).toBe('file:///camera-tmp/broken.jpg');
+    expect(warnSpy).toHaveBeenCalled();
+
+    copySpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it('uses the manipulate API on the correct source image', async () => {
+    __setMockImageSize({ width: 3200, height: 2400 });
+
+    await saveInvoiceImage('file:///camera-tmp/large.jpg');
+
+    expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///camera-tmp/large.jpg');
   });
 });
