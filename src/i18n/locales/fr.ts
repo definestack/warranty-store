@@ -153,6 +153,9 @@ const fr: Messages = {
     expiresIn: { one: 'Expire dans %{count} jour', other: 'Expire dans %{count} jours' },
     expiredAgo: { one: 'Expiré il y a %{count} jour', other: 'Expiré il y a %{count} jours' },
   },
+  notifications: {
+    reminderTitle: 'Rappel de garantie : %{name}',
+  },
   duration: {
     months: { one: '%{count} mois', other: '%{count} mois' },
     years: { one: '%{count} an', other: '%{count} ans' },

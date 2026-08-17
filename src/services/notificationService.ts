@@ -1,5 +1,10 @@
 import * as Notifications from 'expo-notifications';
 
+import type { TranslateFn } from '../i18n/i18n';
+import type { ReminderKind } from '../types/notification';
+import type { WarrantyItem } from '../types/warranty';
+import { fromIsoDate } from '../utils/date';
+
 export async function getNotificationPermissionStatus(): Promise<Notifications.PermissionStatus> {
   const { status } = await Notifications.getPermissionsAsync();
   return status;
@@ -26,4 +31,87 @@ export async function requestNotificationPermissionIfNeeded(
   if (!shouldContinue) return current;
 
   return requestNotificationPermission();
+}
+
+const REMINDER_OFFSETS: { kind: ReminderKind; daysBefore: number }[] = [
+  { kind: 'thirtyDay', daysBefore: 30 },
+  { kind: 'sevenDay', daysBefore: 7 },
+  { kind: 'onExpiry', daysBefore: 0 },
+];
+
+const REMINDER_HOUR = 9;
+
+export interface ReminderPlan {
+  reminderKind: ReminderKind;
+  daysBefore: number;
+  triggerAt: Date;
+}
+
+export interface ScheduledReminder {
+  reminderKind: ReminderKind;
+  notificationId: string;
+  triggerAt: string;
+}
+
+/** Computes the still-upcoming 30/7/0-day reminder trigger times for an item's expiry date. */
+export function computeReminderPlans(item: WarrantyItem, now: Date = new Date()): ReminderPlan[] {
+  const expiry = fromIsoDate(item.expiryDate);
+
+  return REMINDER_OFFSETS.map(({ kind, daysBefore }) => {
+    const triggerAt = new Date(expiry);
+    triggerAt.setDate(triggerAt.getDate() - daysBefore);
+    triggerAt.setHours(REMINDER_HOUR, 0, 0, 0);
+    return { reminderKind: kind, daysBefore, triggerAt };
+  }).filter((plan) => plan.triggerAt.getTime() > now.getTime());
+}
+
+/**
+ * Schedules a local notification for each upcoming 30/7/0-day reminder. Per-reminder
+ * failures are logged and skipped rather than thrown, so one bad schedule call doesn't
+ * lose the others or block the caller (item save already succeeded by this point).
+ */
+export async function scheduleExpiryReminders(
+  item: WarrantyItem,
+  t: TranslateFn,
+  now: Date = new Date()
+): Promise<ScheduledReminder[]> {
+  const plans = computeReminderPlans(item, now);
+  const scheduled: ScheduledReminder[] = [];
+
+  for (const plan of plans) {
+    try {
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: t('notifications.reminderTitle', { name: item.name }),
+          body:
+            plan.daysBefore === 0
+              ? t('date.expiresToday')
+              : t('date.expiresIn', { count: plan.daysBefore }),
+          data: { itemId: item.id },
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: plan.triggerAt },
+      });
+      scheduled.push({
+        reminderKind: plan.reminderKind,
+        notificationId,
+        triggerAt: plan.triggerAt.toISOString(),
+      });
+    } catch (err) {
+      console.error(`Failed to schedule ${plan.reminderKind} reminder for item ${item.id}`, err);
+    }
+  }
+
+  return scheduled;
+}
+
+/** Registers a listener that navigates to the tapped notification's item detail screen. */
+export function addNotificationResponseListener(
+  onItemTapped: (itemId: string) => void
+): Notifications.EventSubscription {
+  return Notifications.addNotificationResponseReceivedListener((response) => {
+    const itemId = response.notification.request.content.data?.itemId;
+    if (typeof itemId === 'string') {
+      onItemTapped(itemId);
+    }
+  });
 }

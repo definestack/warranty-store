@@ -3,6 +3,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
+import type { PermissionStatus } from 'expo-notifications';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -25,11 +26,15 @@ import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
 import type { InvoiceImageDraft } from '../db/invoiceImagesRepository';
 import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
+import { saveSchedulesForItem } from '../db/notificationSchedulesRepository';
 import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useTranslation } from '../i18n/LocaleContext';
 import { deleteInvoiceFile } from '../services/fileService';
 import { MAX_INVOICE_PAGES, pickInvoiceFromCamera, pickInvoiceFromGallery } from '../services/imageService';
-import { requestNotificationPermissionIfNeeded } from '../services/notificationService';
+import {
+  requestNotificationPermissionIfNeeded,
+  scheduleExpiryReminders,
+} from '../services/notificationService';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -272,6 +277,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     setSaving(true);
     try {
       let itemId: string;
+      let createdItem: WarrantyItem | null = null;
       if (isEditing && existing) {
         await updateItem(existing.id, {
           name: trimmedName,
@@ -285,7 +291,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         });
         itemId = existing.id;
       } else {
-        const created = await createItem({
+        createdItem = await createItem({
           name: trimmedName,
           purchaseDate: toIsoDate(purchaseDate),
           warrantyMonths: months,
@@ -295,7 +301,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           store: trimmedStore,
           notes: notes.trim() || undefined,
         });
-        itemId = created.id;
+        itemId = createdItem.id;
       }
 
       try {
@@ -319,10 +325,22 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         await useItemsStore.getState().loadItems();
         useToastStore.getState().show(t('addEditItem.itemAdded'));
 
+        let permissionStatus: PermissionStatus | null = null;
         try {
-          await requestNotificationPermissionIfNeeded(showNotificationPermissionRationale);
+          permissionStatus = await requestNotificationPermissionIfNeeded(showNotificationPermissionRationale);
         } catch (err) {
           console.error('Failed to request notification permission', err);
+        }
+
+        if (permissionStatus === 'granted' && createdItem) {
+          try {
+            const scheduled = await scheduleExpiryReminders(createdItem, t);
+            if (scheduled.length > 0) {
+              await saveSchedulesForItem(createdItem.id, scheduled);
+            }
+          } catch (err) {
+            console.error('Failed to schedule expiry reminders', err);
+          }
         }
       }
       navigation.goBack();

@@ -108,4 +108,14 @@ describe('runMigrations', () => {
     const rows = await db.getAllAsync('SELECT * FROM invoice_images WHERE item_id = ?', 'no-invoice-item');
     expect(rows).toHaveLength(0);
   });
+
+  it('creates the notification_schedules table', async () => {
+    const db = await freshDb();
+    await runMigrations(db);
+
+    const table = await db.getFirstAsync(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'notification_schedules'"
+    );
+    expect(table).not.toBeNull();
+  });
 });

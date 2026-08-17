@@ -152,6 +152,9 @@ const es: Messages = {
     expiresIn: { one: 'Vence en %{count} día', other: 'Vence en %{count} días' },
     expiredAgo: { one: 'Venció hace %{count} día', other: 'Venció hace %{count} días' },
   },
+  notifications: {
+    reminderTitle: 'Recordatorio de garantía: %{name}',
+  },
   duration: {
     months: { one: '%{count} mes', other: '%{count} meses' },
     years: { one: '%{count} año', other: '%{count} años' },

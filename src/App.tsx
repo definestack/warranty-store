@@ -9,7 +9,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import Toast from './components/Toast';
 import { initDatabase } from './db/database';
 import { LocaleProvider, useTranslation } from './i18n/LocaleContext';
+import { navigateToItemDetail, navigationRef } from './navigation/navigationRef';
 import RootNavigator from './navigation/RootNavigator';
+import { addNotificationResponseListener } from './services/notificationService';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 
 type DbStatus = 'loading' | 'ready' | 'error';
@@ -51,7 +53,7 @@ function AppShell({ status, error }: { status: DbStatus; error: string | null })
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme.paper}>
-        <NavigationContainer theme={navigationTheme}>
+        <NavigationContainer ref={navigationRef} theme={navigationTheme}>
           <RootNavigator />
         </NavigationContainer>
         <Toast />
@@ -73,6 +75,11 @@ export default function App() {
         setError(err instanceof Error ? err.message : String(err));
         setStatus('error');
       });
+  }, []);
+
+  useEffect(() => {
+    const subscription = addNotificationResponseListener(navigateToItemDetail);
+    return () => subscription.remove();
   }, []);
 
   return (

@@ -5,6 +5,7 @@ import {
   ADD_BRAND_AND_PRICE_COLUMNS,
   ADD_STORE_COLUMN,
   CREATE_INVOICE_IMAGES_TABLE,
+  CREATE_NOTIFICATION_SCHEDULES_TABLE,
   CREATE_SCHEMA_MIGRATIONS_TABLE,
   CREATE_WARRANTY_ITEMS_TABLE,
 } from './schema';
@@ -58,6 +59,13 @@ export const migrations: Migration[] = [
           row.created_at
         );
       }
+    },
+  },
+  {
+    version: 5,
+    name: 'create_notification_schedules_table',
+    up: async (db) => {
+      await db.execAsync(CREATE_NOTIFICATION_SCHEDULES_TABLE);
     },
   },
 ];
