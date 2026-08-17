@@ -1,7 +1,10 @@
 import { __setFileExists, getInfoAsync } from 'expo-file-system/legacy';
+import * as Notifications from 'expo-notifications';
 
 import { getDatabase, initDatabase } from '../db/database';
 import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
+import * as notificationSchedulesRepository from '../db/notificationSchedulesRepository';
+import { getSchedulesForItem, saveSchedulesForItem } from '../db/notificationSchedulesRepository';
 import * as warrantyRepository from '../db/warrantyRepository';
 import { createItem, getItemById } from '../db/warrantyRepository';
 import { useItemsStore } from './itemsStore';
@@ -13,7 +16,9 @@ beforeAll(async () => {
 beforeEach(async () => {
   await getDatabase().runAsync('DELETE FROM invoice_images');
   await getDatabase().runAsync('DELETE FROM warranty_items');
+  await getDatabase().runAsync('DELETE FROM notification_schedules');
   useItemsStore.setState({ items: [], loading: false, selectedItem: null, selectedItemLoading: false });
+  jest.clearAllMocks();
 });
 
 describe('itemsStore', () => {
@@ -155,5 +160,65 @@ describe('deleteItem', () => {
     expect(useItemsStore.getState().items).toHaveLength(1);
 
     deleteSpy.mockRestore();
+  });
+
+  it('cancels every scheduled reminder and removes their schedule rows', async () => {
+    const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
+    await saveSchedulesForItem(created.id, [
+      { reminderKind: 'thirtyDay', notificationId: 'notif-30', triggerAt: '2026-12-16T09:00:00.000Z' },
+      { reminderKind: 'sevenDay', notificationId: 'notif-7', triggerAt: '2027-01-08T09:00:00.000Z' },
+    ]);
+    await useItemsStore.getState().loadItems();
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledTimes(2);
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notif-30');
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notif-7');
+    expect(await getSchedulesForItem(created.id)).toEqual([]);
+  });
+
+  it('deletes the item even when no reminders were scheduled for it', async () => {
+    const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
+    await useItemsStore.getState().loadItems();
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect(Notifications.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
+    expect(await getItemById(created.id)).toBeNull();
+  });
+
+  it('still deletes the item and logs when cancelling a reminder fails', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
+    await saveSchedulesForItem(created.id, [
+      { reminderKind: 'thirtyDay', notificationId: 'notif-30', triggerAt: '2026-12-16T09:00:00.000Z' },
+    ]);
+    await useItemsStore.getState().loadItems();
+    (Notifications.cancelScheduledNotificationAsync as jest.Mock).mockRejectedValueOnce(new Error('boom'));
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect(await getItemById(created.id)).toBeNull();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('still deletes the item and logs when fetching its schedules fails', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
+    await useItemsStore.getState().loadItems();
+    const getSchedulesSpy = jest
+      .spyOn(notificationSchedulesRepository, 'getSchedulesForItem')
+      .mockRejectedValueOnce(new Error('read failure'));
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect(await getItemById(created.id)).toBeNull();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    getSchedulesSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 });
