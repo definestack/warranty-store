@@ -38,3 +38,14 @@ export const CREATE_INVOICE_IMAGES_TABLE = `
     created_at TEXT NOT NULL
   );
 `;
+
+export const CREATE_NOTIFICATION_SCHEDULES_TABLE = `
+  CREATE TABLE IF NOT EXISTS notification_schedules (
+    id TEXT PRIMARY KEY NOT NULL,
+    item_id TEXT NOT NULL,
+    reminder_kind TEXT NOT NULL,
+    notification_id TEXT NOT NULL,
+    trigger_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+`;

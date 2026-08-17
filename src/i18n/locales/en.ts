@@ -150,6 +150,9 @@ const en = {
     expiresIn: { one: 'Expires in %{count} day', other: 'Expires in %{count} days' },
     expiredAgo: { one: 'Expired %{count} day ago', other: 'Expired %{count} days ago' },
   },
+  notifications: {
+    reminderTitle: 'Warranty reminder: %{name}',
+  },
   duration: {
     months: { one: '%{count} month', other: '%{count} months' },
     years: { one: '%{count} year', other: '%{count} years' },

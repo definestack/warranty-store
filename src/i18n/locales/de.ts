@@ -153,6 +153,9 @@ const de: Messages = {
     expiresIn: { one: 'Läuft in %{count} Tag ab', other: 'Läuft in %{count} Tagen ab' },
     expiredAgo: { one: 'Vor %{count} Tag abgelaufen', other: 'Vor %{count} Tagen abgelaufen' },
   },
+  notifications: {
+    reminderTitle: 'Garantie-Erinnerung: %{name}',
+  },
   duration: {
     months: { one: '%{count} Monat', other: '%{count} Monate' },
     years: { one: '%{count} Jahr', other: '%{count} Jahre' },
