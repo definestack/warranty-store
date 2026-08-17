@@ -12,6 +12,7 @@ import { LocaleProvider, useTranslation } from './i18n/LocaleContext';
 import { navigateToItemDetail, navigationRef } from './navigation/navigationRef';
 import RootNavigator from './navigation/RootNavigator';
 import { addNotificationResponseListener } from './services/notificationService';
+import { useNotificationsStore } from './store/notificationsStore';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 
 type DbStatus = 'loading' | 'ready' | 'error';
@@ -80,6 +81,10 @@ export default function App() {
   useEffect(() => {
     const subscription = addNotificationResponseListener(navigateToItemDetail);
     return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    useNotificationsStore.getState().loadPreference();
   }, []);
 
   return (

@@ -142,7 +142,7 @@ const fr: Messages = {
     general: 'Général',
     backupRestore: 'Sauvegarde et restauration',
     exportData: 'Exporter les données',
-    reminders: 'Rappels',
+    notificationsEnabled: 'Notifications activées',
     about: 'À propos',
     aboutApp: 'À propos de Warranty Tracker',
     version: 'Version %{version}',

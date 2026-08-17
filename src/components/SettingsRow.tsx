@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useAppTheme } from '../theme/ThemeContext';
 
@@ -10,6 +10,8 @@ interface SettingsRowProps {
   trailingText?: string;
   chevron?: 'down' | 'forward' | 'none';
   onPress?: () => void;
+  toggleValue?: boolean;
+  onToggleChange?: (value: boolean) => void;
 }
 
 export default function SettingsRow({
@@ -19,6 +21,8 @@ export default function SettingsRow({
   trailingText,
   chevron = 'none',
   onPress,
+  toggleValue,
+  onToggleChange,
 }: SettingsRowProps) {
   const theme = useAppTheme();
 
@@ -40,6 +44,14 @@ export default function SettingsRow({
         ) : null}
         {chevron === 'forward' ? (
           <Ionicons name="chevron-forward" size={18} color={theme.mutedText} />
+        ) : null}
+        {onToggleChange ? (
+          <Switch
+            value={toggleValue ?? false}
+            onValueChange={onToggleChange}
+            trackColor={{ false: theme.border, true: theme.primary }}
+            thumbColor={theme.surface}
+          />
         ) : null}
       </View>
     </View>
