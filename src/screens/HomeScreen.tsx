@@ -20,13 +20,12 @@ import type { WarrantyItem } from '../types/warranty';
 import { CATEGORIES, DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
 import { formatIsoDate, getWarrantyStatus } from '../utils/date';
 import type { WarrantyStatus } from '../utils/date';
+import { ALL_CATEGORIES, filterItems } from '../utils/itemFilters';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
   NativeStackScreenProps<RootStackParamList>
 >;
-
-const ALL_CATEGORIES = 'all';
 
 const STATUS_TEXT_COLOR: Record<WarrantyStatus, keyof AppTheme> = {
   active: 'success',
@@ -56,14 +55,10 @@ export default function HomeScreen({ navigation }: Props) {
     }, [loadItems])
   );
 
-  const items = useMemo(() => {
-    return allItems.filter((item) => {
-      const itemCategory = item.category ?? DEFAULT_CATEGORY;
-      const matchesCategory = category === ALL_CATEGORIES || itemCategory === category;
-      const matchesSearch = item.name.toLowerCase().includes(search.trim().toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [allItems, search, category]);
+  const items = useMemo(
+    () => filterItems(allItems, { search, category }),
+    [allItems, search, category]
+  );
 
   const overview = useMemo(() => {
     let active = 0;
