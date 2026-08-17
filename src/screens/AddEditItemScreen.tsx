@@ -42,6 +42,7 @@ import {
   scheduleExpiryReminders,
 } from '../services/notificationService';
 import { useItemsStore } from '../store/itemsStore';
+import { useNotificationsStore } from '../store/notificationsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
@@ -335,21 +336,23 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             console.error('Failed to cancel existing expiry reminders', err);
           }
 
-          let permissionStatus: PermissionStatus | null = null;
-          try {
-            permissionStatus = await requestNotificationPermissionIfNeeded(showNotificationPermissionRationale);
-          } catch (err) {
-            console.error('Failed to request notification permission', err);
-          }
-
-          if (permissionStatus === 'granted') {
+          if (useNotificationsStore.getState().enabled) {
+            let permissionStatus: PermissionStatus | null = null;
             try {
-              const scheduled = await scheduleExpiryReminders(updatedItem, t);
-              if (scheduled.length > 0) {
-                await saveSchedulesForItem(updatedItem.id, scheduled);
-              }
+              permissionStatus = await requestNotificationPermissionIfNeeded(showNotificationPermissionRationale);
             } catch (err) {
-              console.error('Failed to schedule expiry reminders', err);
+              console.error('Failed to request notification permission', err);
+            }
+
+            if (permissionStatus === 'granted') {
+              try {
+                const scheduled = await scheduleExpiryReminders(updatedItem, t);
+                if (scheduled.length > 0) {
+                  await saveSchedulesForItem(updatedItem.id, scheduled);
+                }
+              } catch (err) {
+                console.error('Failed to schedule expiry reminders', err);
+              }
             }
           }
         }
@@ -360,21 +363,23 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         await useItemsStore.getState().loadItems();
         useToastStore.getState().show(t('addEditItem.itemAdded'));
 
-        let permissionStatus: PermissionStatus | null = null;
-        try {
-          permissionStatus = await requestNotificationPermissionIfNeeded(showNotificationPermissionRationale);
-        } catch (err) {
-          console.error('Failed to request notification permission', err);
-        }
-
-        if (permissionStatus === 'granted' && createdItem) {
+        if (useNotificationsStore.getState().enabled) {
+          let permissionStatus: PermissionStatus | null = null;
           try {
-            const scheduled = await scheduleExpiryReminders(createdItem, t);
-            if (scheduled.length > 0) {
-              await saveSchedulesForItem(createdItem.id, scheduled);
-            }
+            permissionStatus = await requestNotificationPermissionIfNeeded(showNotificationPermissionRationale);
           } catch (err) {
-            console.error('Failed to schedule expiry reminders', err);
+            console.error('Failed to request notification permission', err);
+          }
+
+          if (permissionStatus === 'granted' && createdItem) {
+            try {
+              const scheduled = await scheduleExpiryReminders(createdItem, t);
+              if (scheduled.length > 0) {
+                await saveSchedulesForItem(createdItem.id, scheduled);
+              }
+            } catch (err) {
+              console.error('Failed to schedule expiry reminders', err);
+            }
           }
         }
       }

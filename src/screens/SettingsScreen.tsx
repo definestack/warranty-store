@@ -9,6 +9,7 @@ import SelectModal from '../components/SelectModal';
 import SettingsRow from '../components/SettingsRow';
 import { useLanguagePreference, useTranslation } from '../i18n/LocaleContext';
 import { LANGUAGE_ENDONYMS, SUPPORTED_LOCALES } from '../i18n/i18n';
+import { useNotificationsStore } from '../store/notificationsStore';
 import { useAppTheme, useThemePreference } from '../theme/ThemeContext';
 import type { ThemePreference } from '../theme/ThemeContext';
 import type { MainTabParamList } from '../types/navigation';
@@ -23,6 +24,8 @@ export default function SettingsScreen(_props: Props) {
   const { t } = useTranslation();
   const { preference: themePreference, setPreference: setThemePreference } = useThemePreference();
   const { preference: languagePreference, setPreference: setLanguagePreference } = useLanguagePreference();
+  const notificationsEnabled = useNotificationsStore((state) => state.enabled);
+  const setNotificationsEnabled = useNotificationsStore((state) => state.setEnabled);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
@@ -69,7 +72,12 @@ export default function SettingsScreen(_props: Props) {
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsRow icon="download-outline" label={t('settings.exportData')} chevron="forward" onPress={() => {}} />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <SettingsRow icon="notifications-outline" label={t('settings.reminders')} chevron="forward" onPress={() => {}} />
+          <SettingsRow
+            icon="notifications-outline"
+            label={t('settings.notificationsEnabled')}
+            toggleValue={notificationsEnabled}
+            onToggleChange={(value) => setNotificationsEnabled(value, t)}
+          />
         </Card>
 
         <SectionHeader title={t('settings.about')} />

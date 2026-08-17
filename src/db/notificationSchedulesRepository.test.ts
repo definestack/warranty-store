@@ -1,6 +1,8 @@
 import { getDatabase, initDatabase } from './database';
 import {
+  deleteAllSchedules,
   deleteSchedulesForItem,
+  getAllSchedules,
   getSchedulesForItem,
   saveSchedulesForItem,
 } from './notificationSchedulesRepository';
@@ -98,5 +100,48 @@ describe('deleteSchedulesForItem', () => {
     const item = await makeItem();
 
     await expect(deleteSchedulesForItem(item.id)).resolves.toBeUndefined();
+  });
+});
+
+describe('getAllSchedules', () => {
+  it('returns an empty array when nothing is scheduled', async () => {
+    expect(await getAllSchedules()).toEqual([]);
+  });
+
+  it('returns schedules across every item', async () => {
+    const itemA = await makeItem('A');
+    const itemB = await makeItem('B');
+    await saveSchedulesForItem(itemA.id, [
+      { reminderKind: 'thirtyDay', notificationId: 'notif-a', triggerAt: '2026-12-16T09:00:00.000Z' },
+    ]);
+    await saveSchedulesForItem(itemB.id, [
+      { reminderKind: 'onExpiry', notificationId: 'notif-b', triggerAt: '2027-01-15T09:00:00.000Z' },
+    ]);
+
+    const schedules = await getAllSchedules();
+
+    expect(schedules).toHaveLength(2);
+    expect(schedules.map((s) => s.notificationId).sort()).toEqual(['notif-a', 'notif-b']);
+  });
+});
+
+describe('deleteAllSchedules', () => {
+  it('removes every schedule for every item', async () => {
+    const itemA = await makeItem('A');
+    const itemB = await makeItem('B');
+    await saveSchedulesForItem(itemA.id, [
+      { reminderKind: 'thirtyDay', notificationId: 'notif-a', triggerAt: '2026-12-16T09:00:00.000Z' },
+    ]);
+    await saveSchedulesForItem(itemB.id, [
+      { reminderKind: 'onExpiry', notificationId: 'notif-b', triggerAt: '2027-01-15T09:00:00.000Z' },
+    ]);
+
+    await deleteAllSchedules();
+
+    expect(await getAllSchedules()).toEqual([]);
+  });
+
+  it('does nothing when there are no schedules', async () => {
+    await expect(deleteAllSchedules()).resolves.toBeUndefined();
   });
 });

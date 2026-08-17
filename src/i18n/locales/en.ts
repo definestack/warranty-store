@@ -139,7 +139,7 @@ const en = {
     general: 'General',
     backupRestore: 'Backup & Restore',
     exportData: 'Export Data',
-    reminders: 'Reminders',
+    notificationsEnabled: 'Notifications enabled',
     about: 'About',
     aboutApp: 'About Warranty Tracker',
     version: 'Version %{version}',
