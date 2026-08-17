@@ -1,5 +1,5 @@
 import type { WarrantyItem } from '../types/warranty';
-import { ALL_CATEGORIES, filterItems } from './itemFilters';
+import { ALL_CATEGORIES, filterItems, getExpiringSoonItems } from './itemFilters';
 
 function makeItem(overrides: Partial<WarrantyItem> = {}): WarrantyItem {
   return {
@@ -61,5 +61,42 @@ describe('filterItems', () => {
   it('treats a missing category as the default category', () => {
     const uncategorized = makeItem({ id: '4', name: 'Mystery Box', category: undefined });
     expect(filterItems([uncategorized], { search: '', category: 'Uncategorized' })).toEqual([uncategorized]);
+  });
+});
+
+describe('getExpiringSoonItems', () => {
+  const today = new Date(2026, 4, 20); // 20 May 2026, local time
+
+  it('returns only items expiring within 30 days, sorted soonest-first', () => {
+    const items = [
+      makeItem({ id: 'active', expiryDate: '2026-12-01' }),
+      makeItem({ id: 'expiring-later', expiryDate: '2026-06-10' }), // 21 days out
+      makeItem({ id: 'expiring-sooner', expiryDate: '2026-05-25' }), // 5 days out
+      makeItem({ id: 'expired', expiryDate: '2026-05-01' }),
+      makeItem({ id: 'expiring-today', expiryDate: '2026-05-20' }), // 0 days out
+    ];
+
+    const result = getExpiringSoonItems(items, today);
+
+    expect(result.map((item) => item.id)).toEqual(['expiring-today', 'expiring-sooner', 'expiring-later']);
+  });
+
+  it('excludes already-expired items', () => {
+    const items = [makeItem({ id: 'expired', expiryDate: '2026-05-01' })];
+    expect(getExpiringSoonItems(items, today)).toEqual([]);
+  });
+
+  it('includes items exactly on the 30-day boundary and expiring today', () => {
+    const items = [
+      makeItem({ id: 'boundary', expiryDate: '2026-06-19' }), // exactly 30 days
+      makeItem({ id: 'today', expiryDate: '2026-05-20' }), // 0 days
+    ];
+
+    expect(getExpiringSoonItems(items, today).map((item) => item.id)).toEqual(['today', 'boundary']);
+  });
+
+  it('returns an empty array when nothing is expiring soon', () => {
+    const items = [makeItem({ id: 'active', expiryDate: '2026-12-01' })];
+    expect(getExpiringSoonItems(items, today)).toEqual([]);
   });
 });

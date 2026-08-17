@@ -18,9 +18,9 @@ import type { AppTheme } from '../theme/palette';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
 import type { WarrantyItem } from '../types/warranty';
 import { CATEGORIES, DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
-import { formatIsoDate, getWarrantyStatus } from '../utils/date';
+import { formatDaysRemaining, formatIsoDate, getWarrantyStatus } from '../utils/date';
 import type { WarrantyStatus } from '../utils/date';
-import { ALL_CATEGORIES, filterItems } from '../utils/itemFilters';
+import { ALL_CATEGORIES, filterItems, getExpiringSoonItems } from '../utils/itemFilters';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
@@ -59,6 +59,8 @@ export default function HomeScreen({ navigation }: Props) {
     () => filterItems(allItems, { search, category }),
     [allItems, search, category]
   );
+
+  const expiringSoonItems = useMemo(() => getExpiringSoonItems(allItems), [allItems]);
 
   const overview = useMemo(() => {
     let active = 0;
@@ -151,6 +153,38 @@ export default function HomeScreen({ navigation }: Props) {
                 </View>
               ))}
             </View>
+
+            {expiringSoonItems.length > 0 ? (
+              <View>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.expiringSoon')}</Text>
+                <FlatList
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  data={expiringSoonItems}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.expiringSoonList}
+                  renderItem={({ item }) => {
+                    const itemCategory = item.category ?? DEFAULT_CATEGORY;
+                    return (
+                      <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>
+                        <Card style={styles.expiringSoonCard}>
+                          <ItemIcon category={itemCategory} size={36} />
+                          <Text
+                            style={[styles.expiringSoonName, { color: theme.text }]}
+                            numberOfLines={1}
+                          >
+                            {item.name}
+                          </Text>
+                          <Text style={[styles.expiringSoonDays, { color: theme.warning }]}>
+                            {formatDaysRemaining(item.expiryDate, t)}
+                          </Text>
+                        </Card>
+                      </Pressable>
+                    );
+                  }}
+                />
+              </View>
+            ) : null}
 
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.myItems')}</Text>
@@ -281,6 +315,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  expiringSoonList: {
+    gap: 10,
+    marginTop: 10,
+  },
+  expiringSoonCard: {
+    width: 120,
+    padding: 12,
+    gap: 8,
+  },
+  expiringSoonName: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  expiringSoonDays: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   categoryFilter: {
     flexDirection: 'row',
