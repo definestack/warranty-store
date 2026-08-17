@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 
+import { deleteSchedulesForItem, getSchedulesForItem } from '../db/notificationSchedulesRepository';
 import { deleteItem as deleteItemRow, getAllItems, getItemById } from '../db/warrantyRepository';
 import { deleteInvoiceFile } from '../services/fileService';
+import { cancelScheduledReminders } from '../services/notificationService';
 import type { WarrantyItem } from '../types/warranty';
 
 interface ItemsState {
@@ -42,6 +44,14 @@ export const useItemsStore = create<ItemsState>((set, get) => ({
   deleteItem: async (id: string) => {
     const state = get();
     const item = state.items.find((i) => i.id === id) ?? (state.selectedItem?.id === id ? state.selectedItem : null);
+
+    try {
+      const schedules = await getSchedulesForItem(id);
+      await cancelScheduledReminders(schedules);
+      await deleteSchedulesForItem(id);
+    } catch (err) {
+      console.error('Failed to cancel expiry reminders for deleted item', err);
+    }
 
     await deleteItemRow(id);
 
