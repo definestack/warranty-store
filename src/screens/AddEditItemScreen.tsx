@@ -29,6 +29,7 @@ import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useTranslation } from '../i18n/LocaleContext';
 import { deleteInvoiceFile } from '../services/fileService';
 import { MAX_INVOICE_PAGES, pickInvoiceFromCamera, pickInvoiceFromGallery } from '../services/imageService';
+import { requestNotificationPermissionIfNeeded } from '../services/notificationService';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -155,6 +156,19 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       ]
     );
   };
+
+  const showNotificationPermissionRationale = (): Promise<boolean> =>
+    new Promise((resolve) => {
+      Alert.alert(
+        t('addEditItem.notificationPermissionTitle'),
+        t('addEditItem.notificationPermissionMessage'),
+        [
+          { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+          { text: t('addEditItem.notificationPermissionAllow'), onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) }
+      );
+    });
 
   const handlePickInvoiceSource = async (source: 'camera' | 'gallery') => {
     setInvoiceSourceModalVisible(false);
@@ -304,6 +318,12 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         // won't always land back on a focused Home screen.
         await useItemsStore.getState().loadItems();
         useToastStore.getState().show(t('addEditItem.itemAdded'));
+
+        try {
+          await requestNotificationPermissionIfNeeded(showNotificationPermissionRationale);
+        } catch (err) {
+          console.error('Failed to request notification permission', err);
+        }
       }
       navigation.goBack();
     } catch (err) {
