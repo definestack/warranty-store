@@ -1,5 +1,9 @@
 import { getDatabase, initDatabase } from './database';
-import { getSchedulesForItem, saveSchedulesForItem } from './notificationSchedulesRepository';
+import {
+  deleteSchedulesForItem,
+  getSchedulesForItem,
+  saveSchedulesForItem,
+} from './notificationSchedulesRepository';
 import { createItem } from './warrantyRepository';
 
 beforeAll(async () => {
@@ -58,5 +62,41 @@ describe('getSchedulesForItem', () => {
     const schedules = await getSchedulesForItem(itemA.id);
     expect(schedules).toHaveLength(1);
     expect(schedules[0].notificationId).toBe('notif-a');
+  });
+});
+
+describe('deleteSchedulesForItem', () => {
+  it('removes all schedules for the item', async () => {
+    const item = await makeItem();
+    await saveSchedulesForItem(item.id, [
+      { reminderKind: 'thirtyDay', notificationId: 'notif-30', triggerAt: '2026-12-16T09:00:00.000Z' },
+      { reminderKind: 'sevenDay', notificationId: 'notif-7', triggerAt: '2027-01-08T09:00:00.000Z' },
+    ]);
+
+    await deleteSchedulesForItem(item.id);
+
+    expect(await getSchedulesForItem(item.id)).toEqual([]);
+  });
+
+  it('does not affect schedules belonging to other items', async () => {
+    const itemA = await makeItem('A');
+    const itemB = await makeItem('B');
+    await saveSchedulesForItem(itemA.id, [
+      { reminderKind: 'onExpiry', notificationId: 'notif-a', triggerAt: '2027-01-15T09:00:00.000Z' },
+    ]);
+    await saveSchedulesForItem(itemB.id, [
+      { reminderKind: 'onExpiry', notificationId: 'notif-b', triggerAt: '2027-01-15T09:00:00.000Z' },
+    ]);
+
+    await deleteSchedulesForItem(itemA.id);
+
+    expect(await getSchedulesForItem(itemA.id)).toEqual([]);
+    expect(await getSchedulesForItem(itemB.id)).toHaveLength(1);
+  });
+
+  it('does nothing when the item has no schedules', async () => {
+    const item = await makeItem();
+
+    await expect(deleteSchedulesForItem(item.id)).resolves.toBeUndefined();
   });
 });

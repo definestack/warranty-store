@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 
 import type { TranslateFn } from '../i18n/i18n';
-import type { ReminderKind } from '../types/notification';
+import type { NotificationSchedule, ReminderKind } from '../types/notification';
 import type { WarrantyItem } from '../types/warranty';
 import { fromIsoDate } from '../utils/date';
 
@@ -102,6 +102,25 @@ export async function scheduleExpiryReminders(
   }
 
   return scheduled;
+}
+
+/** True when a warranty edit changed the recalculated expiry date, meaning reminders need rescheduling. */
+export function hasExpiryDateChanged(previous: WarrantyItem, updated: WarrantyItem): boolean {
+  return previous.expiryDate !== updated.expiryDate;
+}
+
+/**
+ * Cancels each already-scheduled local notification. Per-reminder failures are logged and
+ * skipped rather than thrown, matching scheduleExpiryReminders's fault tolerance.
+ */
+export async function cancelScheduledReminders(schedules: NotificationSchedule[]): Promise<void> {
+  for (const schedule of schedules) {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(schedule.notificationId);
+    } catch (err) {
+      console.error(`Failed to cancel ${schedule.reminderKind} reminder for item ${schedule.itemId}`, err);
+    }
+  }
 }
 
 /** Registers a listener that navigates to the tapped notification's item detail screen. */
