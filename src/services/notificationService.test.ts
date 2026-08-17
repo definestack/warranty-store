@@ -1,14 +1,29 @@
 import * as Notifications from 'expo-notifications';
 
 import type { TranslateFn } from '../i18n/i18n';
+import type { NotificationSchedule } from '../types/notification';
 import type { WarrantyItem } from '../types/warranty';
 import {
+  cancelScheduledReminders,
   computeReminderPlans,
   getNotificationPermissionStatus,
+  hasExpiryDateChanged,
   requestNotificationPermission,
   requestNotificationPermissionIfNeeded,
   scheduleExpiryReminders,
 } from './notificationService';
+
+function makeSchedule(overrides: Partial<NotificationSchedule> = {}): NotificationSchedule {
+  return {
+    id: 'schedule-1',
+    itemId: 'item-1',
+    reminderKind: 'thirtyDay',
+    notificationId: 'notif-30',
+    triggerAt: '2026-12-16T09:00:00.000Z',
+    createdAt: '2026-01-15T00:00:00.000Z',
+    ...overrides,
+  };
+}
 
 const t: TranslateFn = (scope, options) =>
   options ? `${scope}:${JSON.stringify(options)}` : scope;
@@ -208,5 +223,59 @@ describe('scheduleExpiryReminders', () => {
     ]);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe('cancelScheduledReminders', () => {
+  it('cancels each scheduled notification', async () => {
+    const schedules = [
+      makeSchedule({ notificationId: 'notif-30' }),
+      makeSchedule({ notificationId: 'notif-7', reminderKind: 'sevenDay' }),
+    ];
+
+    await cancelScheduledReminders(schedules);
+
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledTimes(2);
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notif-30');
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notif-7');
+  });
+
+  it('does nothing for an empty list', async () => {
+    await cancelScheduledReminders([]);
+
+    expect(Notifications.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  it('logs and continues when cancelling a reminder fails', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    (Notifications.cancelScheduledNotificationAsync as jest.Mock)
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(undefined);
+    const schedules = [
+      makeSchedule({ notificationId: 'notif-30' }),
+      makeSchedule({ notificationId: 'notif-7', reminderKind: 'sevenDay' }),
+    ];
+
+    await cancelScheduledReminders(schedules);
+
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledTimes(2);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+});
+
+describe('hasExpiryDateChanged', () => {
+  it('returns false when the expiry date is unchanged', () => {
+    const previous = makeItem({ expiryDate: '2027-01-15' });
+    const updated = makeItem({ expiryDate: '2027-01-15', notes: 'new notes' });
+
+    expect(hasExpiryDateChanged(previous, updated)).toBe(false);
+  });
+
+  it('returns true when the expiry date changed', () => {
+    const previous = makeItem({ expiryDate: '2027-01-15' });
+    const updated = makeItem({ expiryDate: '2027-06-15' });
+
+    expect(hasExpiryDateChanged(previous, updated)).toBe(true);
   });
 });

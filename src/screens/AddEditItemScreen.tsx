@@ -26,12 +26,18 @@ import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
 import type { InvoiceImageDraft } from '../db/invoiceImagesRepository';
 import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
-import { saveSchedulesForItem } from '../db/notificationSchedulesRepository';
+import {
+  deleteSchedulesForItem,
+  getSchedulesForItem,
+  saveSchedulesForItem,
+} from '../db/notificationSchedulesRepository';
 import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useTranslation } from '../i18n/LocaleContext';
 import { deleteInvoiceFile } from '../services/fileService';
 import { MAX_INVOICE_PAGES, pickInvoiceFromCamera, pickInvoiceFromGallery } from '../services/imageService';
 import {
+  cancelScheduledReminders,
+  hasExpiryDateChanged,
   requestNotificationPermissionIfNeeded,
   scheduleExpiryReminders,
 } from '../services/notificationService';
@@ -278,8 +284,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     try {
       let itemId: string;
       let createdItem: WarrantyItem | null = null;
+      let updatedItem: WarrantyItem | null = null;
       if (isEditing && existing) {
-        await updateItem(existing.id, {
+        updatedItem = await updateItem(existing.id, {
           name: trimmedName,
           purchaseDate: toIsoDate(purchaseDate),
           warrantyMonths: months,
@@ -318,6 +325,34 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         await useItemsStore.getState().loadItems();
         await useItemsStore.getState().loadItemById(itemId);
         useToastStore.getState().show(t('addEditItem.itemUpdated'));
+
+        if (existing && updatedItem && hasExpiryDateChanged(existing, updatedItem)) {
+          try {
+            const existingSchedules = await getSchedulesForItem(existing.id);
+            await cancelScheduledReminders(existingSchedules);
+            await deleteSchedulesForItem(existing.id);
+          } catch (err) {
+            console.error('Failed to cancel existing expiry reminders', err);
+          }
+
+          let permissionStatus: PermissionStatus | null = null;
+          try {
+            permissionStatus = await requestNotificationPermissionIfNeeded(showNotificationPermissionRationale);
+          } catch (err) {
+            console.error('Failed to request notification permission', err);
+          }
+
+          if (permissionStatus === 'granted') {
+            try {
+              const scheduled = await scheduleExpiryReminders(updatedItem, t);
+              if (scheduled.length > 0) {
+                await saveSchedulesForItem(updatedItem.id, scheduled);
+              }
+            } catch (err) {
+              console.error('Failed to schedule expiry reminders', err);
+            }
+          }
+        }
       } else {
         // Refresh Home's store directly here rather than relying solely on its
         // focus listener — the Add FAB is reachable from any tab, so goBack()

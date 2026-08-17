@@ -63,3 +63,8 @@ export async function getSchedulesForItem(itemId: string): Promise<NotificationS
   );
   return rows.map(mapRowToSchedule);
 }
+
+export async function deleteSchedulesForItem(itemId: string): Promise<void> {
+  const db = getDatabase();
+  await db.runAsync('DELETE FROM notification_schedules WHERE item_id = ?', itemId);
+}
