@@ -86,6 +86,9 @@ const es: Messages = {
     galleryPermissionMessage:
       'Warranty Store necesita acceso a tu galería de fotos para adjuntar una foto de tu factura. Puedes habilitarlo en Ajustes.',
     openSettings: 'Abrir Ajustes',
+    notificationPermissionTitle: 'Mantente al tanto de tus garantías',
+    notificationPermissionMessage: 'Te avisaremos antes de que venzan las garantías. ¿Permitir notificaciones?',
+    notificationPermissionAllow: 'Permitir notificaciones',
     invoiceSaveFailed: 'No se pudo guardar la foto de la factura. Inténtalo de nuevo.',
     itemUpdated: 'Artículo actualizado',
     itemAdded: 'Artículo añadido',

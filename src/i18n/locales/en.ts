@@ -84,6 +84,9 @@ const en = {
     galleryPermissionMessage:
       'Warranty Store needs photo library access to attach a photo of your invoice. You can enable it in Settings.',
     openSettings: 'Open Settings',
+    notificationPermissionTitle: 'Stay on top of your warranties',
+    notificationPermissionMessage: "We'll remind you before warranties expire. Allow notifications?",
+    notificationPermissionAllow: 'Allow Notifications',
     invoiceSaveFailed: 'Could not save invoice photo. Please try again.',
     itemUpdated: 'Item updated',
     itemAdded: 'Item added',

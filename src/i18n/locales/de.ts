@@ -86,6 +86,10 @@ const de: Messages = {
     galleryPermissionMessage:
       'Warranty Store benötigt Zugriff auf deine Fotomediathek, um ein Foto deiner Rechnung anzuhängen. Du kannst dies in den Einstellungen aktivieren.',
     openSettings: 'Einstellungen öffnen',
+    notificationPermissionTitle: 'Behalte deine Garantien im Blick',
+    notificationPermissionMessage:
+      'Wir erinnern dich, bevor Garantien ablaufen. Benachrichtigungen erlauben?',
+    notificationPermissionAllow: 'Benachrichtigungen erlauben',
     invoiceSaveFailed: 'Rechnungsfoto konnte nicht gespeichert werden. Bitte erneut versuchen.',
     itemUpdated: 'Artikel aktualisiert',
     itemAdded: 'Artikel hinzugefügt',

@@ -86,6 +86,10 @@ const fr: Messages = {
     galleryPermissionMessage:
       "Warranty Store a besoin d'accéder à votre photothèque pour joindre une photo de votre facture. Vous pouvez l'activer dans les Paramètres.",
     openSettings: 'Ouvrir les paramètres',
+    notificationPermissionTitle: 'Restez informé de vos garanties',
+    notificationPermissionMessage:
+      'Nous vous rappellerons avant l\'expiration de vos garanties. Autoriser les notifications ?',
+    notificationPermissionAllow: 'Autoriser les notifications',
     invoiceSaveFailed: "Impossible d'enregistrer la photo de la facture. Veuillez réessayer.",
     itemUpdated: 'Article mis à jour',
     itemAdded: 'Article ajouté',
