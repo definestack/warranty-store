@@ -53,6 +53,7 @@ const es: Messages = {
     noSearchResults: 'Ningún artículo coincide con tu búsqueda.',
     expiredOn: 'Venció el %{date}',
     expiresOn: 'Vence el %{date}',
+    expiringSoon: 'Por vencer',
   },
   itemDetail: {
     title: 'Detalle del artículo',

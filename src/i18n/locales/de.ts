@@ -53,6 +53,7 @@ const de: Messages = {
     noSearchResults: 'Keine Artikel entsprechen deiner Suche.',
     expiredOn: 'Abgelaufen am %{date}',
     expiresOn: 'Läuft ab am %{date}',
+    expiringSoon: 'Läuft bald ab',
   },
   itemDetail: {
     title: 'Artikeldetails',

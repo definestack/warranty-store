@@ -53,6 +53,7 @@ const fr: Messages = {
     noSearchResults: 'Aucun article ne correspond à votre recherche.',
     expiredOn: 'Expiré le %{date}',
     expiresOn: 'Expire le %{date}',
+    expiringSoon: 'Expire bientôt',
   },
   itemDetail: {
     title: "Détail de l'article",

@@ -51,6 +51,7 @@ const en = {
     noSearchResults: 'No items match your search.',
     expiredOn: 'Expired on %{date}',
     expiresOn: 'Expires %{date}',
+    expiringSoon: 'Expiring Soon',
   },
   itemDetail: {
     title: 'Item Detail',
