@@ -4,7 +4,9 @@ import {
   createItem,
   deleteItem,
   getAllItems,
+  getExistingItemIds,
   getItemById,
+  insertImportedItems,
   updateItem,
 } from './warrantyRepository';
 import type { NewWarrantyItem } from '../types/warranty';
@@ -170,5 +172,89 @@ describe('deleteItem', () => {
       created.id
     );
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe('getExistingItemIds', () => {
+  it('returns only the ids already stored', async () => {
+    const created = await createItem(baseItem);
+
+    const existing = await getExistingItemIds([created.id, 'not-in-db']);
+
+    expect(existing).toEqual(new Set([created.id]));
+  });
+
+  it('returns an empty set for an empty id list', async () => {
+    await createItem(baseItem);
+
+    expect(await getExistingItemIds([])).toEqual(new Set());
+  });
+});
+
+describe('insertImportedItems', () => {
+  const imported = {
+    id: 'imported-1',
+    name: 'Imported Fridge',
+    purchaseDate: '2026-02-01',
+    warrantyMonths: 24,
+    expiryDate: '2028-02-01',
+    category: 'appliances',
+    brand: 'LG',
+    price: 899,
+    store: 'Reliance',
+    notes: 'From backup',
+    invoiceImages: [
+      {
+        id: 'img-9',
+        itemId: 'imported-1',
+        uri: 'file:///mock-documents/invoices/invoice-img-9.jpg',
+        sortOrder: 0,
+        createdAt: '2026-02-01T00:00:00.000Z',
+      },
+    ],
+    createdAt: '2026-02-01T00:00:00.000Z',
+    updatedAt: '2026-02-02T00:00:00.000Z',
+  };
+
+  it('inserts items verbatim, preserving ids, expiry dates and timestamps', async () => {
+    await insertImportedItems([imported]);
+
+    const stored = await getItemById('imported-1');
+    expect(stored).toMatchObject({
+      id: 'imported-1',
+      name: 'Imported Fridge',
+      expiryDate: '2028-02-01',
+      createdAt: '2026-02-01T00:00:00.000Z',
+      updatedAt: '2026-02-02T00:00:00.000Z',
+    });
+  });
+
+  it('inserts the accompanying invoice image rows', async () => {
+    await insertImportedItems([imported]);
+
+    const stored = await getItemById('imported-1');
+    expect(stored?.invoiceImages).toEqual([
+      {
+        id: 'img-9',
+        itemId: 'imported-1',
+        uri: 'file:///mock-documents/invoices/invoice-img-9.jpg',
+        sortOrder: 0,
+        createdAt: '2026-02-01T00:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('leaves existing items untouched', async () => {
+    const existing = await createItem(baseItem);
+
+    await insertImportedItems([imported]);
+
+    expect(await getItemById(existing.id)).not.toBeNull();
+    expect(await getAllItems()).toHaveLength(2);
+  });
+
+  it('does nothing for an empty list', async () => {
+    await expect(insertImportedItems([])).resolves.toBeUndefined();
+    expect(await getAllItems()).toHaveLength(0);
   });
 });

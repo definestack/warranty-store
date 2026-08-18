@@ -1,5 +1,10 @@
 import * as legacyFileSystem from 'expo-file-system/legacy';
-import { __resetMockFileSystem, __setFileExists, getInfoAsync } from 'expo-file-system/legacy';
+import {
+  __resetMockFileSystem,
+  __setFileExists,
+  getInfoAsync,
+  readAsStringAsync,
+} from 'expo-file-system/legacy';
 import {
   __resetImageManipulatorMock,
   __setManipulateShouldFail,
@@ -7,7 +12,7 @@ import {
   ImageManipulator,
 } from 'expo-image-manipulator';
 
-import { deleteInvoiceFile, saveInvoiceImage } from './fileService';
+import { deleteInvoiceFile, saveInvoiceImage, writeInvoiceImageFile } from './fileService';
 
 beforeEach(() => {
   __resetMockFileSystem();
@@ -118,5 +123,29 @@ describe('saveInvoiceImage', () => {
     await saveInvoiceImage('file:///camera-tmp/large.jpg');
 
     expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///camera-tmp/large.jpg');
+  });
+});
+
+describe('writeInvoiceImageFile', () => {
+  it('writes the decoded image into app-private invoice storage', async () => {
+    const base64 = Buffer.from('restored-image-bytes').toString('base64');
+
+    const uri = await writeInvoiceImageFile('invoice-img-1.jpg', base64);
+
+    expect(uri).toBe('file:///mock-documents/invoices/invoice-img-1.jpg');
+    expect((await getInfoAsync(uri)).exists).toBe(true);
+    expect(await readAsStringAsync(uri, { encoding: 'base64' })).toBe(base64);
+  });
+
+  it('creates the invoices directory when it does not exist yet', async () => {
+    const makeDirSpy = jest.spyOn(legacyFileSystem, 'makeDirectoryAsync');
+
+    await writeInvoiceImageFile('invoice-img-2.jpg', 'AAAA');
+
+    expect(makeDirSpy).toHaveBeenCalledWith('file:///mock-documents/invoices/', {
+      intermediates: true,
+    });
+
+    makeDirSpy.mockRestore();
   });
 });

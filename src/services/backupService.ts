@@ -13,8 +13,8 @@ import type { InvoiceImage, WarrantyItem } from '../types/warranty';
 import { nowIso } from '../utils/date';
 
 const BACKUP_DIR = `${cacheDirectory}backups/`;
-const DATA_FILE_NAME = 'data.json';
-const BACKUP_FORMAT_VERSION = 1;
+export const BACKUP_DATA_FILE_NAME = 'data.json';
+export const BACKUP_FORMAT_VERSION = 1;
 
 export interface BackupPayload {
   formatVersion: number;
@@ -62,7 +62,7 @@ export async function createBackupArchive(): Promise<BackupArchiveResult> {
   const payload = buildBackupPayload(items, exportedAt);
 
   const zip = new JSZip();
-  zip.file(DATA_FILE_NAME, JSON.stringify(payload, null, 2));
+  zip.file(BACKUP_DATA_FILE_NAME, JSON.stringify(payload, null, 2));
 
   for (const item of items) {
     for (const image of item.invoiceImages) {

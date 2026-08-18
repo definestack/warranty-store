@@ -128,6 +128,63 @@ export async function updateItem(
   return { ...merged, expiryDate, updatedAt };
 }
 
+/** Which of the given item ids are already stored — used to merge a backup without duplicating items. */
+export async function getExistingItemIds(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+
+  const db = getDatabase();
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT id FROM warranty_items WHERE id IN (${placeholders})`,
+    ...ids
+  );
+  return new Set(rows.map((row) => row.id));
+}
+
+/**
+ * Inserts restored items exactly as they were exported — ids, expiry dates and
+ * timestamps are preserved rather than regenerated, so a restored library matches
+ * the backup. Callers must filter out ids that already exist first
+ * (see `getExistingItemIds`); existing rows are never modified or removed.
+ */
+export async function insertImportedItems(items: WarrantyItem[]): Promise<void> {
+  if (items.length === 0) return;
+
+  const db = getDatabase();
+  await db.withTransactionAsync(async () => {
+    for (const item of items) {
+      await db.runAsync(
+        `INSERT INTO warranty_items
+          (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, store, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        item.id,
+        item.name,
+        item.purchaseDate,
+        item.warrantyMonths,
+        item.expiryDate,
+        item.category ?? null,
+        item.brand ?? null,
+        item.price ?? null,
+        item.store ?? null,
+        item.notes ?? null,
+        item.createdAt,
+        item.updatedAt
+      );
+
+      for (const image of item.invoiceImages) {
+        await db.runAsync(
+          'INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
+          image.id,
+          item.id,
+          image.uri,
+          image.sortOrder,
+          image.createdAt
+        );
+      }
+    }
+  });
+}
+
 export async function deleteItem(id: string): Promise<void> {
   const db = getDatabase();
   await db.withTransactionAsync(async () => {

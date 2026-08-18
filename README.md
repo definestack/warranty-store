@@ -107,7 +107,9 @@ No backend service is required for notifications.
 
 ## Backup Strategy
 
-Phase 1 includes manual local export/import. Phase 2 will add encrypted backup to the user’s Google Drive app folder.
+Phase 1 includes manual local export/import. Export bundles every item and its invoice images into a single self-contained zip that can be saved or shared anywhere. Import reads that zip back: the file is fully validated before anything is written, the user confirms the restore, and items are **merged** into the existing library — items already present are kept untouched, so nothing can be overwritten or lost. Reminders are rescheduled for restored items that have not yet expired.
+
+Phase 2 will add encrypted backup to the user’s Google Drive app folder.
 
 ---
 
@@ -128,7 +130,7 @@ Phase 1 includes manual local export/import. Phase 2 will add encrypted backup t
   * [ ] Invoice image attachment
   * [ ] Expiry reminders
   * [ ] Search and filter
-  * [ ] Local backup/restore
+  * [x] Local backup/restore
 * [ ] Phase 2 Cloud Backup
 
   * [ ] Google Sign-In

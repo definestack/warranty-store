@@ -5,6 +5,7 @@ import {
   documentDirectory,
   getInfoAsync,
   makeDirectoryAsync,
+  writeAsStringAsync,
 } from 'expo-file-system/legacy';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
@@ -60,6 +61,18 @@ export async function saveInvoiceImage(sourceUri: string): Promise<string> {
   }
 
   await copyAsync({ from: uriToCopy, to: destinationUri });
+  return destinationUri;
+}
+
+/**
+ * Writes an already-encoded invoice image (e.g. one unpacked from a backup archive)
+ * into app-private storage under the given file name, and returns its local URI.
+ * Restored images are stored as-is — they were compressed before being exported.
+ */
+export async function writeInvoiceImageFile(fileName: string, base64: string): Promise<string> {
+  await ensureInvoicesDirExists();
+  const destinationUri = `${INVOICES_DIR}${fileName}`;
+  await writeAsStringAsync(destinationUri, base64, { encoding: 'base64' });
   return destinationUri;
 }
 
