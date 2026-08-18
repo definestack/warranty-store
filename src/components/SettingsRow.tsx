@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useAppTheme } from '../theme/ThemeContext';
@@ -8,6 +9,7 @@ interface SettingsRowProps {
   label: string;
   subtitle?: string;
   trailingText?: string;
+  trailing?: ReactNode;
   chevron?: 'down' | 'forward' | 'none';
   onPress?: () => void;
   toggleValue?: boolean;
@@ -19,6 +21,7 @@ export default function SettingsRow({
   label,
   subtitle,
   trailingText,
+  trailing,
   chevron = 'none',
   onPress,
   toggleValue,
@@ -36,6 +39,7 @@ export default function SettingsRow({
         ) : null}
       </View>
       <View style={styles.trailing}>
+        {trailing}
         {trailingText ? (
           <Text style={[styles.trailingText, { color: theme.subtleText }]}>{trailingText}</Text>
         ) : null}

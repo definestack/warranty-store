@@ -1,6 +1,6 @@
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
@@ -9,10 +9,14 @@ import SelectModal from '../components/SelectModal';
 import SettingsRow from '../components/SettingsRow';
 import { useLanguagePreference, useTranslation } from '../i18n/LocaleContext';
 import { LANGUAGE_ENDONYMS, SUPPORTED_LOCALES } from '../i18n/i18n';
+import { getLastBackupTime, setLastBackupTime as persistLastBackupTime } from '../services/backupPreferenceService';
+import { createBackupArchive, shareBackupArchive } from '../services/backupService';
 import { useNotificationsStore } from '../store/notificationsStore';
+import { useToastStore } from '../store/toastStore';
 import { useAppTheme, useThemePreference } from '../theme/ThemeContext';
 import type { ThemePreference } from '../theme/ThemeContext';
 import type { MainTabParamList } from '../types/navigation';
+import { formatDate, nowIso } from '../utils/date';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Settings'>;
 
@@ -21,13 +25,42 @@ const APP_VERSION = '1.0.0';
 export default function SettingsScreen(_props: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { preference: themePreference, setPreference: setThemePreference } = useThemePreference();
   const { preference: languagePreference, setPreference: setLanguagePreference } = useLanguagePreference();
   const notificationsEnabled = useNotificationsStore((state) => state.enabled);
   const setNotificationsEnabled = useNotificationsStore((state) => state.setEnabled);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
+  const [exportingBackup, setExportingBackup] = useState(false);
+
+  useEffect(() => {
+    getLastBackupTime().then(setLastBackupTime);
+  }, []);
+
+  const handleExportBackup = useCallback(async () => {
+    if (exportingBackup) return;
+    setExportingBackup(true);
+    try {
+      const result = await createBackupArchive();
+      const timestamp = nowIso();
+      await persistLastBackupTime(timestamp);
+      setLastBackupTime(timestamp);
+      useToastStore.getState().show(t('settings.exportBackupSuccess'));
+      setExportingBackup(false);
+
+      // Android's share intent resolves the same way on cancel or completion, so it
+      // can't gate the success feedback above — fire it as a best-effort follow-up.
+      shareBackupArchive(result.uri).catch((err) => {
+        if (__DEV__) console.warn('Failed to open share sheet for backup', err);
+      });
+    } catch (err) {
+      console.error('Failed to export backup', err);
+      useToastStore.getState().show(t('settings.exportBackupFailed'));
+      setExportingBackup(false);
+    }
+  }, [exportingBackup, t]);
 
   const themeOptions: { value: ThemePreference; label: string }[] = [
     { value: 'system', label: t('common.systemDefault') },
@@ -70,7 +103,18 @@ export default function SettingsScreen(_props: Props) {
         <Card style={styles.card}>
           <SettingsRow icon="cloud-upload-outline" label={t('settings.backupRestore')} chevron="forward" onPress={() => {}} />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <SettingsRow icon="download-outline" label={t('settings.exportData')} chevron="forward" onPress={() => {}} />
+          <SettingsRow
+            icon="download-outline"
+            label={t('settings.exportData')}
+            subtitle={
+              lastBackupTime
+                ? t('settings.exportBackupLastExported', { date: formatDate(new Date(lastBackupTime), locale) })
+                : t('settings.exportBackupNeverExported')
+            }
+            trailing={exportingBackup ? <ActivityIndicator color={theme.subtleText} /> : undefined}
+            chevron={exportingBackup ? 'none' : 'forward'}
+            onPress={handleExportBackup}
+          />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsRow
             icon="notifications-outline"
