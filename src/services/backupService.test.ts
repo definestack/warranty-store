@@ -7,8 +7,7 @@ import { getDatabase, initDatabase } from '../db/database';
 import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
 import { createItem } from '../db/warrantyRepository';
 import type { NewWarrantyItem, WarrantyItem } from '../types/warranty';
-import { getLastBackupTime } from './backupPreferenceService';
-import { buildBackupPayload, createBackupArchive, exportBackup } from './backupService';
+import { buildBackupPayload, createBackupArchive, shareBackupArchive } from './backupService';
 
 const baseItem: NewWarrantyItem = {
   name: 'Washing Machine',
@@ -99,21 +98,17 @@ describe('createBackupArchive', () => {
   });
 });
 
-describe('exportBackup', () => {
-  it('records the last backup time and opens the share sheet for the archive', async () => {
-    await createItem(baseItem);
-    expect(await getLastBackupTime()).toBeNull();
+describe('shareBackupArchive', () => {
+  it('opens the share sheet for the given archive uri', async () => {
+    await shareBackupArchive('file:///mock-cache/backups/warranty-backup-test.zip');
 
-    const result = await exportBackup();
-
-    expect(await getLastBackupTime()).toEqual(expect.any(String));
-    expect(__getLastSharedUri()).toBe(result.uri);
+    expect(__getLastSharedUri()).toBe('file:///mock-cache/backups/warranty-backup-test.zip');
   });
 
   it('does not attempt to share when sharing is unavailable on the device', async () => {
     __setAvailable(false);
 
-    await exportBackup();
+    await shareBackupArchive('file:///mock-cache/backups/warranty-backup-test.zip');
 
     expect(__getLastSharedUri()).toBeNull();
   });

@@ -11,7 +11,6 @@ import JSZip from 'jszip';
 import { getAllItems } from '../db/warrantyRepository';
 import type { InvoiceImage, WarrantyItem } from '../types/warranty';
 import { nowIso } from '../utils/date';
-import { setLastBackupTime } from './backupPreferenceService';
 
 const BACKUP_DIR = `${cacheDirectory}backups/`;
 const DATA_FILE_NAME = 'data.json';
@@ -81,14 +80,17 @@ export async function createBackupArchive(): Promise<BackupArchiveResult> {
   return { uri: fileUri, itemCount: items.length };
 }
 
-/** Creates a backup archive, records the backup time, and presents the OS share/save sheet. */
-export async function exportBackup(): Promise<BackupArchiveResult> {
-  const result = await createBackupArchive();
-  await setLastBackupTime(nowIso());
-
+/**
+ * Presents the OS share/save sheet for a previously created backup archive.
+ *
+ * Android's share intent resolves the same way whether the user picks a target
+ * or backs out of the chooser, so this promise settling is not proof the file
+ * was actually saved anywhere — callers should treat the backup as complete
+ * once `createBackupArchive` succeeds, and use this only as a best-effort
+ * follow-up rather than a gate on success.
+ */
+export async function shareBackupArchive(uri: string): Promise<void> {
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(result.uri, { mimeType: 'application/zip', dialogTitle: 'Warranty Store Backup' });
+    await Sharing.shareAsync(uri, { mimeType: 'application/zip', dialogTitle: 'Warranty Store Backup' });
   }
-
-  return result;
 }

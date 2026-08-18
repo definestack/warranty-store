@@ -9,14 +9,14 @@ import SelectModal from '../components/SelectModal';
 import SettingsRow from '../components/SettingsRow';
 import { useLanguagePreference, useTranslation } from '../i18n/LocaleContext';
 import { LANGUAGE_ENDONYMS, SUPPORTED_LOCALES } from '../i18n/i18n';
-import { getLastBackupTime } from '../services/backupPreferenceService';
-import { exportBackup } from '../services/backupService';
+import { getLastBackupTime, setLastBackupTime as persistLastBackupTime } from '../services/backupPreferenceService';
+import { createBackupArchive, shareBackupArchive } from '../services/backupService';
 import { useNotificationsStore } from '../store/notificationsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme, useThemePreference } from '../theme/ThemeContext';
 import type { ThemePreference } from '../theme/ThemeContext';
 import type { MainTabParamList } from '../types/navigation';
-import { formatDate } from '../utils/date';
+import { formatDate, nowIso } from '../utils/date';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Settings'>;
 
@@ -43,13 +43,21 @@ export default function SettingsScreen(_props: Props) {
     if (exportingBackup) return;
     setExportingBackup(true);
     try {
-      await exportBackup();
-      setLastBackupTime(await getLastBackupTime());
+      const result = await createBackupArchive();
+      const timestamp = nowIso();
+      await persistLastBackupTime(timestamp);
+      setLastBackupTime(timestamp);
       useToastStore.getState().show(t('settings.exportBackupSuccess'));
+      setExportingBackup(false);
+
+      // Android's share intent resolves the same way on cancel or completion, so it
+      // can't gate the success feedback above — fire it as a best-effort follow-up.
+      shareBackupArchive(result.uri).catch((err) => {
+        if (__DEV__) console.warn('Failed to open share sheet for backup', err);
+      });
     } catch (err) {
       console.error('Failed to export backup', err);
       useToastStore.getState().show(t('settings.exportBackupFailed'));
-    } finally {
       setExportingBackup(false);
     }
   }, [exportingBackup, t]);
