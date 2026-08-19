@@ -18,7 +18,6 @@ const fr: Messages = {
     reports: 'Rapports',
     settings: 'Paramètres',
     helpFeedback: 'Aide et commentaires',
-    signOut: 'Se déconnecter',
     openMenu: 'Ouvrir le menu',
     goBack: 'Retour',
     addItem: 'Ajouter un article',
@@ -141,7 +140,6 @@ const fr: Messages = {
     themeDark: 'Sombre',
     language: 'Langue',
     general: 'Général',
-    backupRestore: 'Sauvegarde et restauration',
     exportData: 'Exporter les données',
     exportBackupNeverExported: 'Aucune sauvegarde effectuée',
     exportBackupLastExported: 'Dernière sauvegarde : %{date}',
@@ -167,7 +165,6 @@ const fr: Messages = {
     about: 'À propos',
     aboutApp: 'À propos de Warranty Tracker',
     version: 'Version %{version}',
-    signOut: 'Se déconnecter',
   },
   date: {
     expiresToday: "Expire aujourd'hui",

@@ -1,6 +1,6 @@
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
@@ -183,8 +183,6 @@ export default function SettingsScreen(_props: Props) {
 
         <SectionHeader title={t('settings.general')} />
         <Card style={styles.card}>
-          <SettingsRow icon="cloud-upload-outline" label={t('settings.backupRestore')} chevron="forward" onPress={() => {}} />
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsRow
             icon="download-outline"
             label={t('settings.exportData')}
@@ -223,10 +221,6 @@ export default function SettingsScreen(_props: Props) {
             subtitle={t('settings.version', { version: APP_VERSION })}
           />
         </Card>
-
-        <Pressable style={[styles.signOut, { borderColor: theme.danger }]}>
-          <Text style={[styles.signOutText, { color: theme.danger }]}>{t('settings.signOut')}</Text>
-        </Pressable>
       </ScrollView>
 
       <SelectModal
@@ -270,16 +264,5 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     marginLeft: 50,
-  },
-  signOut: {
-    minHeight: 52,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  signOutText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
