@@ -16,7 +16,6 @@ const en = {
     reports: 'Reports',
     settings: 'Settings',
     helpFeedback: 'Help & Feedback',
-    signOut: 'Sign out',
     openMenu: 'Open menu',
     goBack: 'Go back',
     addItem: 'Add item',
@@ -138,7 +137,6 @@ const en = {
     themeDark: 'Dark',
     language: 'Language',
     general: 'General',
-    backupRestore: 'Backup & Restore',
     exportData: 'Export Data',
     exportBackupNeverExported: 'Never backed up',
     exportBackupLastExported: 'Last backup: %{date}',
@@ -164,7 +162,6 @@ const en = {
     about: 'About',
     aboutApp: 'About Warranty Tracker',
     version: 'Version %{version}',
-    signOut: 'Sign Out',
   },
   date: {
     expiresToday: 'Expires today',

@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTranslation } from '../i18n/LocaleContext';
 import { useAppTheme } from '../theme/ThemeContext';
-import type { MainTabParamList, RootStackParamList } from '../types/navigation';
+import type { MainTabParamList } from '../types/navigation';
 
 interface DrawerItemConfig {
   key: string;
@@ -27,7 +26,6 @@ const ITEMS: DrawerItemConfig[] = [
 export default function AppDrawerContent(props: DrawerContentComponentProps) {
   const theme = useAppTheme();
   const { t } = useTranslation();
-  const rootNavigation = props.navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
 
   // props.state is the drawer's own state (just a single "Tabs" route) — the active
   // tab name lives one level deeper, in the nested tab navigator's own state.
@@ -87,15 +85,6 @@ export default function AppDrawerContent(props: DrawerContentComponentProps) {
         <Pressable disabled style={styles.item}>
           <Ionicons name="help-circle-outline" size={22} color={theme.mutedText} />
           <Text style={[styles.itemLabel, { color: theme.mutedText }]}>{t('nav.helpFeedback')}</Text>
-        </Pressable>
-      </View>
-
-      <View style={[styles.divider, { backgroundColor: theme.border }]} />
-
-      <View style={styles.section}>
-        <Pressable style={styles.item} onPress={() => rootNavigation?.goBack()}>
-          <Ionicons name="log-out-outline" size={22} color={theme.danger} />
-          <Text style={[styles.itemLabel, { color: theme.danger }]}>{t('nav.signOut')}</Text>
         </Pressable>
       </View>
     </DrawerContentScrollView>

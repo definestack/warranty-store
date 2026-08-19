@@ -18,7 +18,6 @@ const es: Messages = {
     reports: 'Informes',
     settings: 'Ajustes',
     helpFeedback: 'Ayuda y comentarios',
-    signOut: 'Cerrar sesión',
     openMenu: 'Abrir menú',
     goBack: 'Volver',
     addItem: 'Añadir artículo',
@@ -140,7 +139,6 @@ const es: Messages = {
     themeDark: 'Oscuro',
     language: 'Idioma',
     general: 'General',
-    backupRestore: 'Copia de seguridad y restauración',
     exportData: 'Exportar datos',
     exportBackupNeverExported: 'Nunca se ha hecho una copia de seguridad',
     exportBackupLastExported: 'Última copia: %{date}',
@@ -166,7 +164,6 @@ const es: Messages = {
     about: 'Acerca de',
     aboutApp: 'Acerca de Warranty Tracker',
     version: 'Versión %{version}',
-    signOut: 'Cerrar sesión',
   },
   date: {
     expiresToday: 'Vence hoy',

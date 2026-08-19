@@ -18,7 +18,6 @@ const de: Messages = {
     reports: 'Berichte',
     settings: 'Einstellungen',
     helpFeedback: 'Hilfe & Feedback',
-    signOut: 'Abmelden',
     openMenu: 'Menü öffnen',
     goBack: 'Zurück',
     addItem: 'Artikel hinzufügen',
@@ -141,7 +140,6 @@ const de: Messages = {
     themeDark: 'Dunkel',
     language: 'Sprache',
     general: 'Allgemein',
-    backupRestore: 'Sicherung & Wiederherstellung',
     exportData: 'Daten exportieren',
     exportBackupNeverExported: 'Noch keine Sicherung erstellt',
     exportBackupLastExported: 'Letzte Sicherung: %{date}',
@@ -167,7 +165,6 @@ const de: Messages = {
     about: 'Über',
     aboutApp: 'Über Warranty Tracker',
     version: 'Version %{version}',
-    signOut: 'Abmelden',
   },
   date: {
     expiresToday: 'Läuft heute ab',
