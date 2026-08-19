@@ -5,484 +5,189 @@ description: Create and synchronize GitHub Issues from feature requirements, Ope
 
 # GitHub Ticket Creator
 
-Create well-scoped GitHub Issues from planned development work.
+Turn development requirements into well-scoped GitHub Issues. Issues are the project's
+execution queue; the source requirements remain the authoritative record of intent.
 
-GitHub Issues are the project's execution queue.
+This is not an implementation skill. It plans work — it never writes the code.
 
-The skill converts requirements or implementation tasks into actionable,
-traceable GitHub Issues without implementing the code.
+## Sources
 
-## Goals
+The source may be an OpenSpec change, an OpenSpec `tasks.md`, a feature requirement, an
+implementation plan, or a plain list of tasks.
 
-- Convert planned work into actionable GitHub Issues.
-- Keep each issue independently understandable.
-- Preserve the original requirements and intent.
-- Include clear acceptance criteria.
-- Identify genuine dependencies between issues.
-- Avoid duplicate issues.
-- Maintain traceability to the source requirements.
-- Do not implement code.
-
-## Input Sources
-
-The source may be:
-
-1. An OpenSpec change
-2. An OpenSpec `tasks.md`
-3. A feature requirement
-4. An implementation plan
-5. A user-provided task list
-
-When OpenSpec is available, read the relevant artifacts:
-
-- `proposal.md`
-- specification files
-- `design.md`
-- `tasks.md`
-
-Do not rely on `tasks.md` alone when the specification or design contains
-important implementation context.
+When the source is an OpenSpec change, read `proposal.md`, the spec files, `design.md`,
+and `tasks.md`. Do not work from `tasks.md` alone — the *why* and the acceptance criteria
+usually live in the proposal and specs, and issues written without them lose the intent.
 
 ## Workflow
 
-### 1. Determine the Repository
+### 1. Determine the repository
 
-Identify the GitHub repository from the current project.
+Read it from the current project (`gh repo view`). If it cannot be determined, ask the
+user for `owner/repository`. Never guess.
 
-If the repository cannot be determined with confidence, ask the user for:
+### 2. Understand the work
 
-`owner/repository`
+Identify the logical tasks, their real dependencies, and the acceptance criteria implied
+by the source. Preserve OpenSpec task numbering (`1.1`, `1.2`, `2.1`). Do not invent
+requirements.
 
-Never guess the repository.
+### 3. Check for existing issues
 
-### 2. Understand the Source
+Search before creating anything, using the task identifier, the change name, the task
+title, and relevant keywords. An issue may already exist without any OpenSpec reference.
 
-Before creating issues:
+- If an issue clearly represents the task: reuse it, report it as already existing, and
+  leave it unchanged unless synchronization was explicitly requested.
+- If an issue only partially matches and the scope is unclear: report the ambiguity. Do
+  not assume it is the same task, and do not create a second issue until the user decides.
 
-- Understand the feature or change.
-- Identify logical implementation tasks.
-- Identify acceptance criteria.
-- Identify genuine dependencies.
-- Preserve existing task identifiers where available.
-- Do not invent requirements.
-- Do not invent architectural decisions.
+Doing this properly is what makes the skill safe to run repeatedly — a second run over an
+already-ticketed change should create nothing.
 
-If the source is an OpenSpec change, preserve its task numbering.
+### 4. Decide granularity
 
-### 3. Determine Issue Granularity
+One issue per independently implementable task — work that can be built, reviewed, and
+merged on its own without leaving the repository in a broken state.
 
-Create one issue per independently implementable task.
+Do not split work into artificially tiny issues, and do not bundle a whole feature into
+one vague ticket. A small change may legitimately be a single issue; say so rather than
+manufacturing a split.
 
-Good examples:
+### 5. Write the title
 
-- Create Customer domain entity
-- Add Customer repository
-- Add customer creation API
-- Add customer API validation
-- Add customer API tests
+Concise and action-oriented: `Add customer creation API`, `Create Customer repository`.
 
-Avoid overly broad issues such as "Implement customer management" unless the
-entire feature genuinely represents one independently implementable unit.
+Not `Task 1.3`, not `Implement stuff`. Follow the repository's existing title convention
+if it has one.
 
-Also avoid artificially tiny issues such as "Create Customer.cs file" or
-"Add using statement". A developer should be able to understand the meaningful
-outcome of an issue.
+### 6. Write the body
 
-### 4. Check for Existing Issues
-
-Before creating an issue, search GitHub for an existing issue representing
-the same work.
-
-Use:
-
-- OpenSpec task identifier
-- Feature/change name
-- Task title
-- Relevant keywords
-
-An issue may already exist even if it does not have an OpenSpec reference.
-
-Do not create duplicates.
-
-If an existing issue clearly represents the task:
-
-- Reuse it.
-- Report it as already existing.
-- Do not create another issue.
-
-Do not modify the existing issue unless synchronization was explicitly
-requested.
-
-### 5. Create the Issue Title
-
-Use concise, action-oriented titles.
-
-Preferred:
-
-- Add customer creation API
-- Create Customer repository
-- Add authentication validation
-- Add login endpoint
-
-Avoid:
-
-- Task 1.3
-- Changes required
-- Implement stuff
-- Work on authentication
-
-The title should describe the outcome of the work.
-
-### 6. Create the Issue Body
-
-Use this structure:
-
-## OpenSpec Task
+```markdown
+## Source Task
 
 `<task identifier>`
 
 ## Summary
 
-<short description of what needs to be implemented>
+<what needs to be implemented>
 
 ## Context
 
-<relevant context from the specification or design>
+<why this matters; constraints from the spec or design that affect implementation>
 
 ## Requirements
 
 - <requirement>
-- <requirement>
-- <requirement>
 
 ## Acceptance Criteria
 
-- [ ] <criterion>
-- [ ] <criterion>
-- [ ] <criterion>
+- [ ] <observable outcome>
 
 ## Dependencies
 
-- Depends on #<issue>
-- Depends on #<issue>
+Depends on #<issue>          <!-- or: None -->
 
-If there are no dependencies:
+## Source
 
-None
+Change: <name>
+Task: <identifier>
+Specification: <link>
+```
 
-## Specification
+Include enough for someone to implement without reading the full specification, but do not
+copy the specification into the issue. Link to it instead — the spec stays authoritative
+for feature intent, the issue is the unit of execution.
 
-**OpenSpec Change:** `<change name>`
+**Acceptance criteria** must be observable outcomes: *"API returns 201 when a customer is
+created"*, *"Duplicate emails are rejected"*. Not *"API works"* or *"Code is good"*. Derive
+them from the source requirements; never invent behavior just to make the list longer.
 
-**Task:** `<task identifier>`
+**Labels**: use existing repository labels only. Check what exists (`gh label list`) rather
+than assuming. Prefer `feature`, `enhancement`, `bug`, `refactor`, `testing`,
+`documentation` when present. Omit rather than approximate, and never create a label unless
+the user explicitly asks.
 
-**Specification:** `<direct GitHub link to the relevant specification artifact>`
+**Dependencies**: only when a task genuinely requires another's output. Sequential
+numbering is not dependency — `1.2` following `1.1` proves nothing. If two tasks touch
+different files and each leaves the build green, they are independent; say so.
 
-**Design:** `<direct GitHub link to design.md, when applicable>`
+### 7. Link to the source
 
-**Tasks:** `<direct GitHub link to tasks.md, when applicable>`
-
-For non-OpenSpec work, replace this section with an appropriate direct link
-to the source requirement, design document, or implementation plan.
-
-### Specification Reference Rule
-
-Every GitHub Issue created from an OpenSpec change MUST contain a direct,
-clickable GitHub link to the relevant specification artifact.
-
-When a design artifact materially affects the task, also include a direct
-link to the design artifact.
-
-When the task is represented in `tasks.md`, include a direct link to the
-tasks file as well.
-
-Do not merely provide repository-relative paths when a GitHub URL can be
-constructed.
-
-The specification is the authoritative source for detailed feature intent
-and behavior. The GitHub Issue is the execution unit and should summarize
-the relevant requirements rather than duplicating the entire specification.
-
-### Constructing GitHub Links
-
-Determine the repository's GitHub URL and the branch/ref containing the
-OpenSpec artifacts.
-
-Use links in this form:
+When the source is OpenSpec, always link the specification directly:
 
 `https://github.com/<owner>/<repo>/blob/<ref>/<path>`
 
-Prefer the repository's default branch when the OpenSpec change is already
-committed there.
+Choose `<ref>` in this order:
 
-If the OpenSpec change exists only on the current working branch and the
-branch is available on GitHub, use that branch.
+1. The default branch, if the artifacts are already committed there.
+2. The current working branch, if it is pushed and available on GitHub.
+3. Neither — the artifacts exist only locally. Do not invent a URL. Either create the
+   issues without links and say why, or ask the user whether to push first.
 
-If a valid GitHub URL cannot be determined, report the missing information
-instead of inventing a URL.
+Note in the issue when links point at a working branch, since they break if that branch is
+deleted after merge.
 
-### Important
+### 8. Create the issues
 
-Do not copy the entire OpenSpec specification into every issue.
+One issue per task identified in step 4, skipping any covered by step 3. Apply the title,
+body, and labels above.
 
-The GitHub Issue should contain enough context for implementation while the
-full specification remains the authoritative source for feature intent.
+### 9. Backfill dependencies
 
-Always provide the direct specification link when the source is OpenSpec.
+Issue numbers are unknown until every issue exists, so resolve cross-references in a second
+pass: update each issue's Dependencies section with the real numbers. Update only the
+issues this run created — never the issues they depend on.
 
-### 7. Acceptance Criteria
+### 10. Synchronize the source tasks
 
-Acceptance criteria must describe observable outcomes.
+When the source is an OpenSpec `tasks.md`, annotate each task with its issue:
 
-Good examples:
-
-- [ ] API returns 201 when a customer is successfully created.
-- [ ] Duplicate customer email addresses are rejected.
-- [ ] Invalid email addresses return a validation error.
-- [ ] Automated tests cover success and failure cases.
-
-Avoid vague criteria:
-
-- [ ] API works
-- [ ] Code is good
-- [ ] Add proper validation
-
-Derive acceptance criteria from the source requirements.
-
-Do not introduce new behavior merely to make the criteria more detailed.
-
-### 8. Labels
-
-Use existing repository labels when appropriate.
-
-Prefer labels such as:
-
-- feature
-- enhancement
-- bug
-- refactor
-- testing
-- documentation
-
-Do not assume a label exists.
-
-Do not create new labels unless the user explicitly asks for them.
-
-If no appropriate existing label is available, omit the label.
-
-### 9. Dependencies
-
-Determine dependencies from the actual implementation requirements.
-
-For example:
-
-1.1 Create User entity
-1.2 Create User repository
-1.3 Create authentication service
-
-If the repository requires the entity:
-
-#102 depends on #101
-
-If the authentication service requires the repository:
-
-#103 depends on #102
-
-Do not assume task ordering automatically means dependency.
-
-Only establish a dependency when the later task genuinely requires the earlier
-task.
-
-### 10. Create Issues
-
-Create one GitHub Issue for each task that does not already have a
-corresponding issue.
-
-For each issue:
-
-- Create exactly one issue.
-- Use the approved title format.
-- Include summary and context.
-- Include requirements.
-- Include acceptance criteria.
-- Include known dependencies.
-- Include source traceability.
-- Apply appropriate existing labels.
-
-Do not:
-
-- Implement code.
-- Close issues.
-- Modify unrelated issues.
-- Invent requirements.
-- Invent dependencies.
-
-### 11. Handle Dependencies After Creation
-
-Dependency issue numbers may not be known until all issues have been created.
-
-For example:
-
-Create User entity      -> #101
-Create User repository  -> #102
-Authentication service  -> #103
-
-After creation, update the relevant issue bodies:
-
-## Dependencies
-
-Depends on #101
-
-and:
-
-## Dependencies
-
-Depends on #102
-
-Do not modify dependency issues themselves.
-
-### 12. Synchronize OpenSpec Tasks
-
-If the source is an OpenSpec `tasks.md`, update the corresponding tasks with
-their GitHub Issue numbers.
-
-Before:
-
-- [ ] 1.1 Create User entity
-- [ ] 1.2 Create User repository
-- [ ] 1.3 Create authentication service
-
-After:
-
+```markdown
 - [ ] 1.1 Create User entity
       GitHub: #101
+```
 
-- [ ] 1.2 Create User repository
-      GitHub: #102
+Do **not** check the boxes. An issue means the work is planned, not done.
 
-- [ ] 1.3 Create authentication service
-      GitHub: #103
+Edit `tasks.md` in the working tree and leave it there. Committing is the user's call —
+this skill does not commit or push.
 
-Do NOT mark the tasks as completed.
+### 11. Report
 
-Creating an issue means the work has been planned, not completed.
-
-### 13. Existing Issue Handling
-
-If a corresponding issue already exists:
-
-- Do not create another issue.
-- Report the existing issue.
-- Associate it with the source task if possible.
-- Leave the existing issue unchanged unless synchronization was requested.
-
-If an existing issue appears to partially match the task but its scope is
-unclear, do not assume it is the same task. Report the ambiguity.
-
-### 14. Idempotency
-
-Running this skill multiple times must not create duplicate issues.
-
-For example, if:
-
-1.1 -> #101
-1.2 -> #102
-1.3 -> #103
-
-already exists, running the skill again should result in:
-
-No new issues created.
-
-Existing:
-1.1 -> #101
-1.2 -> #102
-1.3 -> #103
-
-The skill should safely support repeated execution.
-
-### 15. Preview / Dry Run
-
-If the user requests:
-
-- preview
-- dry run
-- plan first
-- show me what will be created
-
-do NOT create or modify GitHub Issues.
-
-Instead show a table containing:
-
-- task
-- proposed issue title
-- dependencies
-- whether a matching issue already exists
-
-Then ask the user whether to proceed.
-
-### 16. Synchronization Mode
-
-If the user explicitly asks to synchronize existing issues with the
-OpenSpec change:
-
-- Compare existing issues with the current OpenSpec tasks.
-- Update issue descriptions where the source requirements have changed.
-- Preserve manually added information unless it conflicts with the current
-  specification.
-- Do not close issues automatically.
-- Report all changes made.
-
-Normal ticket creation must NOT modify existing issues.
-
-### 17. Final Report
-
-After creating or synchronizing issues, provide a concise report.
-
-Example:
-
+```text
 Created:
 - #101 — Create User entity
-- #102 — Create User repository
-- #103 — Add authentication service
 
 Already existed:
 - #104 — Add login endpoint
 
 Dependencies:
-- #102 -> #101
-- #103 -> #102
-- #104 -> #103
+- #102 depends on #101
 
-OpenSpec:
-- tasks.md updated with GitHub issue references.
+Source:
+- tasks.md updated with issue references
+```
 
-If no issues were created:
+If nothing was created, say so plainly and list the existing issue for each task.
 
-No new GitHub issues were created.
+## Modes
 
-All OpenSpec tasks already have corresponding GitHub issues.
+**Preview / dry run** — when the user asks to preview, plan first, do a dry run, or see
+what would be created: create and modify nothing. Show a table of task, proposed title,
+dependencies, and whether a matching issue already exists. Then ask whether to proceed.
 
-## Safety Rules
+**Synchronization** — when the user explicitly asks to sync existing issues with a changed
+source: compare existing issues against the current tasks, update descriptions where the
+requirements have changed, preserve manually added content unless it contradicts the
+source, never close issues, and report every change made. Normal creation must not modify
+existing issues.
 
-Never:
+## Never
 
-- Implement code.
-- Commit code.
-- Push code.
-- Close issues.
+- Implement, commit, or push code.
+- Close issues, or modify issues unrelated to this run.
 - Create duplicate issues.
-- Invent requirements.
-- Invent acceptance criteria that change behavior.
-- Invent dependencies.
-- Create labels without permission.
-- Modify unrelated issues.
-- Mark OpenSpec tasks complete merely because issues were created.
-
-The purpose of this skill is strictly:
-
-Requirements / OpenSpec
-        |
-        v
-GitHub Issues
-
-It is not an implementation skill.
+- Create labels without explicit permission.
+- Invent requirements, acceptance criteria, or dependencies.
+- Mark source tasks complete because an issue exists.
