@@ -1,10 +1,23 @@
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 
 import { migrations, runMigrations } from './migrations';
-import { CREATE_WARRANTY_ITEMS_TABLE } from './schema';
+import { CREATE_SCHEMA_MIGRATIONS_TABLE, CREATE_WARRANTY_ITEMS_TABLE } from './schema';
 
 async function freshDb(): Promise<SQLiteDatabase> {
   return openDatabaseAsync('test.db');
+}
+
+/** Brings a fresh database to the given schema version, as an older install would be. */
+async function migrateToVersion(db: SQLiteDatabase, version: number): Promise<void> {
+  await db.execAsync(CREATE_SCHEMA_MIGRATIONS_TABLE);
+  for (const migration of migrations.filter((candidate) => candidate.version <= version)) {
+    await migration.up(db);
+    await db.runAsync(
+      'INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)',
+      migration.version,
+      '2026-01-01T00:00:00.000Z'
+    );
+  }
 }
 
 describe('runMigrations', () => {
@@ -117,5 +130,59 @@ describe('runMigrations', () => {
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'notification_schedules'"
     );
     expect(table).not.toBeNull();
+  });
+
+  it('adds a nullable photo_uri column to warranty_items', async () => {
+    const db = await freshDb();
+    await runMigrations(db);
+
+    const columns = await db.getAllAsync<{ name: string; notnull: number; dflt_value: string | null }>(
+      'PRAGMA table_info(warranty_items)'
+    );
+    const photoColumn = columns.find((column) => column.name === 'photo_uri');
+
+    expect(photoColumn).toBeDefined();
+    expect(photoColumn?.notnull).toBe(0);
+    expect(photoColumn?.dflt_value).toBeNull();
+  });
+
+  it('keeps rows written before migration 6 intact with a null photo_uri', async () => {
+    const db = await freshDb();
+    await migrateToVersion(db, 5);
+    await db.runAsync(
+      `INSERT INTO warranty_items
+        (id, name, purchase_date, warranty_months, expiry_date, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      'pre-photo-item',
+      'Kettle',
+      '2026-01-15',
+      12,
+      '2027-01-15',
+      '2026-01-15T00:00:00.000Z',
+      '2026-01-15T00:00:00.000Z'
+    );
+
+    await runMigrations(db);
+
+    const row = await db.getFirstAsync<{ name: string; expiry_date: string; photo_uri: string | null }>(
+      'SELECT * FROM warranty_items WHERE id = ?',
+      'pre-photo-item'
+    );
+    expect(row?.name).toBe('Kettle');
+    expect(row?.expiry_date).toBe('2027-01-15');
+    expect(row?.photo_uri).toBeNull();
+  });
+
+  it('applies nothing when re-run on a database already at version 6', async () => {
+    const db = await freshDb();
+    await runMigrations(db);
+
+    await expect(runMigrations(db)).resolves.toBeUndefined();
+
+    const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(warranty_items)');
+    expect(columns.filter((column) => column.name === 'photo_uri')).toHaveLength(1);
+
+    const applied = await db.getAllAsync('SELECT * FROM schema_migrations');
+    expect(applied).toHaveLength(migrations.length);
   });
 });

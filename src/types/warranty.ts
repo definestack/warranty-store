@@ -17,6 +17,7 @@ export interface WarrantyItem {
   price?: number;
   store?: string;
   notes?: string;
+  photoUri?: string;
   invoiceImages: InvoiceImage[];
   createdAt: string;
   updatedAt: string;
