@@ -7,6 +7,7 @@ import * as notificationSchedulesRepository from '../db/notificationSchedulesRep
 import { getSchedulesForItem, saveSchedulesForItem } from '../db/notificationSchedulesRepository';
 import * as warrantyRepository from '../db/warrantyRepository';
 import { createItem, getItemById } from '../db/warrantyRepository';
+import * as fileService from '../services/fileService';
 import { useItemsStore } from './itemsStore';
 
 beforeAll(async () => {
@@ -147,6 +148,57 @@ describe('deleteItem', () => {
 
     expect((await getInfoAsync('file:///invoice-1.jpg')).exists).toBe(false);
     expect((await getInfoAsync('file:///invoice-2.jpg')).exists).toBe(false);
+  });
+
+  it('removes the item photo file', async () => {
+    const created = await createItem({
+      name: 'Blender',
+      purchaseDate: '2026-01-15',
+      warrantyMonths: 12,
+      photoUri: 'file:///photos/photo-1.jpg',
+    });
+    await useItemsStore.getState().loadItems();
+    __setFileExists('file:///photos/photo-1.jpg', true);
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect((await getInfoAsync('file:///photos/photo-1.jpg')).exists).toBe(false);
+  });
+
+  it('does not touch photo storage when the item has no photo', async () => {
+    const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
+    await useItemsStore.getState().loadItems();
+    const deletePhotoSpy = jest.spyOn(fileService, 'deleteItemPhotoFile');
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect(deletePhotoSpy).not.toHaveBeenCalled();
+    expect(await getItemById(created.id)).toBeNull();
+
+    deletePhotoSpy.mockRestore();
+  });
+
+  it('still deletes the item and logs when deleting its photo file fails', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const created = await createItem({
+      name: 'Blender',
+      purchaseDate: '2026-01-15',
+      warrantyMonths: 12,
+      photoUri: 'file:///photos/photo-1.jpg',
+    });
+    await useItemsStore.getState().loadItems();
+    const deletePhotoSpy = jest
+      .spyOn(fileService, 'deleteItemPhotoFile')
+      .mockRejectedValueOnce(new Error('unlink failure'));
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect(await getItemById(created.id)).toBeNull();
+    expect(useItemsStore.getState().items).toHaveLength(0);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    deletePhotoSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   it('propagates the error and leaves state untouched when the DB delete fails', async () => {
