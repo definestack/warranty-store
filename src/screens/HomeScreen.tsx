@@ -168,7 +168,7 @@ export default function HomeScreen({ navigation }: Props) {
                     return (
                       <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>
                         <Card style={styles.expiringSoonCard}>
-                          <ItemIcon category={itemCategory} size={36} />
+                          <ItemIcon category={itemCategory} size={36} photoUri={item.photoUri} />
                           <Text
                             style={[styles.expiringSoonName, { color: theme.text }]}
                             numberOfLines={1}
@@ -201,7 +201,7 @@ export default function HomeScreen({ navigation }: Props) {
           return (
             <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>
               <Card style={styles.itemCard}>
-                <ItemIcon category={itemCategory} />
+                <ItemIcon category={itemCategory} photoUri={item.photoUri} />
                 <View style={styles.itemInfo}>
                   <Text style={[styles.itemName, { color: theme.text }]} numberOfLines={1}>
                     {item.name}

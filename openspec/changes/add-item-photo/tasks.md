@@ -88,46 +88,46 @@
 
 ## 6. Display
 
-- [ ] 6.1 Add an optional `photoUri` prop to `src/components/ItemIcon.tsx` that renders the
+- [x] 6.1 Add an optional `photoUri` prop to `src/components/ItemIcon.tsx` that renders the
   photo inside the existing sized/rounded box (same `size`, `borderRadius: size * 0.28`,
   `overflow: 'hidden'`, `resizeMode: 'cover'`) and falls back to the category icon via an
   `onError` handler.
       GitHub: #72
-- [ ] 6.2 Pass `photoUri={item.photoUri}` from `src/screens/HomeScreen.tsx` in both the
+- [x] 6.2 Pass `photoUri={item.photoUri}` from `src/screens/HomeScreen.tsx` in both the
   "Expiring Soon" cards (size 36) and the item list rows (size 44), changing nothing else.
       GitHub: #72
-- [ ] 6.3 Pass `photoUri={item.photoUri}` from the `ItemDetailScreen` summary card
+- [x] 6.3 Pass `photoUri={item.photoUri}` from the `ItemDetailScreen` summary card
   (size 56).
       GitHub: #72
 
 ## 7. Add/Edit Item screen
 
-- [ ] 7.1 Replace `handlePickPhoto`'s direct gallery call with the shared `SelectModal`
+- [x] 7.1 Replace `handlePickPhoto`'s direct gallery call with the shared `SelectModal`
   source chooser offering **Take photo** and **Choose from Gallery**, plus **Remove photo**
   only when a photo is attached; reuse `showInvoicePermissionAlert` for permission denial.
       GitHub: #73
-- [ ] 7.2 Introduce `photoDraft: { uri, isPersisted } | null` seeded from the loaded item
+- [x] 7.2 Introduce `photoDraft: { uri, isPersisted } | null` seeded from the loaded item
   (`isPersisted: true`), and wire pick / replace / remove per the transition table in
   design.md — an unsaved file being superseded or removed is deleted immediately.
       GitHub: #73
-- [ ] 7.3 Add unmount cleanup (`useEffect(() => cleanup, [])` over a ref) that deletes a
+- [x] 7.3 Add unmount cleanup (`useEffect(() => cleanup, [])` over a ref) that deletes a
   still-unsaved photo file when the user leaves without saving, and is disarmed once a save
   commits.
       GitHub: #73
-- [ ] 7.4 Include `photoUri` in both the `createItem` and `updateItem` calls in `handleSave`
+- [x] 7.4 Include `photoUri` in both the `createItem` and `updateItem` calls in `handleSave`
   (always passing the key explicitly so removal clears it), and delete a superseded
   persisted photo file only after the write succeeds.
       GitHub: #73
-- [ ] 7.5 Report a photo save failure with the existing toast pattern without aborting the
+- [x] 7.5 Report a photo save failure with the existing toast pattern without aborting the
   item save (mirroring `invoiceSaveFailed`).
       GitHub: #73
 
 ## 8. Localization
 
-- [ ] 8.1 Add the new `addEditItem` keys (remove-photo option label, photo-save failure
+- [x] 8.1 Add the new `addEditItem` keys (remove-photo option label, photo-save failure
   message, and a photo source chooser title) to `src/i18n/locales/en.ts`.
       GitHub: #73
-- [ ] 8.2 Mirror the same keys in `es.ts`, `fr.ts` and `de.ts`, and confirm
+- [x] 8.2 Mirror the same keys in `es.ts`, `fr.ts` and `de.ts`, and confirm
   `src/i18n/i18n.test.ts`'s key-parity check passes.
       GitHub: #73
 

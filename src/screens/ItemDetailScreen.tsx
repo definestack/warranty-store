@@ -96,7 +96,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
       />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         <Card style={styles.summaryCard}>
-          <ItemIcon category={category} size={56} />
+          <ItemIcon category={category} size={56} photoUri={item.photoUri} />
           <View style={styles.summaryInfo}>
             <Text style={[styles.itemName, { color: theme.text }]}>{item.name}</Text>
             <Text style={[styles.itemMeta, { color: theme.subtleText }]}>{getCategoryLabel(category, t)}</Text>
