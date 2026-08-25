@@ -7,6 +7,7 @@
  */
 const existingUris = new Set<string>();
 const fileContents = new Map<string, string>();
+let writeFailurePattern: string | null = null;
 
 export const documentDirectory = 'file:///mock-documents/';
 export const cacheDirectory = 'file:///mock-cache/';
@@ -24,9 +25,16 @@ export function __setFileContent(uri: string, content: string): void {
   fileContents.set(uri, content);
 }
 
+/** Makes `writeAsStringAsync` reject for any uri containing `pattern`, so tests can
+ *  exercise write-failure paths. Pass null to clear. */
+export function __setWriteFailure(pattern: string | null): void {
+  writeFailurePattern = pattern;
+}
+
 export function __resetMockFileSystem(): void {
   existingUris.clear();
   fileContents.clear();
+  writeFailurePattern = null;
 }
 
 export async function getInfoAsync(uri: string): Promise<{ exists: boolean }> {
@@ -59,6 +67,9 @@ export async function readAsStringAsync(uri: string): Promise<string> {
 }
 
 export async function writeAsStringAsync(uri: string, content: string): Promise<void> {
+  if (writeFailurePattern !== null && uri.includes(writeFailurePattern)) {
+    throw new Error(`Mock file system: write failed for ${uri}`);
+  }
   existingUris.add(uri);
   fileContents.set(uri, content);
 }
@@ -69,5 +80,6 @@ export async function writeAsStringAsync(uri: string, content: string): Promise<
 declare module 'expo-file-system/legacy' {
   export function __setFileExists(uri: string, exists: boolean): void;
   export function __setFileContent(uri: string, content: string): void;
+  export function __setWriteFailure(pattern: string | null): void;
   export function __resetMockFileSystem(): void;
 }

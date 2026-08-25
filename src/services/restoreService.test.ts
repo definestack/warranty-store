@@ -1,6 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { __resetMockDocumentPicker, __setNextDocumentResult } from 'expo-document-picker';
-import { __resetMockFileSystem, __setFileContent, readAsStringAsync } from 'expo-file-system/legacy';
+import {
+  __resetMockFileSystem,
+  __setFileContent,
+  __setWriteFailure,
+  readAsStringAsync,
+} from 'expo-file-system/legacy';
 import * as Notifications from 'expo-notifications';
 import JSZip from 'jszip';
 
@@ -21,6 +26,7 @@ const t: TranslateFn = (scope, options) => (options ? `${scope}:${JSON.stringify
 
 const BACKUP_URI = 'file:///mock-cache/picked/warranty-backup.zip';
 const IMAGE_BASE64 = Buffer.from('fake-image-bytes').toString('base64');
+const PHOTO_BASE64 = Buffer.from('fake-photo-bytes').toString('base64');
 
 function makeBackupItem(overrides: Record<string, unknown> = {}) {
   return {
@@ -45,17 +51,17 @@ function makePayload(items: unknown[], formatVersion = 1) {
   return { formatVersion, exportedAt: '2026-08-18T10:00:00.000Z', items };
 }
 
-/** Writes a zip containing `data.json` (plus any invoice entries) into the mock file system. */
+/** Writes a zip containing `data.json` (plus any image entries) into the mock file system. */
 async function writeBackupZip(
   payload: unknown,
-  invoices: Record<string, string> = {},
+  files: Record<string, string> = {},
   uri = BACKUP_URI
 ): Promise<string> {
   const zip = new JSZip();
   if (payload !== undefined) {
     zip.file('data.json', typeof payload === 'string' ? payload : JSON.stringify(payload));
   }
-  for (const [path, base64] of Object.entries(invoices)) {
+  for (const [path, base64] of Object.entries(files)) {
     zip.file(path, base64, { base64: true });
   }
   __setFileContent(uri, await zip.generateAsync({ type: 'base64' }));
@@ -121,6 +127,25 @@ describe('parseBackupPayload', () => {
       expect(err).toBeInstanceOf(BackupValidationError);
       expect((err as BackupValidationError).reason).toBe('unsupportedVersion');
     }
+  });
+
+  it('accepts an item photo path as an optional string', () => {
+    const payload = parseBackupPayload(
+      JSON.stringify(makePayload([makeBackupItem({ photoUri: 'photos/item-1.jpg' })]))
+    );
+
+    expect(payload.items[0].photoUri).toBe('photos/item-1.jpg');
+  });
+
+  it('accepts a backup taken before item photos existed', () => {
+    const payload = parseBackupPayload(JSON.stringify(makePayload([makeBackupItem()])));
+
+    expect(payload.items[0].photoUri).toBeUndefined();
+  });
+
+  it('rejects an item whose photoUri is not a string', () => {
+    const broken = makeBackupItem({ photoUri: 42 });
+    expect(() => parseBackupPayload(JSON.stringify(makePayload([broken])))).toThrow(BackupValidationError);
   });
 
   it('defaults a missing invoiceImages list to empty rather than failing', () => {
@@ -244,6 +269,63 @@ describe('applyBackup', () => {
     expect(warnSpy).toHaveBeenCalled();
 
     warnSpy.mockRestore();
+  });
+
+  it('restores an item photo into app-private storage and points the record at it', async () => {
+    await writeBackupZip(makePayload([makeBackupItem({ photoUri: 'photos/item-1.jpg' })]), {
+      'photos/item-1.jpg': PHOTO_BASE64,
+    });
+    const loaded = await loadBackupArchive(BACKUP_URI);
+
+    await applyBackup(loaded, t);
+
+    const [item] = await getAllItems();
+    expect(item.photoUri).toBe('file:///mock-documents/photos/photo-item-1.jpg');
+    expect(await readAsStringAsync(item.photoUri!, { encoding: 'base64' })).toBe(PHOTO_BASE64);
+  });
+
+  it('imports an item with no photo from a backup taken before item photos existed', async () => {
+    await writeBackupZip(makePayload([makeBackupItem()]));
+    const loaded = await loadBackupArchive(BACKUP_URI);
+
+    const result = await applyBackup(loaded, t);
+
+    expect(result.imported).toBe(1);
+    const [item] = await getAllItems();
+    expect(item.photoUri).toBeUndefined();
+  });
+
+  it('still imports an item whose photo file is missing from the archive', async () => {
+    await writeBackupZip(makePayload([makeBackupItem({ photoUri: 'photos/item-1.jpg' })]));
+    const loaded = await loadBackupArchive(BACKUP_URI);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const result = await applyBackup(loaded, t);
+
+    expect(result.imported).toBe(1);
+    const [item] = await getAllItems();
+    expect(item.photoUri).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  it('still imports an item whose photo file cannot be written', async () => {
+    await writeBackupZip(makePayload([makeBackupItem({ photoUri: 'photos/item-1.jpg' })]), {
+      'photos/item-1.jpg': PHOTO_BASE64,
+    });
+    const loaded = await loadBackupArchive(BACKUP_URI);
+    __setWriteFailure('/photos/');
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await applyBackup(loaded, t);
+
+    expect(result.imported).toBe(1);
+    const [item] = await getAllItems();
+    expect(item.photoUri).toBeUndefined();
+    expect(errorSpy).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
   });
 
   it('reschedules reminders for imported non-expired items', async () => {

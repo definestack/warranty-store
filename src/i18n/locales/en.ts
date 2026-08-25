@@ -145,6 +145,17 @@ const en = {
     exportBackupLastExported: 'Last backup: %{date}',
     exportBackupSuccess: 'Backup exported',
     exportBackupFailed: 'Failed to export backup',
+    exportBackupMissingFilesTitle: 'Some images are missing',
+    exportBackupMissingFilesMessage: {
+      one: '1 image referenced by your items could not be found on this device. Exporting now will leave it out of the backup.',
+      other:
+        '%{count} images referenced by your items could not be found on this device. Exporting now will leave them out of the backup.',
+    },
+    exportBackupMissingFilesAction: 'Export anyway',
+    exportBackupSuccessSkipped: {
+      one: 'Backup exported without 1 missing image',
+      other: 'Backup exported without %{count} missing images',
+    },
     importData: 'Import Backup',
     importBackupSubtitle: 'Restore items from a backup file',
     importBackupConfirmTitle: 'Import this backup?',

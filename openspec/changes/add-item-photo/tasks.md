@@ -68,22 +68,36 @@
 
 ## 5. Backup and restore
 
-- [ ] 5.1 Write failing tests in `src/services/backupService.test.ts`: `buildBackupPayload`
+- [x] 5.1 Write failing tests in `src/services/backupService.test.ts`: `buildBackupPayload`
   rewrites `photoUri` to `photos/<itemId><ext>` and leaves items without a photo untouched;
   `createBackupArchive` writes the photo file into the archive under that path;
   `formatVersion` stays 1.
       GitHub: #75
-- [ ] 5.2 Implement photo packing in `src/services/backupService.ts`; make 5.1 pass.
+- [x] 5.2 Implement photo packing in `src/services/backupService.ts`; make 5.1 pass.
       GitHub: #75
-- [ ] 5.3 Write failing tests in `src/services/restoreService.test.ts`: a `photoUri` is
+- [x] 5.3 Write failing tests in `src/services/restoreService.test.ts`: a `photoUri` is
   validated as an optional string and restored to app-private storage; a payload with no
   `photoUri` (pre-change backup) imports cleanly with no photo; a `photoUri` naming a file
   missing from the archive, or one whose write fails, imports the item without a photo
   rather than failing the import; a non-string `photoUri` is rejected as invalid like other
   malformed fields.
       GitHub: #75
-- [ ] 5.4 Implement photo validation and unpacking in `src/services/restoreService.ts` using
+- [x] 5.4 Implement photo validation and unpacking in `src/services/restoreService.ts` using
   `writeItemPhotoFile`; make 5.3 pass.
+      GitHub: #75
+
+- [x] 5.5 Write failing tests in `src/services/backupService.test.ts` for the export-side
+  policy: an unreadable photo or invoice file is reported via `BackupMissingFilesError`
+  before any archive is written, and `{ skipMissingFiles: true }` exports without those
+  files and reports `skippedFileCount`.
+      GitHub: #75
+- [x] 5.6 Implement `BackupMissingFilesError` / `CreateBackupOptions` in
+  `src/services/backupService.ts`; make 5.5 pass.
+      GitHub: #75
+- [x] 5.7 Prompt from `SettingsScreen`'s export handler on `BackupMissingFilesError`
+  (count + "Export anyway", re-running with `skipMissingFiles`), and add the
+  `exportBackupMissingFiles*` / `exportBackupSuccessSkipped` keys to `en`, `es`, `fr`
+  and `de`.
       GitHub: #75
 
 ## 6. Display
