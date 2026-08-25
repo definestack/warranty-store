@@ -88,15 +88,15 @@
 
 ## 6. Display
 
-- [ ] 6.1 Add an optional `photoUri` prop to `src/components/ItemIcon.tsx` that renders the
+- [x] 6.1 Add an optional `photoUri` prop to `src/components/ItemIcon.tsx` that renders the
   photo inside the existing sized/rounded box (same `size`, `borderRadius: size * 0.28`,
   `overflow: 'hidden'`, `resizeMode: 'cover'`) and falls back to the category icon via an
   `onError` handler.
       GitHub: #72
-- [ ] 6.2 Pass `photoUri={item.photoUri}` from `src/screens/HomeScreen.tsx` in both the
+- [x] 6.2 Pass `photoUri={item.photoUri}` from `src/screens/HomeScreen.tsx` in both the
   "Expiring Soon" cards (size 36) and the item list rows (size 44), changing nothing else.
       GitHub: #72
-- [ ] 6.3 Pass `photoUri={item.photoUri}` from the `ItemDetailScreen` summary card
+- [x] 6.3 Pass `photoUri={item.photoUri}` from the `ItemDetailScreen` summary card
   (size 56).
       GitHub: #72
 

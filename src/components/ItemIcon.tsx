@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, StyleSheet, View } from 'react-native';
 
 const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Electronics: 'laptop-outline',
@@ -20,20 +21,38 @@ const CATEGORY_COLORS: Record<string, { bg: string; fg: string }> = {
 interface ItemIconProps {
   category?: string;
   size?: number;
+  photoUri?: string;
 }
 
-export default function ItemIcon({ category = 'Other', size = 44 }: ItemIconProps) {
+export default function ItemIcon({ category = 'Other', size = 44, photoUri }: ItemIconProps) {
+  const [photoFailed, setPhotoFailed] = useState(false);
+
+  useEffect(() => {
+    setPhotoFailed(false);
+  }, [photoUri]);
+
   const icon = CATEGORY_ICONS[category] ?? CATEGORY_ICONS.Other;
   const { bg, fg } = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.Other;
+  const showPhoto = Boolean(photoUri) && !photoFailed;
 
   return (
     <View
       style={[
         styles.container,
         { width: size, height: size, borderRadius: size * 0.28, backgroundColor: bg },
+        showPhoto && styles.clipped,
       ]}
     >
-      <Ionicons name={icon} size={size * 0.52} color={fg} />
+      {showPhoto ? (
+        <Image
+          source={{ uri: photoUri }}
+          style={styles.photo}
+          resizeMode="cover"
+          onError={() => setPhotoFailed(true)}
+        />
+      ) : (
+        <Ionicons name={icon} size={size * 0.52} color={fg} />
+      )}
     </View>
   );
 }
@@ -42,5 +61,12 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  clipped: {
+    overflow: 'hidden',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
   },
 });
