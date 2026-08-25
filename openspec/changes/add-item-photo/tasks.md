@@ -32,27 +32,27 @@
 
 ## 3. File and picker services
 
-- [ ] 3.1 Write failing tests in `src/services/fileService.test.ts`: `saveItemPhoto` copies
+- [x] 3.1 Write failing tests in `src/services/fileService.test.ts`: `saveItemPhoto` copies
   into `documentDirectory/photos/` as `photo-<uuid>.jpg`, compresses only when above the
   1600px threshold, falls back to the original on compression failure, and
   `deleteItemPhotoFile` deletes an existing file and no-ops (without throwing) on a missing
   one.
       GitHub: #71
-- [ ] 3.2 Refactor `src/services/fileService.ts` so the compress-and-copy logic is a shared
+- [x] 3.2 Refactor `src/services/fileService.ts` so the compress-and-copy logic is a shared
   internal helper parameterised by target directory and filename prefix; implement
   `saveItemPhoto` and `deleteItemPhotoFile` on top of it, leaving `saveInvoiceImage`,
   `writeInvoiceImageFile` and `deleteInvoiceFile` exports and behaviour unchanged. Make 3.1
   pass; confirm existing fileService tests still pass.
       GitHub: #71
-- [ ] 3.3 Add `writeItemPhotoFile(fileName, base64)` (photos counterpart of
+- [x] 3.3 Add `writeItemPhotoFile(fileName, base64)` (photos counterpart of
   `writeInvoiceImageFile`) with a test covering the written path.
       GitHub: #71
-- [ ] 3.4 Write failing tests in `src/services/imageService.test.ts` for
+- [x] 3.4 Write failing tests in `src/services/imageService.test.ts` for
   `pickItemPhotoFromCamera` / `pickItemPhotoFromGallery`: `permission-denied` when the
   permission is refused, `canceled` when the picker is dismissed or returns no asset, and
   `success` with a single app-private URI otherwise.
       GitHub: #71
-- [ ] 3.5 Implement both pickers in `src/services/imageService.ts` returning an
+- [x] 3.5 Implement both pickers in `src/services/imageService.ts` returning an
   `ItemPhotoPickResult` (single URI, gallery limited to one selection), delegating storage
   to `saveItemPhoto`. Make 3.4 pass.
       GitHub: #71
