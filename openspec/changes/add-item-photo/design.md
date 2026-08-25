@@ -124,6 +124,15 @@ unreadable by existing installs for no compatibility benefit.
 Restore follows the existing per-image error policy: a `photoUri` that names a file missing
 from the zip, or that fails to write, drops the photo and imports the item anyway.
 
+Export no longer aborts on an unreadable file. `createBackupArchive` collects every photo
+and invoice file it cannot read and throws `BackupMissingFilesError` *before* writing the
+archive; `SettingsScreen` reports the count and offers "Export anyway", which re-runs with
+`skipMissingFiles: true`. This replaces the previous invoice-only behaviour, where one file
+deleted outside the app failed the whole backup with a generic toast — a worse outcome for
+photos in particular, since `ItemIcon`'s silent fallback means the user has no idea a photo
+file has gone. A skipped file leaves its record pointing at an archive entry that isn't
+there, which restore already handles by dropping that image.
+
 ### Test strategy
 
 TDD per `CLAUDE.md` for everything below the screen: migration 6 (`migrations.test.ts`),

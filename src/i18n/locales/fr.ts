@@ -148,6 +148,17 @@ const fr: Messages = {
     exportBackupLastExported: 'Dernière sauvegarde : %{date}',
     exportBackupSuccess: 'Sauvegarde exportée',
     exportBackupFailed: "Échec de l'exportation de la sauvegarde",
+    exportBackupMissingFilesTitle: 'Certaines images sont introuvables',
+    exportBackupMissingFilesMessage: {
+      one: "1 image référencée par vos articles est introuvable sur cet appareil. Exporter maintenant l'exclura de la sauvegarde.",
+      other:
+        '%{count} images référencées par vos articles sont introuvables sur cet appareil. Exporter maintenant les exclura de la sauvegarde.',
+    },
+    exportBackupMissingFilesAction: 'Exporter quand même',
+    exportBackupSuccessSkipped: {
+      one: 'Sauvegarde exportée sans 1 image manquante',
+      other: 'Sauvegarde exportée sans %{count} images manquantes',
+    },
     importData: 'Importer une sauvegarde',
     importBackupSubtitle: 'Restaurer vos articles depuis un fichier de sauvegarde',
     importBackupConfirmTitle: 'Importer cette sauvegarde ?',

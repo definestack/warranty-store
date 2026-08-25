@@ -9,7 +9,7 @@ import type { InvoiceImage, WarrantyItem } from '../types/warranty';
 import { getWarrantyStatus } from '../utils/date';
 import { BACKUP_DATA_FILE_NAME, BACKUP_FORMAT_VERSION } from './backupService';
 import type { BackupPayload } from './backupService';
-import { writeInvoiceImageFile } from './fileService';
+import { writeInvoiceImageFile, writeItemPhotoFile } from './fileService';
 import { getNotificationsEnabled } from './notificationPreferenceService';
 import { scheduleExpiryReminders } from './notificationService';
 
@@ -117,6 +117,7 @@ function validateItem(raw: unknown, index: number): WarrantyItem {
     price: (item.price as number | undefined) ?? undefined,
     store: optionalString(item.store, 'store', item.id),
     notes: optionalString(item.notes, 'notes', item.id),
+    photoUri: optionalString(item.photoUri, 'photo', item.id),
     invoiceImages: rawImages.map((image, imageIndex) =>
       validateInvoiceImage(image, item.id as string, imageIndex)
     ),
@@ -195,9 +196,13 @@ export async function loadBackupArchive(uri: string): Promise<LoadedBackup> {
   return { uri, payload: parseBackupPayload(await dataEntry.async('string')), zip };
 }
 
+function fileExtension(uri: string): string {
+  const extMatch = uri.match(/\.[a-zA-Z0-9]+$/);
+  return extMatch ? extMatch[0] : '.jpg';
+}
+
 function restoredImageFileName(image: InvoiceImage): string {
-  const extMatch = image.uri.match(/\.[a-zA-Z0-9]+$/);
-  return `invoice-${image.id}${extMatch ? extMatch[0] : '.jpg'}`;
+  return `invoice-${image.id}${fileExtension(image.uri)}`;
 }
 
 /**
@@ -225,6 +230,29 @@ async function restoreInvoiceImages(item: WarrantyItem, zip: JSZip): Promise<Inv
   }
 
   return restored;
+}
+
+/**
+ * Unpacks an item's photo into app-private storage, returning the local URI. Follows the
+ * same policy as invoice images: a photo whose file is missing from the archive or cannot
+ * be written is dropped so the item itself still imports.
+ */
+async function restoreItemPhoto(item: WarrantyItem, zip: JSZip): Promise<string | undefined> {
+  if (!item.photoUri) return undefined;
+
+  const entry = zip.file(item.photoUri);
+  if (!entry) {
+    if (__DEV__) console.warn(`Backup archive is missing item photo ${item.photoUri}`);
+    return undefined;
+  }
+
+  try {
+    const base64 = await entry.async('base64');
+    return await writeItemPhotoFile(`photo-${item.id}${fileExtension(item.photoUri)}`, base64);
+  } catch (err) {
+    console.error(`Failed to restore item photo ${item.photoUri}`, err);
+    return undefined;
+  }
 }
 
 /**
@@ -265,7 +293,11 @@ export async function applyBackup(backup: LoadedBackup, t: TranslateFn): Promise
 
   const restored: WarrantyItem[] = [];
   for (const item of newItems) {
-    restored.push({ ...item, invoiceImages: await restoreInvoiceImages(item, backup.zip) });
+    restored.push({
+      ...item,
+      photoUri: await restoreItemPhoto(item, backup.zip),
+      invoiceImages: await restoreInvoiceImages(item, backup.zip),
+    });
   }
 
   await insertImportedItems(restored);

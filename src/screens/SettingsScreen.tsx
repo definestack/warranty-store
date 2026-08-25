@@ -10,7 +10,7 @@ import SettingsRow from '../components/SettingsRow';
 import { useLanguagePreference, useTranslation } from '../i18n/LocaleContext';
 import { LANGUAGE_ENDONYMS, SUPPORTED_LOCALES } from '../i18n/i18n';
 import { getLastBackupTime, setLastBackupTime as persistLastBackupTime } from '../services/backupPreferenceService';
-import { createBackupArchive, shareBackupArchive } from '../services/backupService';
+import { BackupMissingFilesError, createBackupArchive, shareBackupArchive } from '../services/backupService';
 import {
   BackupValidationError,
   applyBackup,
@@ -48,28 +48,59 @@ export default function SettingsScreen(_props: Props) {
     getLastBackupTime().then(setLastBackupTime);
   }, []);
 
-  const handleExportBackup = useCallback(async () => {
-    if (exportingBackup) return;
-    setExportingBackup(true);
-    try {
-      const result = await createBackupArchive();
-      const timestamp = nowIso();
-      await persistLastBackupTime(timestamp);
-      setLastBackupTime(timestamp);
-      useToastStore.getState().show(t('settings.exportBackupSuccess'));
-      setExportingBackup(false);
+  const runExport = useCallback(
+    async (skipMissingFiles: boolean) => {
+      setExportingBackup(true);
+      try {
+        const result = await createBackupArchive({ skipMissingFiles });
+        const timestamp = nowIso();
+        await persistLastBackupTime(timestamp);
+        setLastBackupTime(timestamp);
+        useToastStore
+          .getState()
+          .show(
+            result.skippedFileCount > 0
+              ? t('settings.exportBackupSuccessSkipped', { count: result.skippedFileCount })
+              : t('settings.exportBackupSuccess')
+          );
+        setExportingBackup(false);
 
-      // Android's share intent resolves the same way on cancel or completion, so it
-      // can't gate the success feedback above — fire it as a best-effort follow-up.
-      shareBackupArchive(result.uri).catch((err) => {
-        if (__DEV__) console.warn('Failed to open share sheet for backup', err);
-      });
-    } catch (err) {
-      console.error('Failed to export backup', err);
-      useToastStore.getState().show(t('settings.exportBackupFailed'));
-      setExportingBackup(false);
-    }
-  }, [exportingBackup, t]);
+        // Android's share intent resolves the same way on cancel or completion, so it
+        // can't gate the success feedback above — fire it as a best-effort follow-up.
+        shareBackupArchive(result.uri).catch((err) => {
+          if (__DEV__) console.warn('Failed to open share sheet for backup', err);
+        });
+      } catch (err) {
+        setExportingBackup(false);
+
+        // Image files can go missing outside the app; nothing has been written yet, so
+        // let the user decide between fixing them and exporting without them.
+        if (err instanceof BackupMissingFilesError) {
+          Alert.alert(
+            t('settings.exportBackupMissingFilesTitle'),
+            t('settings.exportBackupMissingFilesMessage', { count: err.missingFiles.length }),
+            [
+              { text: t('common.cancel'), style: 'cancel' },
+              {
+                text: t('settings.exportBackupMissingFilesAction'),
+                onPress: () => runExport(true),
+              },
+            ]
+          );
+          return;
+        }
+
+        console.error('Failed to export backup', err);
+        useToastStore.getState().show(t('settings.exportBackupFailed'));
+      }
+    },
+    [t]
+  );
+
+  const handleExportBackup = useCallback(() => {
+    if (exportingBackup) return;
+    runExport(false);
+  }, [exportingBackup, runExport]);
 
   const runImport = useCallback(
     async (backup: LoadedBackup) => {

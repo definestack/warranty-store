@@ -147,6 +147,17 @@ const es: Messages = {
     exportBackupLastExported: 'Última copia: %{date}',
     exportBackupSuccess: 'Copia de seguridad exportada',
     exportBackupFailed: 'Error al exportar la copia de seguridad',
+    exportBackupMissingFilesTitle: 'Faltan algunas imágenes',
+    exportBackupMissingFilesMessage: {
+      one: 'No se ha encontrado en este dispositivo 1 imagen a la que hacen referencia tus artículos. Si exportas ahora, quedará fuera de la copia de seguridad.',
+      other:
+        'No se han encontrado en este dispositivo %{count} imágenes a las que hacen referencia tus artículos. Si exportas ahora, quedarán fuera de la copia de seguridad.',
+    },
+    exportBackupMissingFilesAction: 'Exportar de todos modos',
+    exportBackupSuccessSkipped: {
+      one: 'Copia de seguridad exportada sin 1 imagen que faltaba',
+      other: 'Copia de seguridad exportada sin %{count} imágenes que faltaban',
+    },
     importData: 'Importar copia de seguridad',
     importBackupSubtitle: 'Restaura tus artículos desde un archivo de copia de seguridad',
     importBackupConfirmTitle: '¿Importar esta copia de seguridad?',

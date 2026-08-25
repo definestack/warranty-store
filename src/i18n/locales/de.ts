@@ -148,6 +148,17 @@ const de: Messages = {
     exportBackupLastExported: 'Letzte Sicherung: %{date}',
     exportBackupSuccess: 'Sicherung exportiert',
     exportBackupFailed: 'Sicherung konnte nicht exportiert werden',
+    exportBackupMissingFilesTitle: 'Einige Bilder fehlen',
+    exportBackupMissingFilesMessage: {
+      one: '1 Bild, auf das deine Einträge verweisen, wurde auf diesem Gerät nicht gefunden. Beim Exportieren fehlt es in der Sicherung.',
+      other:
+        '%{count} Bilder, auf die deine Einträge verweisen, wurden auf diesem Gerät nicht gefunden. Beim Exportieren fehlen sie in der Sicherung.',
+    },
+    exportBackupMissingFilesAction: 'Trotzdem exportieren',
+    exportBackupSuccessSkipped: {
+      one: 'Sicherung ohne 1 fehlendes Bild exportiert',
+      other: 'Sicherung ohne %{count} fehlende Bilder exportiert',
+    },
     importData: 'Sicherung importieren',
     importBackupSubtitle: 'Einträge aus einer Sicherungsdatei wiederherstellen',
     importBackupConfirmTitle: 'Diese Sicherung importieren?',

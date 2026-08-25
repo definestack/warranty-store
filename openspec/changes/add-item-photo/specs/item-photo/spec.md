@@ -184,3 +184,9 @@ photo rather than causing the import to fail.
 
 - **WHEN** an archive references a photo file that is missing or unreadable
 - **THEN** the item is imported without a photo and the rest of the import completes
+
+#### Scenario: An unreadable image is reported before the backup is written
+
+- **WHEN** the user exports a backup and an item's photo or invoice file cannot be read
+- **THEN** no archive is written and the user is told how many images are missing
+- **AND** the user can either cancel or export without those images
