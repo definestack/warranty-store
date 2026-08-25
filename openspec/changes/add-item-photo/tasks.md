@@ -59,11 +59,11 @@
 
 ## 4. Item deletion cleanup
 
-- [ ] 4.1 Write a failing test in `src/store/itemsStore.test.ts` that `deleteItem` deletes
+- [x] 4.1 Write a failing test in `src/store/itemsStore.test.ts` that `deleteItem` deletes
   the item's photo file alongside its invoice images, and that a photo-file delete failure
   still leaves the item deleted.
       GitHub: #74
-- [ ] 4.2 Implement the photo cleanup in `src/store/itemsStore.ts`; make 4.1 pass.
+- [x] 4.2 Implement the photo cleanup in `src/store/itemsStore.ts`; make 4.1 pass.
       GitHub: #74
 
 ## 5. Backup and restore
