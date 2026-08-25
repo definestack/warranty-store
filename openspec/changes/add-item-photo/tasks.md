@@ -147,9 +147,9 @@
 
 ## 9. Verification
 
-- [ ] 9.1 Run `npm test` — all suites pass, including the new ones.
+- [x] 9.1 Run `npm test` — all suites pass, including the new ones.
       GitHub: #70, #71, #72, #73, #74, #75
-- [ ] 9.2 Run `npm run typecheck` and `npm run lint` — both clean.
+- [x] 9.2 Run `npm run typecheck` and `npm run lint` — both clean.
       GitHub: #70, #71, #72, #73, #74, #75
 - [ ] 9.3 Manually verify on the Android emulator/device: attach from camera, attach from
   gallery, replace, remove, cancel out of the picker, deny each permission and confirm the
