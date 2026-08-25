@@ -49,3 +49,7 @@ export const CREATE_NOTIFICATION_SCHEDULES_TABLE = `
     created_at TEXT NOT NULL
   );
 `;
+
+export const ADD_PHOTO_URI_COLUMN = `
+  ALTER TABLE warranty_items ADD COLUMN photo_uri TEXT;
+`;

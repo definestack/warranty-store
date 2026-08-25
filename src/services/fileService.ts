@@ -10,18 +10,19 @@ import {
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 const INVOICES_DIR = `${documentDirectory}invoices/`;
+const PHOTOS_DIR = `${documentDirectory}photos/`;
 const MAX_DIMENSION = 1600;
 const COMPRESSION_QUALITY = 0.8;
 
-async function ensureInvoicesDirExists(): Promise<void> {
-  const dirInfo = await getInfoAsync(INVOICES_DIR);
+async function ensureDirExists(directory: string): Promise<void> {
+  const dirInfo = await getInfoAsync(directory);
   if (!dirInfo.exists) {
-    await makeDirectoryAsync(INVOICES_DIR, { intermediates: true });
+    await makeDirectoryAsync(directory, { intermediates: true });
   }
 }
 
 /**
- * Resizes/compresses images above MAX_DIMENSION so invoice photos don't
+ * Resizes/compresses images above MAX_DIMENSION so saved images don't
  * consume excessive device storage. Images already within the threshold are
  * returned unchanged to avoid a needless re-encode.
  */
@@ -47,16 +48,25 @@ async function compressIfNeeded(sourceUri: string): Promise<string> {
   return result.uri;
 }
 
-export async function saveInvoiceImage(sourceUri: string): Promise<string> {
-  await ensureInvoicesDirExists();
-  const destinationUri = `${INVOICES_DIR}invoice-${Crypto.randomUUID()}.jpg`;
+/**
+ * Copies a picked image into app-private storage under `<directory><prefix>-<uuid>.jpg`,
+ * compressing it first when it exceeds the size budget. Shared by invoice pages and
+ * item photos so both get identical resize/compress behaviour.
+ */
+async function saveImageInto(
+  directory: string,
+  filePrefix: string,
+  sourceUri: string
+): Promise<string> {
+  await ensureDirExists(directory);
+  const destinationUri = `${directory}${filePrefix}-${Crypto.randomUUID()}.jpg`;
 
   let uriToCopy = sourceUri;
   try {
     uriToCopy = await compressIfNeeded(sourceUri);
   } catch (err) {
     if (__DEV__) {
-      console.warn('Invoice image compression failed, saving original file', err);
+      console.warn('Image compression failed, saving original file', err);
     }
   }
 
@@ -65,24 +75,57 @@ export async function saveInvoiceImage(sourceUri: string): Promise<string> {
 }
 
 /**
- * Writes an already-encoded invoice image (e.g. one unpacked from a backup archive)
- * into app-private storage under the given file name, and returns its local URI.
+ * Writes an already-encoded image (e.g. one unpacked from a backup archive) into
+ * app-private storage under the given file name, and returns its local URI.
  * Restored images are stored as-is — they were compressed before being exported.
  */
-export async function writeInvoiceImageFile(fileName: string, base64: string): Promise<string> {
-  await ensureInvoicesDirExists();
-  const destinationUri = `${INVOICES_DIR}${fileName}`;
+async function writeImageInto(
+  directory: string,
+  fileName: string,
+  base64: string
+): Promise<string> {
+  await ensureDirExists(directory);
+  const destinationUri = `${directory}${fileName}`;
   await writeAsStringAsync(destinationUri, base64, { encoding: 'base64' });
   return destinationUri;
 }
 
-export async function deleteInvoiceFile(uri: string): Promise<void> {
+/** Deletes a stored image, tolerating a file that is already gone or unreadable. */
+async function deleteImageFile(uri: string, description: string): Promise<void> {
   try {
     const info = await getInfoAsync(uri);
     if (info.exists) {
       await deleteAsync(uri, { idempotent: true });
     }
   } catch (err) {
-    console.error('Failed to delete invoice file', err);
+    console.error(`Failed to delete ${description}`, err);
   }
+}
+
+export async function saveInvoiceImage(sourceUri: string): Promise<string> {
+  return saveImageInto(INVOICES_DIR, 'invoice', sourceUri);
+}
+
+export async function writeInvoiceImageFile(fileName: string, base64: string): Promise<string> {
+  return writeImageInto(INVOICES_DIR, fileName, base64);
+}
+
+export async function deleteInvoiceFile(uri: string): Promise<void> {
+  return deleteImageFile(uri, 'invoice file');
+}
+
+/**
+ * Item photos live in their own directory so the backup packer's listing stays
+ * unambiguous and a photo can never be mistaken for an invoice page during cleanup.
+ */
+export async function saveItemPhoto(sourceUri: string): Promise<string> {
+  return saveImageInto(PHOTOS_DIR, 'photo', sourceUri);
+}
+
+export async function writeItemPhotoFile(fileName: string, base64: string): Promise<string> {
+  return writeImageInto(PHOTOS_DIR, fileName, base64);
+}
+
+export async function deleteItemPhotoFile(uri: string): Promise<void> {
+  return deleteImageFile(uri, 'item photo file');
 }

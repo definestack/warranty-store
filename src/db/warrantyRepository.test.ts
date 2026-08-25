@@ -65,6 +65,21 @@ describe('createItem', () => {
     expect(created.store).toBe('Croma');
     expect(created.notes).toBe('Bought during the sale');
   });
+
+  it('persists a photoUri and round-trips it through getItemById and getAllItems', async () => {
+    const created = await createItem({ ...baseItem, photoUri: 'file:///photos/photo-1.jpg' });
+
+    expect(created.photoUri).toBe('file:///photos/photo-1.jpg');
+    expect((await getItemById(created.id))?.photoUri).toBe('file:///photos/photo-1.jpg');
+    expect((await getAllItems())[0].photoUri).toBe('file:///photos/photo-1.jpg');
+  });
+
+  it('reads back an undefined photoUri when none was provided', async () => {
+    const created = await createItem(baseItem);
+
+    expect(created.photoUri).toBeUndefined();
+    expect((await getItemById(created.id))?.photoUri).toBeUndefined();
+  });
 });
 
 describe('getAllItems', () => {
@@ -139,6 +154,32 @@ describe('updateItem', () => {
     const updated = await updateItem(created.id, { store: 'Amazon India' });
 
     expect(updated.store).toBe('Amazon India');
+  });
+
+  it('persists a photoUri update', async () => {
+    const created = await createItem(baseItem);
+    const updated = await updateItem(created.id, { photoUri: 'file:///photos/photo-2.jpg' });
+
+    expect(updated.photoUri).toBe('file:///photos/photo-2.jpg');
+    expect((await getItemById(created.id))?.photoUri).toBe('file:///photos/photo-2.jpg');
+  });
+
+  it('clears the stored photo when photoUri is passed explicitly as undefined', async () => {
+    const created = await createItem({ ...baseItem, photoUri: 'file:///photos/photo-1.jpg' });
+
+    const updated = await updateItem(created.id, { photoUri: undefined });
+
+    expect(updated.photoUri).toBeUndefined();
+    expect((await getItemById(created.id))?.photoUri).toBeUndefined();
+  });
+
+  it('preserves the stored photo when the photoUri key is omitted', async () => {
+    const created = await createItem({ ...baseItem, photoUri: 'file:///photos/photo-1.jpg' });
+
+    const updated = await updateItem(created.id, { name: 'Renamed' });
+
+    expect(updated.photoUri).toBe('file:///photos/photo-1.jpg');
+    expect((await getItemById(created.id))?.photoUri).toBe('file:///photos/photo-1.jpg');
   });
 
   it('throws for an unknown id', async () => {
@@ -251,6 +292,18 @@ describe('insertImportedItems', () => {
 
     expect(await getItemById(existing.id)).not.toBeNull();
     expect(await getAllItems()).toHaveLength(2);
+  });
+
+  it('preserves photoUri exactly as given, including items with none', async () => {
+    await insertImportedItems([
+      { ...imported, photoUri: 'file:///mock-documents/photos/photo-imported-1.jpg' },
+      { ...imported, id: 'imported-2', invoiceImages: [], photoUri: undefined },
+    ]);
+
+    expect((await getItemById('imported-1'))?.photoUri).toBe(
+      'file:///mock-documents/photos/photo-imported-1.jpg'
+    );
+    expect((await getItemById('imported-2'))?.photoUri).toBeUndefined();
   });
 
   it('does nothing for an empty list', async () => {

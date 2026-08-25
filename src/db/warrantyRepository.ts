@@ -20,6 +20,7 @@ interface WarrantyItemRow {
   price: number | null;
   store: string | null;
   notes: string | null;
+  photo_uri: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +37,7 @@ function mapRowToItem(row: WarrantyItemRow, invoiceImages: WarrantyItem['invoice
     price: row.price ?? undefined,
     store: row.store ?? undefined,
     notes: row.notes ?? undefined,
+    photoUri: row.photo_uri ?? undefined,
     invoiceImages,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -50,8 +52,8 @@ export async function createItem(input: NewWarrantyItem): Promise<WarrantyItem> 
 
   await db.runAsync(
     `INSERT INTO warranty_items
-      (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, store, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, store, notes, photo_uri, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
     input.name,
     input.purchaseDate,
@@ -62,6 +64,7 @@ export async function createItem(input: NewWarrantyItem): Promise<WarrantyItem> 
     input.price ?? null,
     input.store ?? null,
     input.notes ?? null,
+    input.photoUri ?? null,
     timestamp,
     timestamp
   );
@@ -93,6 +96,12 @@ export async function getItemById(id: string): Promise<WarrantyItem | null> {
   return mapRowToItem(row, invoiceImages);
 }
 
+/**
+ * Merges `updates` over the stored item, so an omitted key preserves its current value.
+ * Note the corollary for `photoUri`: passing it explicitly as `undefined` clears the
+ * stored photo, which is how the Add/Edit screen expresses "remove the photo". Callers
+ * that only mean to leave the photo alone must omit the key entirely.
+ */
 export async function updateItem(
   id: string,
   updates: WarrantyItemUpdate
@@ -110,7 +119,8 @@ export async function updateItem(
   await db.runAsync(
     `UPDATE warranty_items
      SET name = ?, purchase_date = ?, warranty_months = ?, expiry_date = ?,
-         category = ?, brand = ?, price = ?, store = ?, notes = ?, updated_at = ?
+         category = ?, brand = ?, price = ?, store = ?, notes = ?, photo_uri = ?,
+         updated_at = ?
      WHERE id = ?`,
     merged.name,
     merged.purchaseDate,
@@ -121,6 +131,7 @@ export async function updateItem(
     merged.price ?? null,
     merged.store ?? null,
     merged.notes ?? null,
+    merged.photoUri ?? null,
     updatedAt,
     id
   );
@@ -155,8 +166,8 @@ export async function insertImportedItems(items: WarrantyItem[]): Promise<void> 
     for (const item of items) {
       await db.runAsync(
         `INSERT INTO warranty_items
-          (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, store, notes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, name, purchase_date, warranty_months, expiry_date, category, brand, price, store, notes, photo_uri, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         item.id,
         item.name,
         item.purchaseDate,
@@ -167,6 +178,7 @@ export async function insertImportedItems(items: WarrantyItem[]): Promise<void> 
         item.price ?? null,
         item.store ?? null,
         item.notes ?? null,
+        item.photoUri ?? null,
         item.createdAt,
         item.updatedAt
       );

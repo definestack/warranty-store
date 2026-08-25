@@ -1,30 +1,30 @@
 ## 1. Data model and migration
 
-- [ ] 1.1 Write a failing test in `src/db/migrations.test.ts` asserting migration 6 adds a
+- [x] 1.1 Write a failing test in `src/db/migrations.test.ts` asserting migration 6 adds a
   nullable `photo_uri` column to `warranty_items`, that existing rows survive with
   `photo_uri` NULL, and that migrating from version 5 is idempotent on re-run.
       GitHub: #70
-- [ ] 1.2 Add `ADD_PHOTO_URI_COLUMN` to `src/db/schema.ts` and migration 6
+- [x] 1.2 Add `ADD_PHOTO_URI_COLUMN` to `src/db/schema.ts` and migration 6
   `add_photo_uri_to_warranty_items` to `src/db/migrations.ts`; make 1.1 pass.
       GitHub: #70
-- [ ] 1.3 Add optional `photoUri?: string` to `WarrantyItem` in `src/types/warranty.ts` and
+- [x] 1.3 Add optional `photoUri?: string` to `WarrantyItem` in `src/types/warranty.ts` and
   confirm `NewWarrantyItem` / `WarrantyItemUpdate` pick it up without other edits.
       GitHub: #70
 
 ## 2. Repository
 
-- [ ] 2.1 Write failing tests in `src/db/warrantyRepository.test.ts`: `createItem` persists
+- [x] 2.1 Write failing tests in `src/db/warrantyRepository.test.ts`: `createItem` persists
   `photoUri` and round-trips it through `getItemById` / `getAllItems`; an item created
   without one reads back `undefined`.
       GitHub: #70
-- [ ] 2.2 Write failing tests for update semantics: `updateItem` with an explicit
+- [x] 2.2 Write failing tests for update semantics: `updateItem` with an explicit
   `photoUri: undefined` clears the stored photo, and an update that omits the key preserves
   it (per design.md — "`photoUri: undefined` in an update means remove").
       GitHub: #70
-- [ ] 2.3 Write a failing test that `insertImportedItems` preserves `photoUri` exactly as
+- [x] 2.3 Write a failing test that `insertImportedItems` preserves `photoUri` exactly as
   given, including items with no photo.
       GitHub: #70
-- [ ] 2.4 Implement: extend `WarrantyItemRow`, `mapRowToItem`, the `createItem` INSERT, the
+- [x] 2.4 Implement: extend `WarrantyItemRow`, `mapRowToItem`, the `createItem` INSERT, the
   `updateItem` UPDATE and the `insertImportedItems` INSERT in
   `src/db/warrantyRepository.ts`; document the explicit-undefined-clears behaviour at
   `updateItem`. Make 2.1–2.3 pass.
@@ -32,27 +32,27 @@
 
 ## 3. File and picker services
 
-- [ ] 3.1 Write failing tests in `src/services/fileService.test.ts`: `saveItemPhoto` copies
+- [x] 3.1 Write failing tests in `src/services/fileService.test.ts`: `saveItemPhoto` copies
   into `documentDirectory/photos/` as `photo-<uuid>.jpg`, compresses only when above the
   1600px threshold, falls back to the original on compression failure, and
   `deleteItemPhotoFile` deletes an existing file and no-ops (without throwing) on a missing
   one.
       GitHub: #71
-- [ ] 3.2 Refactor `src/services/fileService.ts` so the compress-and-copy logic is a shared
+- [x] 3.2 Refactor `src/services/fileService.ts` so the compress-and-copy logic is a shared
   internal helper parameterised by target directory and filename prefix; implement
   `saveItemPhoto` and `deleteItemPhotoFile` on top of it, leaving `saveInvoiceImage`,
   `writeInvoiceImageFile` and `deleteInvoiceFile` exports and behaviour unchanged. Make 3.1
   pass; confirm existing fileService tests still pass.
       GitHub: #71
-- [ ] 3.3 Add `writeItemPhotoFile(fileName, base64)` (photos counterpart of
+- [x] 3.3 Add `writeItemPhotoFile(fileName, base64)` (photos counterpart of
   `writeInvoiceImageFile`) with a test covering the written path.
       GitHub: #71
-- [ ] 3.4 Write failing tests in `src/services/imageService.test.ts` for
+- [x] 3.4 Write failing tests in `src/services/imageService.test.ts` for
   `pickItemPhotoFromCamera` / `pickItemPhotoFromGallery`: `permission-denied` when the
   permission is refused, `canceled` when the picker is dismissed or returns no asset, and
   `success` with a single app-private URI otherwise.
       GitHub: #71
-- [ ] 3.5 Implement both pickers in `src/services/imageService.ts` returning an
+- [x] 3.5 Implement both pickers in `src/services/imageService.ts` returning an
   `ItemPhotoPickResult` (single URI, gallery limited to one selection), delegating storage
   to `saveItemPhoto`. Make 3.4 pass.
       GitHub: #71
