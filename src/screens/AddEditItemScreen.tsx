@@ -2,9 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Crypto from 'expo-crypto';
-import * as ImagePicker from 'expo-image-picker';
 import type { PermissionStatus } from 'expo-notifications';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -33,8 +32,14 @@ import {
 } from '../db/notificationSchedulesRepository';
 import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useTranslation } from '../i18n/LocaleContext';
-import { deleteInvoiceFile } from '../services/fileService';
-import { MAX_INVOICE_PAGES, pickInvoiceFromCamera, pickInvoiceFromGallery } from '../services/imageService';
+import { deleteInvoiceFile, deleteItemPhotoFile } from '../services/fileService';
+import {
+  MAX_INVOICE_PAGES,
+  pickInvoiceFromCamera,
+  pickInvoiceFromGallery,
+  pickItemPhotoFromCamera,
+  pickItemPhotoFromGallery,
+} from '../services/imageService';
 import {
   cancelScheduledReminders,
   hasExpiryDateChanged,
@@ -53,6 +58,13 @@ import { NOTES_MAX_LENGTH, parsePrice, parseWarrantyMonths } from '../utils/vali
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
 
+/**
+ * The item's photo while it is being edited. `isPersisted` marks a file that is
+ * already referenced by the saved item: an unsaved one is deleted as soon as it is
+ * superseded, a persisted one only after a save writes its replacement.
+ */
+type PhotoDraft = { uri: string; isPersisted: boolean };
+
 export default function AddEditItemScreen({ route, navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -64,7 +76,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const [loadingExisting, setLoadingExisting] = useState(isEditing);
   const [notFound, setNotFound] = useState(false);
 
-  const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [photoDraft, setPhotoDraft] = useState<PhotoDraft | null>(null);
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [category, setCategory] = useState('');
@@ -94,6 +106,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           return;
         }
         setExisting(item);
+        setPhotoDraft(item.photoUri ? { uri: item.photoUri, isPersisted: true } : null);
         setName(item.name);
         setCategory(item.category ?? '');
         setBrand(item.brand ?? '');
@@ -127,19 +140,26 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       : null;
   const isFormValid = !!name.trim() && parsedWarrantyMonths !== null && !loadingExisting;
 
-  const handlePickPhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
+  const [attachingPhoto, setAttachingPhoto] = useState(false);
+  const [photoSourceModalVisible, setPhotoSourceModalVisible] = useState(false);
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-    });
+  /**
+   * The photo file that would be orphaned if the user left right now. Navigating back
+   * runs no handler, so unmount cleanup reads this ref; a committed save clears it so a
+   * saved photo is never deleted.
+   */
+  const unsavedPhotoUriRef = useRef<string | null>(null);
 
-    if (!result.canceled && result.assets.length > 0) {
-      setPhotoUri(result.assets[0].uri);
-    }
-  };
+  useEffect(
+    () => () => {
+      const orphanUri = unsavedPhotoUriRef.current;
+      if (orphanUri) {
+        unsavedPhotoUriRef.current = null;
+        void deleteItemPhotoFile(orphanUri);
+      }
+    },
+    []
+  );
 
   const [attachingInvoice, setAttachingInvoice] = useState(false);
   const [invoiceSourceModalVisible, setInvoiceSourceModalVisible] = useState(false);
@@ -167,6 +187,51 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         { text: t('addEditItem.openSettings'), onPress: () => Linking.openSettings() },
       ]
     );
+  };
+
+  const handleOpenPhotoSource = () => {
+    if (attachingPhoto) return;
+    setPhotoSourceModalVisible(true);
+  };
+
+  const handleRemovePhoto = async () => {
+    const current = photoDraft;
+    setPhotoDraft(null);
+    if (current && !current.isPersisted) {
+      unsavedPhotoUriRef.current = null;
+      await deleteItemPhotoFile(current.uri);
+    }
+  };
+
+  const handlePickPhotoSource = async (source: 'camera' | 'gallery' | 'remove') => {
+    setPhotoSourceModalVisible(false);
+
+    if (source === 'remove') {
+      await handleRemovePhoto();
+      return;
+    }
+
+    setAttachingPhoto(true);
+    try {
+      const result =
+        source === 'camera' ? await pickItemPhotoFromCamera() : await pickItemPhotoFromGallery();
+
+      if (result.status === 'success') {
+        const previous = photoDraft;
+        setPhotoDraft({ uri: result.uri, isPersisted: false });
+        unsavedPhotoUriRef.current = result.uri;
+        if (previous && !previous.isPersisted) {
+          await deleteItemPhotoFile(previous.uri);
+        }
+      } else if (result.status === 'permission-denied') {
+        showInvoicePermissionAlert(source);
+      }
+    } catch (err) {
+      console.error('Failed to save item photo', err);
+      useToastStore.getState().show(t('addEditItem.photoSaveFailed'));
+    } finally {
+      setAttachingPhoto(false);
+    }
   };
 
   const showNotificationPermissionRationale = (): Promise<boolean> =>
@@ -281,6 +346,11 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     const parsedPrice = parsePrice(price);
     const trimmedStore = store.trim() || undefined;
 
+    // Always passed explicitly: an omitted key preserves the stored photo, while an
+    // explicit undefined clears it, which is how removal is expressed.
+    const photoUriToSave = photoDraft?.uri;
+    const previousPhotoUri = existing?.photoUri;
+
     setSaving(true);
     try {
       let itemId: string;
@@ -296,6 +366,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           price: parsedPrice,
           store: trimmedStore,
           notes: notes.trim() || undefined,
+          photoUri: photoUriToSave,
         });
         itemId = existing.id;
       } else {
@@ -308,8 +379,16 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           price: parsedPrice,
           store: trimmedStore,
           notes: notes.trim() || undefined,
+          photoUri: photoUriToSave,
         });
         itemId = createdItem.id;
+      }
+
+      // The write committed, so the draft photo is no longer an orphan and the file it
+      // replaced (if any) is.
+      unsavedPhotoUriRef.current = null;
+      if (previousPhotoUri && previousPhotoUri !== photoUriToSave) {
+        await deleteItemPhotoFile(previousPhotoUri);
       }
 
       try {
@@ -422,10 +501,10 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         backIcon="close"
       />
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={handlePickPhoto}>
+        <Pressable onPress={handleOpenPhotoSource}>
           <Card style={styles.photoCard}>
-            {photoUri ? (
-              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+            {photoDraft ? (
+              <Image source={{ uri: photoDraft.uri }} style={styles.photoPreview} />
             ) : (
               <View style={[styles.photoIcon, { backgroundColor: theme.surfaceAlt }]}>
                 <Ionicons name="camera-outline" size={22} color={theme.subtleText} />
@@ -433,9 +512,11 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             )}
             <View>
               <Text style={[styles.photoTitle, { color: theme.text }]}>
-                {photoUri ? t('addEditItem.changePhoto') : t('addEditItem.addPhoto')}
+                {photoDraft ? t('addEditItem.changePhoto') : t('addEditItem.addPhoto')}
               </Text>
-              <Text style={[styles.photoSubtitle, { color: theme.subtleText }]}>{t('addEditItem.tapToUpload')}</Text>
+              <Text style={[styles.photoSubtitle, { color: theme.subtleText }]}>
+                {attachingPhoto ? t('addEditItem.savingEllipsis') : t('addEditItem.tapToUpload')}
+              </Text>
             </View>
           </Card>
         </Pressable>
@@ -681,6 +762,17 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           setInvoiceSourceModalVisible(false);
           setReplaceTargetIndex(null);
         }}
+      />
+      <SelectModal
+        visible={photoSourceModalVisible}
+        title={t('addEditItem.photoSourceTitle')}
+        options={[
+          { value: 'camera', label: t('addEditItem.takePhoto') },
+          { value: 'gallery', label: t('addEditItem.chooseFromGallery') },
+          ...(photoDraft ? [{ value: 'remove', label: t('addEditItem.removePhoto') }] : []),
+        ]}
+        onSelect={(value) => handlePickPhotoSource(value as 'camera' | 'gallery' | 'remove')}
+        onClose={() => setPhotoSourceModalVisible(false)}
       />
       {datePickerVisible ? (
         <DateTimePicker
