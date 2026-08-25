@@ -1,7 +1,7 @@
 schema: spec-driven
 
 # Brownfield architecture baseline.
-# Verified against commit 89f5fdb (2026-08-19). Facts only — every statement below was
+# Verified against commit f3ad279 (2026-08-25). Facts only — every statement below was
 # read from the codebase, not inferred. Update when the code changes.
 context: |
   # Warranty Store — architecture baseline
@@ -28,7 +28,7 @@ context: |
                    backupPreference
   src/store/       zustand: itemsStore, notificationsStore, toastStore
   src/screens/     Home, ItemDetail, AddEditItem, Settings (4 total)
-  src/components/  14 presentational components (Card, ScreenHeader, StatusBadge,
+  src/components/  13 presentational components (Card, ScreenHeader, StatusBadge,
                    SelectModal, InvoiceImageViewer, Toast, AppTabBar, ...)
   src/navigation/  RootNavigator, MainDrawerNavigator, MainTabNavigator, AppDrawerContent,
                    navigationRef
@@ -57,10 +57,13 @@ context: |
     3 add store TEXT
     4 create invoice_images + backfill one row per non-null warranty_items.invoice_uri
     5 create notification_schedules
+    6 add photo_uri TEXT to warranty_items
   warranty_items(id PK TEXT/uuid, name, purchase_date, warranty_months, expiry_date,
-    category, notes, invoice_uri, created_at, updated_at, brand, price, store).
+    category, notes, invoice_uri, created_at, updated_at, brand, price, store, photo_uri).
     invoice_uri is a retained legacy column, superseded by invoice_images and no longer
-    read by the repository mapper.
+    read by the repository mapper. photo_uri is nullable and holds the app-private URI of
+    the item's single optional photo; updateItem with photoUri: undefined clears it, while
+    omitting the key preserves it.
   invoice_images(id PK, item_id, uri, sort_order DEFAULT 0, created_at).
   notification_schedules(id PK, item_id, reminder_kind, notification_id, trigger_at,
     created_at). reminder_kind is 'thirtyDay' | 'sevenDay' | 'onExpiry'.
@@ -93,32 +96,41 @@ context: |
   Images: picker quality 0.7; files copied into documentDirectory/invoices/ as
   invoice-<uuid>.jpg; resized to max dimension 1600 at compress 0.8 only when larger;
   compression failure falls back to saving the original. MAX_INVOICE_PAGES is 10. Original
-  gallery URIs are never retained.
+  gallery URIs are never retained. Item photos reuse the same save pipeline in their own
+  directory: at most one per item, copied into documentDirectory/photos/ as
+  photo-<uuid>.jpg, picked from camera or gallery. A photo file that is replaced, removed,
+  or attached and then abandoned by leaving the screen without saving is deleted;
+  itemsStore.deleteItem deletes the item's photo file alongside its invoice files. A photo
+  that cannot be displayed falls back to the category icon.
   Error policy: per-item, per-notification and per-image failures are logged and skipped so
   one failure cannot undo an otherwise successful save, restore or cancel.
 
   ## Backup format (version 1)
   Export: zip containing data.json { formatVersion, exportedAt, items[] } plus
-  invoices/<imageId><ext>; each item's invoiceImages[].uri is rewritten to that relative
-  path. Written to cacheDirectory/backups/, then offered through the OS share sheet.
+  invoices/<imageId><ext> and photos/photo-<itemId><ext>; each item's invoiceImages[].uri
+  and photoUri are rewritten to those relative paths. Written to cacheDirectory/backups/,
+  then offered through the OS share sheet. An unreadable invoice or photo file is detected
+  before anything is written and reported as BackupMissingFilesError; re-running with
+  { skipMissingFiles: true } exports without those files and reports skippedFileCount.
   Success is deliberately NOT gated on the share sheet outcome (Android resolves
   identically whether the user saves or dismisses).
   Import: picked with type '*/*' (Android MIME types for zip are unreliable), fully parsed
   and validated in memory before any write — BackupValidationError('invalid' or
   'unsupportedVersion') is thrown first. Merge is strictly additive: items whose id already
   exists are skipped, never overwritten; ids, expiry dates and timestamps are preserved as
-  exported. Unreadable images are dropped rather than failing the item. Returns
+  exported. photoUri is validated as an optional string and unpacked back into
+  app-private storage; a photo missing from the archive or one whose write fails imports
+  the item without a photo, and a backup taken before item photos existed imports cleanly.
+  Unreadable images are dropped rather than failing the item. Returns
   { imported, skipped }. Reminders are scheduled for imported non-expired items when
   notifications are enabled.
 
   ## Known structural facts (accepted at this baseline, not yet addressed)
-  - Item create/update orchestration lives in AddEditItemScreen (844 lines): repository
+  - Item create/update orchestration lives in AddEditItemScreen (936 lines): repository
     write, invoice-file reconciliation, reminder rescheduling and the permission prompt all
     sit in handleSave, calling repositories and services directly rather than via a store.
     Delete is the opposite — fully owned by itemsStore and covered by tests.
   - No screen or component tests exist; screens are the only untested logic.
-  - AddEditItemScreen has a product-photo picker (photoUri) that is never copied to app
-    storage and never persisted — there is no column for it; it is discarded on save.
   - src/utils/mockData.ts is unreferenced.
   - File access uses the expo-file-system/legacy API surface throughout, consistently,
     including in the test mock.
@@ -128,7 +140,7 @@ context: |
   - Category filtering logic exists (filterItems) with no Categories screen to drive it.
 
   ## Testing
-  Jest with the jest-expo preset; 18 suites / 220 tests passing at this baseline, covering
+  Jest with the jest-expo preset; 18 suites / 265 tests passing at this baseline, covering
   db/, services/, store/, utils/ and i18n/ only. Run with `npm test`.
   __mocks__/expo-sqlite.ts backs the async expo-sqlite API with a real in-memory
   better-sqlite3 engine, so migration and repository tests execute real SQL. Other native
