@@ -13,13 +13,9 @@ const fr: Messages = {
   },
   nav: {
     home: 'Accueil',
-    categories: 'Catégories',
-    reminders: 'Rappels',
     settings: 'Paramètres',
     goBack: 'Retour',
     addItem: 'Ajouter un article',
-    categoriesComingSoon: 'Catégories arrive bientôt',
-    remindersComingSoon: 'Rappels arrive bientôt',
   },
   category: {
     electronics: 'Électronique',
