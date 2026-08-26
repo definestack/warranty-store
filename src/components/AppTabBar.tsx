@@ -11,8 +11,6 @@ import type { RootStackParamList } from '../types/navigation';
 
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Home: { active: 'home', inactive: 'home-outline' },
-  Categories: { active: 'grid', inactive: 'grid-outline' },
-  Reminders: { active: 'notifications', inactive: 'notifications-outline' },
   Settings: { active: 'settings', inactive: 'settings-outline' },
 };
 

@@ -11,13 +11,9 @@ const en = {
   },
   nav: {
     home: 'Home',
-    categories: 'Categories',
-    reminders: 'Reminders',
     settings: 'Settings',
     goBack: 'Go back',
     addItem: 'Add item',
-    categoriesComingSoon: 'Categories is coming soon',
-    remindersComingSoon: 'Reminders is coming soon',
   },
   category: {
     electronics: 'Electronics',

@@ -1,7 +1,5 @@
 export type MainTabParamList = {
   Home: undefined;
-  Categories: undefined;
-  Reminders: undefined;
   Settings: undefined;
 };
 
