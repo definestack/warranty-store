@@ -5,10 +5,6 @@ export type MainTabParamList = {
   Settings: undefined;
 };
 
-export type MainDrawerParamList = {
-  Tabs: undefined;
-};
-
 export type RootStackParamList = {
   MainTabs: undefined;
   ItemDetail: { itemId: string };
