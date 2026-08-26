@@ -41,6 +41,10 @@ function buildTheme(mode: ThemeMode, paper: MD3Theme): AppTheme {
   return {
     mode,
     paper,
+    // The splash `backgroundColor` literals in `app.json` (#FFFBFE light, #1C1B1F dark)
+    // must stay equal to these MD3 light/dark `background` values. Native splash config
+    // cannot import from TypeScript, so the pair is duplicated; if they drift, the splash
+    // steps colour as it hands off to the first screen.
     background: c.background,
     surface: c.surface,
     surfaceAlt: c.surfaceVariant,
