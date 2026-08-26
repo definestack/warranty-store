@@ -56,6 +56,7 @@ src/
   utils/
 assets/
 docs/
+scripts/
 ```
 
 ---
@@ -84,6 +85,45 @@ npx expo start
 ### Run on Android
 
 Press **a** in the Expo terminal, or scan the QR code using **Expo Go** on your Android device.
+
+---
+
+## App Icons
+
+The logo master lives at `assets/logo-master.png`. Every icon the app ships is derived from
+it, so none of them is edited by hand:
+
+| Asset | Where it shows up |
+| --- | --- |
+| `assets/icon.png` | launcher and store icon |
+| `assets/android-icon-foreground.png` | Android adaptive icon, foreground layer |
+| `assets/android-icon-background.png` | Android adaptive icon, background layer |
+| `assets/android-icon-monochrome.png` | Android 13+ themed icon |
+| `assets/splash-icon.png` | splash artwork |
+| `assets/favicon.png` | browser tab on web |
+
+Regenerate all six after changing the master:
+
+```bash
+python scripts/generate-app-icons.py
+```
+
+The script checks what only shows up on a device — that `icon.png` is fully opaque, that the
+adaptive and themed layers stay inside Android's safe circle, that the splash keeps a
+transparent margin — and fails rather than writing an asset that breaks one of those rules.
+Add `--preview <dir>` to also get review renders: the icon under circular and squircle masks,
+the themed icon recoloured, the splash on light and dark, and the favicon at 16px.
+
+`android.adaptiveIcon.backgroundColor` in `app.json` must match
+`android-icon-background.png`; the script prints the value to use.
+
+Two caveats:
+
+* **Python 3 with Pillow and NumPy is needed only for this script.** It is a development
+  tool — building or running the app never needs Python.
+* **Changing an icon needs a native rebuild** (`npm run android`) before a device shows it.
+  An installed app or a stale dev client keeps displaying the old icon, so check for that
+  before suspecting the asset.
 
 ---
 
