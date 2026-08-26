@@ -22,9 +22,9 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const { t } = useTranslation();
 
   const handleAddPress = () => {
-    // navigation here is the bottom-tab navigator; AddEditItem lives two levels up
-    // the tree (Tabs -> Drawer -> RootStack).
-    navigation.getParent()?.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('AddEditItem', {});
+    // navigation here is the bottom-tab navigator; AddEditItem lives one level up
+    // the tree (Tabs -> RootStack).
+    navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('AddEditItem', {});
   };
 
   return (

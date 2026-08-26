@@ -10,8 +10,8 @@ those controls — not the behaviour of the features behind them.
 ### Requirement: Controls are only shown when the feature behind them works
 
 The app SHALL NOT present an interactive control that appears operable but performs no
-action. Every control in Settings and in the navigation drawer SHALL either carry out the
-action its label describes, or be presented in an explicitly unavailable state — visibly
+action. Every control in Settings and in the app's navigation chrome SHALL either carry
+out the action its label describes, or be presented in an explicitly unavailable state — visibly
 disabled, or acknowledging the interaction with a message saying the feature is not yet
 available.
 
@@ -68,7 +68,7 @@ that remains true.
 - **WHEN** the user opens Settings and scrolls to the end of the screen
 - **THEN** no sign-out control is shown
 
-#### Scenario: The navigation drawer has no sign-out control
+#### Scenario: The app's navigation chrome has no sign-out control
 
-- **WHEN** the user opens the navigation drawer
-- **THEN** no sign-out control is shown
+- **WHEN** the user moves between the app's top-level destinations
+- **THEN** no sign-out control is shown in the navigation chrome

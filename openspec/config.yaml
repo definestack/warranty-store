@@ -14,7 +14,7 @@ context: |
   Expo SDK ~54, React Native 0.81.5, React 19.1.0, TypeScript ~5.9.
   State: zustand 5. DB: expo-sqlite ~16 (`warranty-store.db`). Settings: AsyncStorage.
   UI: react-native-paper 5.15 (Material 3) plus custom components. Nav: React Navigation 7
-  (native-stack + drawer + bottom-tabs). i18n: i18n-js. Archives: jszip.
+  (native-stack + bottom-tabs). i18n: i18n-js. Archives: jszip.
   Expo modules in use: notifications, image-picker, image-manipulator, file-system (legacy
   API surface), document-picker, sharing, localization, crypto (randomUUID), font,
   status-bar, linear-gradient. app.json plugins: expo-sqlite, datetimepicker,
@@ -30,8 +30,7 @@ context: |
   src/screens/     Home, ItemDetail, AddEditItem, Settings (4 total)
   src/components/  13 presentational components (Card, ScreenHeader, StatusBadge,
                    SelectModal, InvoiceImageViewer, Toast, AppTabBar, ...)
-  src/navigation/  RootNavigator, MainDrawerNavigator, MainTabNavigator, AppDrawerContent,
-                   navigationRef
+  src/navigation/  RootNavigator, MainTabNavigator, navigationRef
   src/types/       warranty.ts, notification.ts, navigation.ts
   src/utils/       date, validation, itemFilters, categories
   src/i18n/        i18n.ts, LocaleContext.tsx, locales/{en,es,fr,de}.ts
@@ -44,7 +43,7 @@ context: |
   taps to ItemDetail via navigationRef.
 
   ## Navigation
-  RootStack (headerShown: false): MainTabs -> Drawer -> BottomTabs, ItemDetail { itemId },
+  RootStack (headerShown: false): MainTabs -> BottomTabs, ItemDetail { itemId },
   AddEditItem { itemId? } — itemId absent means create. Tabs: Home, Categories, Reminders,
   Settings. Categories and Reminders render an empty View and intercept tabPress to show a
   toast; they have no screens.

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -105,13 +105,6 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable
-          hitSlop={12}
-          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-          accessibilityLabel={t('nav.openMenu')}
-        >
-          <Ionicons name="menu" size={24} color={theme.text} />
-        </Pressable>
         <Text style={[styles.brandText, { color: theme.text }]}>{t('common.appName')}</Text>
         <Pressable
           hitSlop={12}
