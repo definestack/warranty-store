@@ -21,7 +21,12 @@ export function initDatabase(): Promise<SQLiteDatabase> {
       await runMigrations(db);
       dbInstance = db;
       return db;
-    })();
+    })().catch((err) => {
+      // Never memoize a failed attempt: the launch screen offers a retry, and it must be
+      // able to start a fresh initialization instead of re-awaiting the same rejection.
+      initPromise = null;
+      throw err;
+    });
   }
   return initPromise;
 }

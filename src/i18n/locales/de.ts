@@ -9,6 +9,8 @@ const de: Messages = {
     systemDefault: 'Systemstandard',
     initializingDatabase: 'Datenbank wird initialisiert…',
     databaseError: 'Datenbankfehler: %{error}',
+
+    retry: 'Erneut versuchen',
     pageOfTotal: 'Seite %{current} von %{total}',
   },
   nav: {

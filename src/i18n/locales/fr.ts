@@ -9,6 +9,8 @@ const fr: Messages = {
     systemDefault: 'Système par défaut',
     initializingDatabase: 'Initialisation de la base de données…',
     databaseError: 'Erreur de base de données : %{error}',
+
+    retry: 'Réessayer',
     pageOfTotal: 'Page %{current} sur %{total}',
   },
   nav: {

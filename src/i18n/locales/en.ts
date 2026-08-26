@@ -7,6 +7,8 @@ const en = {
     systemDefault: 'System Default',
     initializingDatabase: 'Initializing database…',
     databaseError: 'Database error: %{error}',
+
+    retry: 'Retry',
     pageOfTotal: 'Page %{current} of %{total}',
   },
   nav: {
