@@ -127,6 +127,24 @@ Two caveats:
 
 ---
 
+## Splash Screen
+
+The splash is configured by the `expo-splash-screen` plugin entry in `app.json` and drawn
+from a single asset, `assets/splash-icon.png`. That one file backs all three launch states —
+the native splash the system shows, the preparing state while the database initializes, and
+the failure state — so replacing it updates every one of them with no code change.
+
+The two `backgroundColor` literals in the plugin entry (`#FFFBFE` light, `#1C1B1F` dark) must
+stay equal to the MD3 `background` values in `src/theme/palette.ts`. Native splash config
+cannot import from TypeScript, so the pair is duplicated; if they drift, the splash visibly
+steps colour as it hands off to the first screen.
+
+**Changing the splash artwork or its configuration needs a native rebuild** (`npm run android`).
+An existing dev client does not pick up config-plugin changes and will look as if there is no
+splash at all.
+
+---
+
 ## Database
 
 The app uses a local SQLite database. Invoice images are stored in the app’s private file storage, and only the file path is saved in the database.

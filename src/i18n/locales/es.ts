@@ -9,6 +9,8 @@ const es: Messages = {
     systemDefault: 'Predeterminado del sistema',
     initializingDatabase: 'Inicializando base de datos…',
     databaseError: 'Error de base de datos: %{error}',
+
+    retry: 'Reintentar',
     pageOfTotal: 'Página %{current} de %{total}',
   },
   nav: {
