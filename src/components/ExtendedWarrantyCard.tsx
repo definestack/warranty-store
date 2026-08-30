@@ -66,198 +66,197 @@ export default function ExtendedWarrantyCard({
     values.durationUnit === 'years' ? t('addEditItem.durationYears') : t('addEditItem.durationMonths');
 
   return (
-    <View style={styles.wrapper}>
-      <Card style={styles.card}>
-        <View style={styles.headingRow}>
-          <Text style={[styles.heading, { color: theme.text }]}>{title}</Text>
+    <Card style={styles.card}>
+      <View style={styles.headingRow}>
+        <Text style={[styles.heading, { color: theme.text }]}>{title}</Text>
+        <Pressable
+          hitSlop={8}
+          onPress={onRemove}
+          accessibilityLabel={t('addEditItem.removeExtendedWarranty')}
+        >
+          <Ionicons name="trash-outline" size={18} color={theme.danger} />
+        </Pressable>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.provider')}</Text>
+        <View
+          style={[
+            styles.textBoxRow,
+            { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
+          ]}
+        >
+          <TextInput
+            style={[styles.textBoxInput, { color: theme.text }]}
+            placeholder={t('addEditItem.providerPlaceholder')}
+            placeholderTextColor={theme.mutedText}
+            value={values.provider}
+            onChangeText={(text) => onChange('provider', text)}
+          />
+          <Ionicons name="business-outline" size={18} color={theme.mutedText} />
+        </View>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.duration')}</Text>
+        <View style={styles.splitRow}>
+          <TextInput
+            style={[
+              styles.textBox,
+              styles.splitGrow,
+              {
+                backgroundColor: theme.surfaceAlt,
+                borderColor: errors?.duration ? theme.danger : theme.border,
+                color: theme.text,
+              },
+            ]}
+            placeholder={t('addEditItem.durationPlaceholder')}
+            placeholderTextColor={theme.mutedText}
+            value={values.durationValue}
+            onChangeText={(text) => onChange('durationValue', text)}
+            keyboardType="numeric"
+          />
           <Pressable
-            hitSlop={8}
-            onPress={onRemove}
-            accessibilityLabel={t('addEditItem.removeExtendedWarranty')}
+            onPress={onPressDurationUnit}
+            style={[
+              styles.textBoxRow,
+              styles.unitSelect,
+              { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
+            ]}
           >
-            <Ionicons name="trash-outline" size={18} color={theme.danger} />
+            <Text style={[styles.unitLabel, { color: theme.text }]}>{unitLabel}</Text>
+            <Ionicons name="chevron-down" size={16} color={theme.mutedText} />
           </Pressable>
         </View>
+        {errors?.duration ? (
+          <Text style={[styles.fieldCaption, { color: theme.danger }]}>{errors.duration}</Text>
+        ) : null}
+      </View>
 
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.provider')}</Text>
-          <View
+      <View style={styles.splitRow}>
+        <View style={[styles.field, styles.splitGrow]}>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>
+            {t('addEditItem.startsOn')}
+          </Text>
+          <Pressable
+            onPress={onPressStartDate}
             style={[
               styles.textBoxRow,
               { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
             ]}
           >
-            <TextInput
-              style={[styles.textBoxInput, { color: theme.text }]}
-              placeholder={t('addEditItem.providerPlaceholder')}
-              placeholderTextColor={theme.mutedText}
-              value={values.provider}
-              onChangeText={(text) => onChange('provider', text)}
-            />
-            <Ionicons name="business-outline" size={18} color={theme.mutedText} />
-          </View>
+            <Text style={[styles.textBoxInput, { color: theme.text }]}>{startsOnLabel}</Text>
+            <Ionicons name="calendar-outline" size={18} color={theme.mutedText} />
+          </Pressable>
         </View>
 
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.duration')}</Text>
-          <View style={styles.splitRow}>
-            <TextInput
-              style={[
-                styles.textBox,
-                styles.splitGrow,
-                {
-                  backgroundColor: theme.surfaceAlt,
-                  borderColor: errors?.duration ? theme.danger : theme.border,
-                  color: theme.text,
-                },
-              ]}
-              placeholder={t('addEditItem.durationPlaceholder')}
-              placeholderTextColor={theme.mutedText}
-              value={values.durationValue}
-              onChangeText={(text) => onChange('durationValue', text)}
-              keyboardType="numeric"
-            />
-            <Pressable
-              onPress={onPressDurationUnit}
-              style={[
-                styles.textBoxRow,
-                styles.unitSelect,
-                { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
-              ]}
-            >
-              <Text style={[styles.unitLabel, { color: theme.text }]}>{unitLabel}</Text>
-              <Ionicons name="chevron-down" size={16} color={theme.mutedText} />
-            </Pressable>
-          </View>
-          {errors?.duration ? (
-            <Text style={[styles.fieldCaption, { color: theme.danger }]}>{errors.duration}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.splitRow}>
-          <View style={[styles.field, styles.splitGrow]}>
-            <Text style={[styles.fieldLabel, { color: theme.text }]}>
-              {t('addEditItem.startsOn')}
-            </Text>
-            <Pressable
-              onPress={onPressStartDate}
-              style={[
-                styles.textBoxRow,
-                { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
-              ]}
-            >
-              <Text style={[styles.textBoxInput, { color: theme.text }]}>{startsOnLabel}</Text>
-              <Ionicons name="calendar-outline" size={18} color={theme.mutedText} />
-            </Pressable>
-          </View>
-
-          {/*
-            Ends On is derived from the start date and the duration on every write, so it
-            is rendered as read-only text. The mockup draws a calendar affordance here to
-            mirror the field beside it; reproducing it would let an end date be entered
-            directly, which the whole coverage model rests on not being possible.
-          */}
-          <View style={[styles.field, styles.splitGrow]}>
-            <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.endsOn')}</Text>
-            <View
-              style={[
-                styles.textBoxRow,
-                { backgroundColor: theme.surface, borderColor: theme.border },
-              ]}
-            >
-              <Text style={[styles.textBoxInput, { color: endsOnLabel ? theme.text : theme.mutedText }]}>
-                {endsOnLabel || '—'}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <Text style={[styles.fieldCaption, { color: theme.subtleText }]}>
-          {t('addEditItem.endsOnCaption')}
-        </Text>
-
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>
-            {t('addEditItem.cost')} <Text style={{ color: theme.subtleText }}>{t('addEditItem.extendedWarrantyOptional')}</Text>
-          </Text>
+        {/*
+          Ends On is derived from the start date and the duration on every write, so it
+          is rendered as read-only text. The mockup draws a calendar affordance here to
+          mirror the field beside it; reproducing it would let an end date be entered
+          directly, which the whole coverage model rests on not being possible.
+        */}
+        <View style={[styles.field, styles.splitGrow]}>
+          <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.endsOn')}</Text>
           <View
             style={[
               styles.textBoxRow,
-              {
-                backgroundColor: theme.surfaceAlt,
-                borderColor: errors?.cost ? theme.danger : theme.border,
-              },
+              { backgroundColor: theme.surface, borderColor: theme.border },
             ]}
           >
-            <Text style={[styles.currency, { color: theme.subtleText }]}>₹</Text>
-            <TextInput
-              style={[styles.textBoxInput, { color: theme.text }]}
-              placeholder={t('addEditItem.enterAmount')}
-              placeholderTextColor={theme.mutedText}
-              value={values.cost}
-              onChangeText={(text) => onChange('cost', text)}
-              keyboardType="numeric"
-            />
+            <Text style={[styles.textBoxInput, { color: endsOnLabel ? theme.text : theme.mutedText }]}>
+              {endsOnLabel || '—'}
+            </Text>
           </View>
-          {errors?.cost ? (
-            <Text style={[styles.fieldCaption, { color: theme.danger }]}>{errors.cost}</Text>
-          ) : null}
         </View>
+      </View>
+      <Text style={[styles.fieldCaption, { color: theme.subtleText }]}>
+        {t('addEditItem.endsOnCaption')}
+      </Text>
 
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>
-            {t('addEditItem.notes')} <Text style={{ color: theme.subtleText }}>{t('addEditItem.extendedWarrantyOptional')}</Text>
-          </Text>
+      <View style={styles.field}>
+        <Text style={[styles.fieldLabel, { color: theme.text }]}>
+          {t('addEditItem.cost')} <Text style={{ color: theme.subtleText }}>{t('addEditItem.extendedWarrantyOptional')}</Text>
+        </Text>
+        <View
+          style={[
+            styles.textBoxRow,
+            {
+              backgroundColor: theme.surfaceAlt,
+              borderColor: errors?.cost ? theme.danger : theme.border,
+            },
+          ]}
+        >
+          <Text style={[styles.currency, { color: theme.subtleText }]}>₹</Text>
           <TextInput
-            style={[
-              styles.textBox,
-              styles.notesBox,
-              { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text },
-            ]}
-            placeholder={t('addEditItem.extendedNotesPlaceholder')}
+            style={[styles.textBoxInput, { color: theme.text }]}
+            placeholder={t('addEditItem.enterAmount')}
             placeholderTextColor={theme.mutedText}
-            value={values.notes}
-            onChangeText={(text) => onChange('notes', text)}
-            multiline
-            textAlignVertical="top"
+            value={values.cost}
+            onChangeText={(text) => onChange('cost', text)}
+            keyboardType="numeric"
           />
         </View>
-      </Card>
+        {errors?.cost ? (
+          <Text style={[styles.fieldCaption, { color: theme.danger }]}>{errors.cost}</Text>
+        ) : null}
+      </View>
 
-      <Card style={styles.card}>
-        <View style={styles.sectionHeaderRow}>
-          <View style={styles.sectionHeaderText}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {t('addEditItem.extendedInvoiceSection')}
-            </Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
-              {t('addEditItem.extendedInvoiceSubtitle')}
-            </Text>
-          </View>
-          {renderAddAction('invoice')}
-        </View>
-        {renderDocuments('invoice')}
+      <View style={styles.field}>
+        <Text style={[styles.fieldLabel, { color: theme.text }]}>
+          {t('addEditItem.notes')} <Text style={{ color: theme.subtleText }}>{t('addEditItem.extendedWarrantyOptional')}</Text>
+        </Text>
+        <TextInput
+          style={[
+            styles.textBox,
+            styles.notesBox,
+            { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text },
+          ]}
+          placeholder={t('addEditItem.extendedNotesPlaceholder')}
+          placeholderTextColor={theme.mutedText}
+          value={values.notes}
+          onChangeText={(text) => onChange('notes', text)}
+          multiline
+          textAlignVertical="top"
+        />
+      </View>
+      {/*
+        The documents live inside this entry's own card rather than a card of their own:
+        with several extended warranties on screen, a detached tile leaves it unclear
+        which cover its documents belong to.
+      */}
+      <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-        <View style={[styles.sectionHeaderRow, styles.secondSectionHeader]}>
-          <View style={styles.sectionHeaderText}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {t('addEditItem.extendedDocumentsSection')}
-            </Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
-              {t('addEditItem.extendedDocumentsSubtitle')}
-            </Text>
-          </View>
-          {renderAddAction('warranty')}
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.sectionHeaderText}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {t('addEditItem.extendedInvoiceSection')}
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
+            {t('addEditItem.extendedInvoiceSubtitle')}
+          </Text>
         </View>
-        {renderDocuments('warranty')}
-      </Card>
-    </View>
+        {renderAddAction('invoice')}
+      </View>
+      {renderDocuments('invoice')}
+
+      <View style={[styles.sectionHeaderRow, styles.secondSectionHeader]}>
+        <View style={styles.sectionHeaderText}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {t('addEditItem.extendedDocumentsSection')}
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
+            {t('addEditItem.extendedDocumentsSubtitle')}
+          </Text>
+        </View>
+        {renderAddAction('warranty')}
+      </View>
+      {renderDocuments('warranty')}
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    gap: 12,
-  },
   card: {
     padding: 16,
     gap: 12,
@@ -340,6 +339,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   secondSectionHeader: {
+    marginTop: 4,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
     marginTop: 4,
   },
 });

@@ -338,6 +338,13 @@ list in one place also means the ordering requirement is satisfied by constructi
   mockup's *start* rule exactly (28 Aug 2027 is the day after the manufacturer warranty's
   27 Aug 2027). Do not reverse-engineer the arithmetic from either image.
 
+- **An extended warranty's documents sit inside its own card, not a card of their own** —
+  the Add/Edit mockup draws the entry's fields and its two document sections as two
+  separate tiles. That reads fine for the single extended warranty the mockup shows, and
+  badly for several: the second tile detaches from the entry it belongs to and there is
+  nothing to say which cover's paperwork it holds. One card per extended warranty, with a
+  divider before the document sections. Changed on user feedback after the first build.
+
 - **Two mockup elements are deliberately not reproduced on the detail screen** — the details
   card in the mockup drops the **Warranty Period** row (the duration now appears against the
   period it belongs to, which is better placement, so this is followed) and shows no
