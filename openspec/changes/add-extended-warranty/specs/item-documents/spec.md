@@ -123,8 +123,8 @@ A document added through a section's own control SHALL be added to that section 
 kind, in that scope — and SHALL NOT be added to any other.
 
 Where a section presents both a header control and an add tile at the end of its document
-strip, the two SHALL NOT both be offered at once: the header control SHALL be active only
-while the section is empty, and SHALL be disabled once the section holds a document,
+strip, the two SHALL NOT both be offered at once: the header control SHALL be shown only
+while the section is empty, and SHALL NOT be shown once the section holds a document,
 leaving the tile as the way to add more. A section SHALL always offer at least one active
 way to add to it, up to its limit.
 
@@ -161,7 +161,7 @@ SHALL NOT exceed that section's limit.
 #### Scenario: A populated section offers only its add tile
 
 - **WHEN** a section holds at least one document
-- **THEN** its header control is disabled
+- **THEN** its header control is no longer shown
 - **AND** the add tile at the end of its strip is still active, up to the section's limit
 
 #### Scenario: A source chooser is offered per section

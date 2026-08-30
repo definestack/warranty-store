@@ -117,22 +117,20 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
   };
 
   /**
-   * A section's header add control. It is disabled once the section holds a document,
+   * A section's header add control. It is dropped once the section holds a document,
    * because the "Add More" tile in its strip then does the same job — matching the edit
    * screen, where the two controls are equally redundant.
    */
-  const renderAddAction = (label: string, focus: AddEditSection, disabled = false) => {
-    const tint = disabled ? theme.mutedText : theme.primary;
+  const renderAddAction = (label: string, focus: AddEditSection, hidden = false) => {
+    if (hidden) return null;
 
     return (
       <Pressable
         onPress={() => openEditor(focus)}
-        disabled={disabled}
-        accessibilityState={{ disabled }}
-        style={[styles.sectionAction, { borderColor: tint }]}
+        style={[styles.sectionAction, { borderColor: theme.primary }]}
       >
-        <Ionicons name="add" size={14} color={tint} />
-        <Text style={[styles.sectionActionText, { color: tint }]}>{label}</Text>
+        <Ionicons name="add" size={14} color={theme.primary} />
+        <Text style={[styles.sectionActionText, { color: theme.primary }]}>{label}</Text>
       </Pressable>
     );
   };

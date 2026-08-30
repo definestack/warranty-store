@@ -610,18 +610,22 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
   /**
    * A section's header add control. Once the section holds a document, the "Add More" tile
-   * at the end of its strip does exactly the same job, so this is disabled rather than
-   * offering a second route to the same action.
+   * at the end of its strip does exactly the same job, so this control is not offered at
+   * all rather than sitting there inert.
    */
   const renderAddAction = (ref: DocumentSectionRef, label: string) => {
-    const disabled = attachingSection !== null || draftsFor(documentDrafts, ref).length > 0;
-    const tint = disabled ? theme.mutedText : theme.primary;
+    if (draftsFor(documentDrafts, ref).length > 0) return null;
+
+    // An attach already in flight still disables it rather than hiding it, so its
+    // "Saving…" state stays visible where the user tapped.
+    const busy = attachingSection !== null;
+    const tint = busy ? theme.mutedText : theme.primary;
 
     return (
       <Pressable
         onPress={() => handleAttachDocument(ref)}
-        disabled={disabled}
-        accessibilityState={{ disabled }}
+        disabled={busy}
+        accessibilityState={{ disabled: busy }}
         style={[styles.sectionAction, { borderColor: tint }]}
       >
         <Ionicons name="add" size={14} color={tint} />
