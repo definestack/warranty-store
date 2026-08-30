@@ -34,7 +34,7 @@ const STATUS_TEXT_COLOR: Record<WarrantyStatus, keyof AppTheme> = {
 };
 
 function expiryLabel(item: WarrantyItem, status: WarrantyStatus, t: TranslateFn, locale: string): string {
-  const date = formatIsoDate(item.expiryDate, locale);
+  const date = formatIsoDate(item.coverageEndDate, locale);
   return status === 'expired' ? t('home.expiredOn', { date }) : t('home.expiresOn', { date });
 }
 
@@ -67,7 +67,7 @@ export default function HomeScreen({ navigation }: Props) {
     let expiring = 0;
     let expired = 0;
     for (const item of allItems) {
-      const status = getWarrantyStatus(item.expiryDate);
+      const status = getWarrantyStatus(item.coverageEndDate);
       if (status === 'active') active += 1;
       else if (status === 'expiring') expiring += 1;
       else expired += 1;
@@ -169,7 +169,7 @@ export default function HomeScreen({ navigation }: Props) {
                             {item.name}
                           </Text>
                           <Text style={[styles.expiringSoonDays, { color: theme.warning }]}>
-                            {formatDaysRemaining(item.expiryDate, t)}
+                            {formatDaysRemaining(item.coverageEndDate, t)}
                           </Text>
                         </Card>
                       </Pressable>
@@ -189,7 +189,7 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         }
         renderItem={({ item }) => {
-          const status = getWarrantyStatus(item.expiryDate);
+          const status = getWarrantyStatus(item.coverageEndDate);
           const itemCategory = item.category ?? DEFAULT_CATEGORY;
           return (
             <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>

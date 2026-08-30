@@ -145,3 +145,69 @@ describe('deleteAllSchedules', () => {
     await expect(deleteAllSchedules()).resolves.toBeUndefined();
   });
 });
+
+describe('the cover period a schedule belongs to', () => {
+  it('persists the extended warranty a reminder was scheduled for', async () => {
+    const item = await makeItem();
+    await saveSchedulesForItem(item.id, [
+      {
+        reminderKind: 'thirtyDay',
+        notificationId: 'notif-ew',
+        triggerAt: '2028-12-16T09:00:00.000Z',
+        extendedWarrantyId: 'ew-1',
+      },
+    ]);
+
+    const [schedule] = await getSchedulesForItem(item.id);
+    expect(schedule.extendedWarrantyId).toBe('ew-1');
+  });
+
+  it('reads a reminder with no reference as the manufacturer period', async () => {
+    const item = await makeItem();
+    await saveSchedulesForItem(item.id, [
+      {
+        reminderKind: 'onExpiry',
+        notificationId: 'notif-manufacturer',
+        triggerAt: '2027-01-15T09:00:00.000Z',
+      },
+    ]);
+
+    const [schedule] = await getSchedulesForItem(item.id);
+    expect(schedule.extendedWarrantyId).toBeUndefined();
+  });
+
+  it('returns every period’s schedules when reading by item', async () => {
+    const item = await makeItem();
+    await saveSchedulesForItem(item.id, [
+      { reminderKind: 'onExpiry', notificationId: 'notif-m', triggerAt: '2027-01-15T09:00:00.000Z' },
+      {
+        reminderKind: 'onExpiry',
+        notificationId: 'notif-e',
+        triggerAt: '2029-01-15T09:00:00.000Z',
+        extendedWarrantyId: 'ew-1',
+      },
+    ]);
+
+    const schedules = await getSchedulesForItem(item.id);
+
+    expect(schedules).toHaveLength(2);
+    expect(schedules.map((entry) => entry.extendedWarrantyId)).toEqual([undefined, 'ew-1']);
+  });
+
+  it('deletes every period’s schedules when deleting by item', async () => {
+    const item = await makeItem();
+    await saveSchedulesForItem(item.id, [
+      { reminderKind: 'onExpiry', notificationId: 'notif-m', triggerAt: '2027-01-15T09:00:00.000Z' },
+      {
+        reminderKind: 'onExpiry',
+        notificationId: 'notif-e',
+        triggerAt: '2029-01-15T09:00:00.000Z',
+        extendedWarrantyId: 'ew-1',
+      },
+    ]);
+
+    await deleteSchedulesForItem(item.id);
+
+    expect(await getSchedulesForItem(item.id)).toEqual([]);
+  });
+});

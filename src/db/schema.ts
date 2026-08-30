@@ -62,3 +62,40 @@ export const ADD_PHOTO_URI_COLUMN = `
 export const ADD_DOCUMENT_KIND_COLUMN = `
   ALTER TABLE invoice_images ADD COLUMN kind TEXT NOT NULL DEFAULT 'invoice';
 `;
+
+/**
+ * Extended warranty cover bought on top of the manufacturer warranty. An item may hold
+ * any number of these; `sort_order` is dense from zero and reconciled on save, the same
+ * way `invoice_images` is ordered.
+ *
+ * `ends_on` is derived from `starts_on` and the duration on every write and is never
+ * supplied by a caller, matching the contract `warranty_items.expiry_date` already has.
+ * `duration_value` and `duration_unit` are both stored so the form shows the duration back
+ * as the user typed it — "2 years" must not reopen as "24 months".
+ */
+export const CREATE_EXTENDED_WARRANTIES_TABLE = `
+  CREATE TABLE IF NOT EXISTS extended_warranties (
+    id TEXT PRIMARY KEY NOT NULL,
+    item_id TEXT NOT NULL,
+    provider TEXT,
+    duration_value INTEGER NOT NULL,
+    duration_unit TEXT NOT NULL,
+    starts_on TEXT NOT NULL,
+    ends_on TEXT NOT NULL,
+    cost REAL,
+    notes TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`;
+
+/**
+ * Scopes a document and a reminder to a cover period. NULL keeps meaning exactly what
+ * these rows already meant — a document belonging to the item itself, and a reminder for
+ * the manufacturer period — so every pre-existing row is correct with no backfill.
+ */
+export const ADD_EXTENDED_WARRANTY_SCOPE_COLUMNS = `
+  ALTER TABLE invoice_images ADD COLUMN extended_warranty_id TEXT;
+  ALTER TABLE notification_schedules ADD COLUMN extended_warranty_id TEXT;
+`;

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
@@ -5,19 +6,23 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Tex
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
+import type { CoverageDocumentSection, CoveragePeriodView } from '../components/CoveragePeriodCard';
+import CoveragePeriodCard from '../components/CoveragePeriodCard';
 import DetailRow from '../components/DetailRow';
 import DocumentViewer from '../components/DocumentViewer';
 import ItemIcon from '../components/ItemIcon';
 import ScreenHeader from '../components/ScreenHeader';
 import StatusBadge from '../components/StatusBadge';
+import Surface from '../components/Surface';
 import { useTranslation } from '../i18n/LocaleContext';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
-import type { ItemDocument } from '../types/warranty';
-import type { RootStackParamList } from '../types/navigation';
+import type { AddEditSection, RootStackParamList } from '../types/navigation';
+import type { ExtendedWarranty, ItemDocument } from '../types/warranty';
 import { DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
-import { formatDaysRemaining, formatIsoDate, formatWarrantyDuration, getWarrantyStatus } from '../utils/date';
+import { formatPeriodCountdown, getPeriodStatus } from '../utils/coverage';
+import { formatIsoDate, getDaysRemaining, getWarrantyStatus } from '../utils/date';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ItemDetail'>;
 
@@ -61,8 +66,14 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
     );
   }
 
-  const status = getWarrantyStatus(item.expiryDate);
+  const status = getWarrantyStatus(item.coverageEndDate);
   const category = item.category ?? DEFAULT_CATEGORY;
+  const daysLeft = getDaysRemaining(item.coverageEndDate);
+  const lastExtended = item.extendedWarranties[item.extendedWarranties.length - 1];
+
+  /** Every add control on this read-only screen opens the editor at its section. */
+  const openEditor = (focus?: AddEditSection) =>
+    navigation.navigate('AddEditItem', { itemId: item.id, focus });
 
   const handleConfirmDelete = async () => {
     setDeleting(true);
@@ -88,35 +99,168 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
     );
   };
 
-  const renderDocumentSection = (label: string, documents: ItemDocument[]) => {
-    if (documents.length === 0) return null;
+  const openViewer = (documents: ItemDocument[], index: number) => {
+    setViewerIndex(index);
+    setViewerDocuments(documents.map((entry) => entry.uri));
+  };
+
+  /**
+   * The per-tile menu. With the screen read-only its only two actions are viewing the
+   * document and jumping to the editor to change it.
+   */
+  const showDocumentMenu = (documents: ItemDocument[], index: number, focus: AddEditSection) => {
+    Alert.alert(t('itemDetail.documentMenu'), undefined, [
+      { text: t('itemDetail.viewDocument'), onPress: () => openViewer(documents, index) },
+      { text: t('itemDetail.editInItem'), onPress: () => openEditor(focus) },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
+
+  /**
+   * A section's header add control. It is dropped once the section holds a document,
+   * because the "Add More" tile in its strip then does the same job — matching the edit
+   * screen, where the two controls are equally redundant.
+   */
+  const renderAddAction = (label: string, focus: AddEditSection, hidden = false) => {
+    if (hidden) return null;
 
     return (
-      <View style={styles.notesSection}>
-        <Text style={[styles.notesLabel, { color: theme.text }]}>{label}</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.documentThumbnailRow}
-        >
-          {documents.map((document, index) => (
-            <Pressable
-              key={document.id}
-              onPress={() => {
-                setViewerIndex(index);
-                setViewerDocuments(documents.map((entry) => entry.uri));
-              }}
-              accessibilityLabel={label}
-            >
+      <Pressable
+        onPress={() => openEditor(focus)}
+        style={[styles.sectionAction, { borderColor: theme.primary }]}
+      >
+        <Ionicons name="add" size={14} color={theme.primary} />
+        <Text style={[styles.sectionActionText, { color: theme.primary }]}>{label}</Text>
+      </Pressable>
+    );
+  };
+
+  /**
+   * A document strip. Rendered even when the section is empty, so an empty section is
+   * visibly empty rather than absent and its add tile stays reachable.
+   */
+  const renderDocumentStrip = (documents: ItemDocument[], focus: AddEditSection) => {
+    // An empty section is served by its header control, which is shown exactly when this
+    // strip is not. The section still says it is empty rather than showing nothing at all.
+    if (documents.length === 0) {
+      return (
+        <Text style={[styles.emptySection, { color: theme.mutedText }]}>
+          {t('itemDetail.noDocuments')}
+        </Text>
+      );
+    }
+
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.documentRow}
+      >
+        {documents.map((document, index) => (
+          <View key={document.id} style={[styles.documentTile, { borderColor: theme.border }]}>
+            <Pressable onPress={() => openViewer(documents, index)}>
               <Image source={{ uri: document.uri }} style={styles.documentThumbnail} />
             </Pressable>
-          ))}
-        </ScrollView>
-        <Text style={[styles.notesText, { color: theme.subtleText }]}>
-          {t('itemDetail.viewDocumentHint')}
-        </Text>
-      </View>
+            <Pressable
+              hitSlop={6}
+              onPress={() => showDocumentMenu(documents, index, focus)}
+              accessibilityLabel={t('itemDetail.documentMenu')}
+              style={[styles.documentMenuButton, { backgroundColor: theme.surface }]}
+            >
+              <Ionicons name="ellipsis-vertical" size={13} color={theme.subtleText} />
+            </Pressable>
+          </View>
+        ))}
+        <Pressable
+          onPress={() => openEditor(focus)}
+          style={[styles.documentAddTile, { borderColor: theme.primary }]}
+        >
+          <Ionicons name="add" size={20} color={theme.primary} />
+          <Text style={[styles.documentAddLabel, { color: theme.primary }]}>
+            {t('itemDetail.addMore')}
+          </Text>
+        </Pressable>
+      </ScrollView>
     );
+  };
+
+  const extendedFacts = (extended: ExtendedWarranty) => {
+    const facts: { label: string; value: string }[] = [];
+    if (extended.provider) {
+      facts.push({ label: t('itemDetail.provider'), value: extended.provider });
+    }
+    facts.push({
+      label: t('itemDetail.duration'),
+      value:
+        extended.durationUnit === 'years'
+          ? t('duration.years', { count: extended.durationValue })
+          : t('duration.months', { count: extended.durationValue }),
+    });
+    if (extended.cost !== undefined) {
+      facts.push({ label: t('itemDetail.cost'), value: formatPrice(extended.cost) });
+    }
+    return facts;
+  };
+
+  /**
+   * The item's cover as one ordered list: the manufacturer warranty mapped into the same
+   * shape as every extended warranty, so neither is a special case below.
+   */
+  const periods: CoveragePeriodView[] = [
+    {
+      id: 'manufacturer',
+      title: t('itemDetail.originalWarranty'),
+      status: getPeriodStatus(item.purchaseDate, item.expiryDate),
+      range: `${formatIsoDate(item.purchaseDate, locale)} – ${formatIsoDate(item.expiryDate, locale)}`,
+      countdown: formatPeriodCountdown(item.purchaseDate, item.expiryDate, t),
+      countdownDate: formatIsoDate(item.expiryDate, locale),
+      facts: [],
+      sections: [{ kind: 'warranty', label: t('itemDetail.warrantyDocumentsWithExamples') }],
+    },
+    ...item.extendedWarranties.map((extended, index) => ({
+      id: extended.id,
+      title:
+        item.extendedWarranties.length > 1
+          ? `${t('itemDetail.extendedWarranty')} ${index + 1}`
+          : t('itemDetail.extendedWarranty'),
+      status: getPeriodStatus(extended.startsOn, extended.endsOn),
+      range: `${formatIsoDate(extended.startsOn, locale)} – ${formatIsoDate(extended.endsOn, locale)}`,
+      countdown: formatPeriodCountdown(extended.startsOn, extended.endsOn, t),
+      // An upcoming period counts up to its start, so that is the date to show beside it.
+      countdownDate: formatIsoDate(
+        getDaysRemaining(extended.startsOn) > 0 ? extended.startsOn : extended.endsOn,
+        locale
+      ),
+      facts: extendedFacts(extended),
+      sections: [
+        { kind: 'invoice' as const, label: t('itemDetail.extendedInvoiceSection') },
+        { kind: 'warranty' as const, label: t('itemDetail.extendedDocumentsSection') },
+      ],
+    })),
+  ];
+
+  const documentsForPeriod = (
+    period: CoveragePeriodView,
+    section: CoverageDocumentSection
+  ): { documents: ItemDocument[]; focus: AddEditSection } => {
+    if (period.id === 'manufacturer') {
+      return { documents: item.warrantyDocuments, focus: { section: 'warrantyDocuments' } };
+    }
+
+    const extended = item.extendedWarranties.find((entry) => entry.id === period.id);
+    const documents =
+      section.kind === 'invoice'
+        ? extended?.invoiceDocuments ?? []
+        : extended?.warrantyDocuments ?? [];
+
+    return {
+      documents,
+      focus: {
+        section:
+          section.kind === 'invoice' ? 'extendedWarrantyInvoice' : 'extendedWarrantyDocuments',
+        extendedWarrantyId: period.id,
+      },
+    };
   };
 
   return (
@@ -126,9 +270,9 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
         onBack={() => navigation.goBack()}
         rightIcon="ellipsis-vertical"
         rightFilled={false}
-        onRightPress={() => navigation.navigate('AddEditItem', { itemId: item.id })}
+        onRightPress={() => openEditor()}
       />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
+      <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.summaryCard}>
           <ItemIcon category={category} size={56} photoUri={item.photoUri} />
           <View style={styles.summaryInfo}>
@@ -136,13 +280,21 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
             <Text style={[styles.itemMeta, { color: theme.subtleText }]}>{getCategoryLabel(category, t)}</Text>
             <StatusBadge status={status} />
             <Text style={[styles.daysRemaining, { color: theme.subtleText }]}>
-              {formatDaysRemaining(item.expiryDate, t)} · {formatIsoDate(item.expiryDate, locale)}
+              {t('itemDetail.coveredTill', {
+                date: formatIsoDate(item.coverageEndDate, locale),
+              })}
+              {daysLeft >= 0 ? ` · ${t('itemDetail.daysLeft', { count: daysLeft })}` : ''}
             </Text>
           </View>
         </Card>
 
         <Card style={styles.detailCard}>
           {item.brand ? <DetailRow icon="pricetag-outline" label={t('itemDetail.brand')} value={item.brand} /> : null}
+          <DetailRow
+            icon="albums-outline"
+            label={t('itemDetail.category')}
+            value={getCategoryLabel(category, t)}
+          />
           <DetailRow
             icon="calendar-outline"
             label={t('itemDetail.purchaseDate')}
@@ -153,45 +305,101 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           ) : null}
           {item.store ? <DetailRow icon="storefront-outline" label={t('itemDetail.store')} value={item.store} /> : null}
           <DetailRow
-            icon="time-outline"
-            label={t('itemDetail.warrantyPeriod')}
-            value={formatWarrantyDuration(item.warrantyMonths, t)}
-          />
-          <DetailRow
-            icon="checkmark-circle-outline"
-            label={t('itemDetail.warrantyValidTill')}
+            icon="shield-checkmark-outline"
+            label={t('itemDetail.originalWarrantyValidTill')}
             value={formatIsoDate(item.expiryDate, locale)}
           />
+          {lastExtended ? (
+            <DetailRow
+              icon="shield-outline"
+              label={t('itemDetail.extendedWarrantyValidTill')}
+              value={formatIsoDate(lastExtended.endsOn, locale)}
+            />
+          ) : null}
         </Card>
 
-        <View style={styles.notesSection}>
-          <Text style={[styles.notesLabel, { color: theme.text }]}>{t('itemDetail.notes')}</Text>
-          <Text style={[styles.notesText, { color: theme.subtleText }]}>
-            {item.notes ?? t('itemDetail.noNotes')}
+        <Card style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderText}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                {t('itemDetail.originalBills')}
+              </Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
+                {t('itemDetail.originalBillsSubtitle')}
+              </Text>
+            </View>
+            {renderAddAction(
+              t('itemDetail.addInvoice'),
+              { section: 'invoiceDocuments' },
+              item.invoiceDocuments.length > 0
+            )}
+          </View>
+          {renderDocumentStrip(item.invoiceDocuments, { section: 'invoiceDocuments' })}
+        </Card>
+
+        <Card style={styles.sectionCard}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {t('itemDetail.warrantyCoverage')}
           </Text>
-        </View>
 
-        {renderDocumentSection(t('itemDetail.invoiceDocuments'), item.invoiceDocuments)}
-        {renderDocumentSection(t('itemDetail.warrantyDocuments'), item.warrantyDocuments)}
+          {periods.map((period, index) => (
+            <CoveragePeriodCard
+              key={period.id}
+              period={period}
+              showRail={index < periods.length - 1}
+              renderDocuments={(current, section) => {
+                const { documents, focus } = documentsForPeriod(current, section);
+                return renderDocumentStrip(documents, focus);
+              }}
+            />
+          ))}
+        </Card>
 
-        <View style={styles.actions}>
-          <Pressable
-            style={[styles.actionButton, styles.actionButtonFilled, { backgroundColor: theme.primaryContainer }]}
-            onPress={() => navigation.navigate('AddEditItem', { itemId: item.id })}
-          >
-            <Text style={[styles.actionText, { color: theme.onPrimaryContainer }]}>{t('itemDetail.editItem')}</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.actionButton, styles.actionButtonOutlined, { borderColor: theme.danger }]}
-            onPress={handleDeletePress}
-            disabled={deleting}
-          >
-            <Text style={[styles.actionText, { color: theme.danger }]}>
-              {deleting ? t('itemDetail.deleting') : t('itemDetail.deleteItem')}
-            </Text>
-          </Pressable>
-        </View>
+        {/*
+          Sits outside the coverage card, matching the edit screen: adding cover is an
+          action on the item, not part of the list of periods it already has.
+        */}
+        <Pressable
+          onPress={() => openEditor({ section: 'extendedWarranties' })}
+          style={[styles.addCoverageButton, { borderColor: theme.primary }]}
+        >
+          <Ionicons name="add" size={16} color={theme.primary} />
+          <Text style={[styles.sectionActionText, { color: theme.primary }]}>
+            {t('itemDetail.addExtendedWarranty')}
+          </Text>
+        </Pressable>
+
+        {/*
+          The mockup shows no notes section, but its sample item has none. Notes are a
+          field the user can fill in, so the section is kept and simply hidden when empty
+          rather than deleted outright. See design.md — Risks.
+        */}
+        {item.notes ? (
+          <View style={styles.notesSection}>
+            <Text style={[styles.notesLabel, { color: theme.text }]}>{t('itemDetail.notes')}</Text>
+            <Text style={[styles.notesText, { color: theme.subtleText }]}>{item.notes}</Text>
+          </View>
+        ) : null}
       </ScrollView>
+
+      <Surface style={[styles.actionBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable
+          style={[styles.actionButton, { backgroundColor: theme.primaryContainer }]}
+          onPress={() => openEditor()}
+        >
+          <Text style={[styles.actionText, { color: theme.onPrimaryContainer }]}>{t('itemDetail.editItem')}</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.actionButton, styles.actionButtonOutlined, { borderColor: theme.danger }]}
+          onPress={handleDeletePress}
+          disabled={deleting}
+        >
+          <Text style={[styles.actionText, { color: theme.danger }]}>
+            {deleting ? t('itemDetail.deleting') : t('itemDetail.deleteItem')}
+          </Text>
+        </Pressable>
+      </Surface>
+
       {viewerDocuments ? (
         <DocumentViewer
           visible
@@ -211,6 +419,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     gap: 16,
+    paddingBottom: 32,
   },
   emptyState: {
     flex: 1,
@@ -243,6 +452,40 @@ const styles = StyleSheet.create({
   detailCard: {
     paddingVertical: 4,
   },
+  sectionCard: {
+    padding: 16,
+    gap: 12,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  sectionHeaderText: {
+    flex: 1,
+    gap: 2,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+  },
+  sectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  sectionActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   notesSection: {
     gap: 6,
     paddingHorizontal: 4,
@@ -255,20 +498,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  documentThumbnailRow: {
+  addCoverageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingVertical: 14,
+  },
+  emptySection: {
+    fontSize: 13,
+    paddingVertical: 2,
+  },
+  documentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    paddingVertical: 2,
+  },
+  documentTile: {
+    width: 76,
+    height: 88,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   documentThumbnail: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
+    width: '100%',
+    height: '100%',
   },
-  actions: {
+  documentMenuButton: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    borderRadius: 999,
+    paddingHorizontal: 2,
+    paddingVertical: 3,
+  },
+  documentAddTile: {
+    width: 76,
+    height: 88,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  documentAddLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  actionBar: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 4,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   actionButton: {
     flex: 1,
@@ -277,7 +564,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionButtonFilled: {},
   actionButtonOutlined: {
     borderWidth: StyleSheet.hairlineWidth,
   },

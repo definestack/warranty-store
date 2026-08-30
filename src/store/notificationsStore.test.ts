@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 
 import { getDatabase, initDatabase } from '../db/database';
 import { getAllSchedules, saveSchedulesForItem } from '../db/notificationSchedulesRepository';
+import { saveExtendedWarrantiesForItem } from '../db/extendedWarrantyRepository';
 import { createItem } from '../db/warrantyRepository';
 import type { TranslateFn } from '../i18n/i18n';
 import { useNotificationsStore } from './notificationsStore';
@@ -15,6 +16,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await getDatabase().runAsync('DELETE FROM notification_schedules');
+  await getDatabase().runAsync('DELETE FROM extended_warranties');
   await getDatabase().runAsync('DELETE FROM warranty_items');
   await AsyncStorage.clear();
   useNotificationsStore.setState({ enabled: true, loading: false });
@@ -97,6 +99,25 @@ describe('setEnabled(true)', () => {
 
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
     expect(await getAllSchedules()).toEqual([]);
+  });
+
+  it('still schedules for an item kept alive only by its extended cover', async () => {
+    const item = await makeItem('2020-01-01', 1, 'Extended Item'); // manufacturer cover long gone
+    await saveExtendedWarrantiesForItem(item.id, [
+      {
+        id: 'ew-live',
+        durationValue: 10,
+        durationUnit: 'years',
+        startsOn: '2020-02-02',
+        isPersisted: false,
+      },
+    ]);
+
+    await useNotificationsStore.getState().setEnabled(true, t);
+
+    // The item is not expired — its cover runs to 2030 — so it must not be filtered out.
+    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+    expect(await getAllSchedules()).not.toEqual([]);
   });
 
   it('logs and continues when scheduling fails for one item', async () => {

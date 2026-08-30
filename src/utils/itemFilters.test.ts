@@ -1,8 +1,9 @@
 import type { WarrantyItem } from '../types/warranty';
+import { getWarrantyStatus } from './date';
 import { ALL_CATEGORIES, filterItems, getExpiringSoonItems } from './itemFilters';
 
 function makeItem(overrides: Partial<WarrantyItem> = {}): WarrantyItem {
-  return {
+  const item: WarrantyItem = {
     id: overrides.id ?? 'id-1',
     name: overrides.name ?? 'Item',
     purchaseDate: '2024-01-01',
@@ -11,10 +12,16 @@ function makeItem(overrides: Partial<WarrantyItem> = {}): WarrantyItem {
     category: overrides.category,
     invoiceDocuments: [],
     warrantyDocuments: [],
+    extendedWarranties: [],
+    coverageEndDate: '2025-01-01',
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     ...overrides,
   };
+
+  // Without extended cover an item is covered exactly as long as its manufacturer
+  // warranty, so the two dates track unless a test says otherwise.
+  return { ...item, coverageEndDate: overrides.coverageEndDate ?? item.expiryDate };
 }
 
 describe('filterItems', () => {
@@ -99,5 +106,42 @@ describe('getExpiringSoonItems', () => {
   it('returns an empty array when nothing is expiring soon', () => {
     const items = [makeItem({ id: 'active', expiryDate: '2026-12-01' })];
     expect(getExpiringSoonItems(items, today)).toEqual([]);
+  });
+
+  it('does not treat an item carried by extended cover as expiring', () => {
+    const items = [
+      makeItem({ id: 'extended', expiryDate: '2026-05-25', coverageEndDate: '2028-05-25' }),
+    ];
+
+    // Its manufacturer warranty ends in 5 days, but the item is covered for two more years.
+    expect(getExpiringSoonItems(items, today)).toEqual([]);
+  });
+
+  it('surfaces an item whose extended cover is what ends soon', () => {
+    const items = [
+      makeItem({ id: 'extended', expiryDate: '2024-01-01', coverageEndDate: '2026-06-10' }),
+    ];
+
+    // The manufacturer warranty expired two years ago; the extended cover ends in 21 days.
+    expect(getExpiringSoonItems(items, today).map((item) => item.id)).toEqual(['extended']);
+  });
+
+  it('orders by when cover actually ends, not by the manufacturer expiry date', () => {
+    const items = [
+      makeItem({ id: 'later', expiryDate: '2026-05-22', coverageEndDate: '2026-06-10' }),
+      makeItem({ id: 'sooner', expiryDate: '2026-06-15', coverageEndDate: '2026-05-25' }),
+    ];
+
+    expect(getExpiringSoonItems(items, today).map((item) => item.id)).toEqual(['sooner', 'later']);
+  });
+
+  it('does not expire an item whose manufacturer warranty has lapsed but whose extended cover runs', () => {
+    const items = [
+      makeItem({ id: 'extended', expiryDate: '2026-05-01', coverageEndDate: '2028-05-01' }),
+    ];
+
+    // Not expiring soon, and — the point — not expired either.
+    expect(getExpiringSoonItems(items, today)).toEqual([]);
+    expect(getWarrantyStatus(items[0].coverageEndDate, today)).toBe('active');
   });
 });

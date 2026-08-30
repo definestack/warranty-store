@@ -1,5 +1,6 @@
 import { getDatabase, initDatabase } from './database';
-import { saveDocumentsForItem } from './invoiceImagesRepository';
+import { saveExtendedWarrantiesForItem } from './extendedWarrantyRepository';
+import { saveDocumentsForScope } from './invoiceImagesRepository';
 import {
   createItem,
   deleteItem,
@@ -23,6 +24,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await getDatabase().runAsync('DELETE FROM invoice_images');
+  await getDatabase().runAsync('DELETE FROM extended_warranties');
   await getDatabase().runAsync('DELETE FROM warranty_items');
 });
 
@@ -115,11 +117,11 @@ describe('getItemById', () => {
 
   it('exposes documents already grouped by kind, each ordered by sort order', async () => {
     const created = await createItem(baseItem);
-    await saveDocumentsForItem(created.id, 'invoice', [
+    await saveDocumentsForScope({ itemId: created.id, kind: 'invoice' }, [
       { id: 'temp-1', uri: 'file:///1.jpg', isPersisted: false },
       { id: 'temp-2', uri: 'file:///2.jpg', isPersisted: false },
     ]);
-    await saveDocumentsForItem(created.id, 'warranty', [
+    await saveDocumentsForScope({ itemId: created.id, kind: 'warranty' }, [
       { id: 'temp-3', uri: 'file:///card.jpg', isPersisted: false },
     ]);
 
@@ -211,10 +213,10 @@ describe('deleteItem', () => {
 
   it('also removes the item document rows of both kinds', async () => {
     const created = await createItem(baseItem);
-    await saveDocumentsForItem(created.id, 'invoice', [
+    await saveDocumentsForScope({ itemId: created.id, kind: 'invoice' }, [
       { id: 'temp-1', uri: 'file:///1.jpg', isPersisted: false },
     ]);
-    await saveDocumentsForItem(created.id, 'warranty', [
+    await saveDocumentsForScope({ itemId: created.id, kind: 'warranty' }, [
       { id: 'temp-2', uri: 'file:///card.jpg', isPersisted: false },
     ]);
 
@@ -225,6 +227,105 @@ describe('deleteItem', () => {
       created.id
     );
     expect(rows).toHaveLength(0);
+  });
+
+  it('also removes the item’s extended warranties and their documents', async () => {
+    const created = await createItem(baseItem);
+    await saveExtendedWarrantiesForItem(created.id, [
+      {
+        id: 'ew-1',
+        durationValue: 24,
+        durationUnit: 'months',
+        startsOn: '2027-01-16',
+        isPersisted: false,
+      },
+    ]);
+    await saveDocumentsForScope({ itemId: created.id, extendedWarrantyId: 'ew-1', kind: 'invoice' }, [
+      { id: 'temp-ew', uri: 'file:///ew-invoice.jpg', isPersisted: false },
+    ]);
+
+    await deleteItem(created.id);
+
+    const extended = await getDatabase().getAllAsync(
+      'SELECT * FROM extended_warranties WHERE item_id = ?',
+      created.id
+    );
+    const documents = await getDatabase().getAllAsync(
+      'SELECT * FROM invoice_images WHERE item_id = ?',
+      created.id
+    );
+    expect(extended).toHaveLength(0);
+    expect(documents).toHaveLength(0);
+  });
+});
+
+describe('extended cover on a read item', () => {
+  async function withExtendedCover(itemId: string) {
+    await saveExtendedWarrantiesForItem(itemId, [
+      {
+        id: 'ew-1',
+        provider: 'ABC Protection',
+        durationValue: 24,
+        durationUnit: 'months',
+        startsOn: '2027-01-16',
+        isPersisted: false,
+      },
+    ]);
+  }
+
+  it('loads an item’s extended warranties with it', async () => {
+    const created = await createItem(baseItem);
+    await withExtendedCover(created.id);
+
+    const stored = await getItemById(created.id);
+
+    expect(stored?.extendedWarranties.map((entry) => entry.id)).toEqual(['ew-1']);
+    expect(stored?.extendedWarranties[0].provider).toBe('ABC Protection');
+  });
+
+  it('derives the coverage end date as the furthest of the periods', async () => {
+    const created = await createItem(baseItem);
+    await withExtendedCover(created.id);
+
+    const stored = await getItemById(created.id);
+
+    // Manufacturer cover ends 2027-01-15; the extended period runs to 2029-01-15.
+    expect(stored?.expiryDate).toBe('2027-01-15');
+    expect(stored?.coverageEndDate).toBe('2029-01-15');
+  });
+
+  it('leaves the coverage end date equal to the expiry date without extended cover', async () => {
+    const created = await createItem(baseItem);
+
+    const stored = await getItemById(created.id);
+
+    expect(stored?.extendedWarranties).toEqual([]);
+    expect(stored?.coverageEndDate).toBe(stored?.expiryDate);
+  });
+
+  it('applies the same derivation to the list read', async () => {
+    const withCover = await createItem(baseItem);
+    const withoutCover = await createItem({ ...baseItem, name: 'Kettle' });
+    await withExtendedCover(withCover.id);
+
+    const items = await getAllItems();
+    const covered = items.find((item) => item.id === withCover.id);
+    const bare = items.find((item) => item.id === withoutCover.id);
+
+    expect(covered?.extendedWarranties).toHaveLength(1);
+    expect(covered?.coverageEndDate).toBe('2029-01-15');
+    expect(bare?.extendedWarranties).toEqual([]);
+    expect(bare?.coverageEndDate).toBe(bare?.expiryDate);
+  });
+
+  it('recomputes the coverage end date when an update moves the expiry date', async () => {
+    const created = await createItem(baseItem);
+
+    const updated = await updateItem(created.id, { warrantyMonths: 60 });
+
+    // The manufacturer period now outlasts nothing else, but it did move.
+    expect(updated.expiryDate).toBe('2031-01-15');
+    expect(updated.coverageEndDate).toBe('2031-01-15');
   });
 });
 
@@ -276,6 +377,8 @@ describe('insertImportedItems', () => {
         createdAt: '2026-02-01T00:00:00.000Z',
       },
     ],
+    extendedWarranties: [],
+    coverageEndDate: '2028-02-01',
     createdAt: '2026-02-01T00:00:00.000Z',
     updatedAt: '2026-02-02T00:00:00.000Z',
   };

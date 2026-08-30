@@ -20,9 +20,19 @@ export function filterItems(items: WarrantyItem[], { search, category }: ItemFil
   });
 }
 
-/** Items expiring within the next 30 days (not yet expired), sorted soonest-first, for the Home screen's "Expiring Soon" section. */
+/**
+ * Items whose cover ends within the next 30 days (not yet ended), sorted soonest-first,
+ * for the Home screen's "Expiring Soon" section.
+ *
+ * Read from the coverage end date, not the manufacturer expiry date: an item carried by an
+ * extended warranty is not expiring just because its manufacturer cover is.
+ */
 export function getExpiringSoonItems(items: WarrantyItem[], referenceDate: Date = new Date()): WarrantyItem[] {
   return items
-    .filter((item) => getWarrantyStatus(item.expiryDate, referenceDate) === 'expiring')
-    .sort((a, b) => getDaysRemaining(a.expiryDate, referenceDate) - getDaysRemaining(b.expiryDate, referenceDate));
+    .filter((item) => getWarrantyStatus(item.coverageEndDate, referenceDate) === 'expiring')
+    .sort(
+      (a, b) =>
+        getDaysRemaining(a.coverageEndDate, referenceDate) -
+        getDaysRemaining(b.coverageEndDate, referenceDate)
+    );
 }

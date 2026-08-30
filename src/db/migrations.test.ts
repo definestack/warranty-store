@@ -257,4 +257,159 @@ describe('runMigrations', () => {
     const applied = await db.getAllAsync('SELECT * FROM schema_migrations');
     expect(applied).toHaveLength(migrations.length);
   });
+
+  it('creates the extended_warranties table', async () => {
+    const db = await freshDb();
+    await runMigrations(db);
+
+    const table = await db.getFirstAsync(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'extended_warranties'"
+    );
+    expect(table).not.toBeNull();
+
+    const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(extended_warranties)');
+    expect(columns.map((column) => column.name)).toEqual(
+      expect.arrayContaining([
+        'id',
+        'item_id',
+        'provider',
+        'duration_value',
+        'duration_unit',
+        'starts_on',
+        'ends_on',
+        'cost',
+        'notes',
+        'sort_order',
+        'created_at',
+        'updated_at',
+      ])
+    );
+  });
+
+  it('leaves items that existed before migration 8 holding no extended warranties', async () => {
+    const db = await freshDb();
+    await migrateToVersion(db, 7);
+    await db.runAsync(
+      `INSERT INTO warranty_items
+        (id, name, purchase_date, warranty_months, expiry_date, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      'pre-extended-item',
+      'Dishwasher',
+      '2026-02-01',
+      24,
+      '2028-02-01',
+      '2026-02-01T00:00:00.000Z',
+      '2026-02-01T00:00:00.000Z'
+    );
+
+    await runMigrations(db);
+
+    const item = await db.getFirstAsync<{ name: string; expiry_date: string }>(
+      'SELECT * FROM warranty_items WHERE id = ?',
+      'pre-extended-item'
+    );
+    expect(item?.name).toBe('Dishwasher');
+    expect(item?.expiry_date).toBe('2028-02-01');
+
+    const extended = await db.getAllAsync(
+      'SELECT * FROM extended_warranties WHERE item_id = ?',
+      'pre-extended-item'
+    );
+    expect(extended).toHaveLength(0);
+  });
+
+  it('adds a nullable extended warranty reference to invoice_images and notification_schedules', async () => {
+    const db = await freshDb();
+    await runMigrations(db);
+
+    for (const table of ['invoice_images', 'notification_schedules']) {
+      const columns = await db.getAllAsync<{
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }>(`PRAGMA table_info(${table})`);
+      const column = columns.find((candidate) => candidate.name === 'extended_warranty_id');
+
+      expect(column).toBeDefined();
+      expect(column?.notnull).toBe(0);
+      expect(column?.dflt_value).toBeNull();
+    }
+  });
+
+  it('reads rows written before migration 9 as item-scoped documents and manufacturer reminders', async () => {
+    const db = await freshDb();
+    await migrateToVersion(db, 8);
+    await db.runAsync(
+      `INSERT INTO warranty_items
+        (id, name, purchase_date, warranty_months, expiry_date, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      'pre-scope-item',
+      'Router',
+      '2026-03-01',
+      12,
+      '2027-03-01',
+      '2026-03-01T00:00:00.000Z',
+      '2026-03-01T00:00:00.000Z'
+    );
+    await db.runAsync(
+      'INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at, kind) VALUES (?, ?, ?, ?, ?, ?)',
+      'doc-pre-scope',
+      'pre-scope-item',
+      'file:///receipt.jpg',
+      0,
+      '2026-03-01T00:00:00.000Z',
+      'invoice'
+    );
+    await db.runAsync(
+      `INSERT INTO notification_schedules
+        (id, item_id, reminder_kind, notification_id, trigger_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      'sched-pre-scope',
+      'pre-scope-item',
+      'thirtyDay',
+      'os-notification-1',
+      '2027-01-30T09:00:00.000Z',
+      '2026-03-01T00:00:00.000Z'
+    );
+
+    await runMigrations(db);
+
+    // NULL keeps meaning what these rows already meant: a document on the item itself,
+    // and a reminder for the manufacturer period.
+    const document = await db.getFirstAsync<{ extended_warranty_id: string | null; kind: string }>(
+      'SELECT * FROM invoice_images WHERE id = ?',
+      'doc-pre-scope'
+    );
+    expect(document?.extended_warranty_id).toBeNull();
+    expect(document?.kind).toBe('invoice');
+
+    const schedule = await db.getFirstAsync<{
+      extended_warranty_id: string | null;
+      notification_id: string;
+    }>('SELECT * FROM notification_schedules WHERE id = ?', 'sched-pre-scope');
+    expect(schedule?.extended_warranty_id).toBeNull();
+    expect(schedule?.notification_id).toBe('os-notification-1');
+  });
+
+  it('applies nothing when re-run on a database already at version 9', async () => {
+    const db = await freshDb();
+    await migrateToVersion(db, 9);
+
+    await expect(runMigrations(db)).resolves.toBeUndefined();
+
+    const documentColumns = await db.getAllAsync<{ name: string }>(
+      'PRAGMA table_info(invoice_images)'
+    );
+    expect(
+      documentColumns.filter((column) => column.name === 'extended_warranty_id')
+    ).toHaveLength(1);
+
+    const tables = await db.getAllAsync<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'extended_warranties'"
+    );
+    expect(tables).toHaveLength(1);
+
+    const applied = await db.getAllAsync('SELECT * FROM schema_migrations');
+    expect(applied).toHaveLength(migrations.length);
+  });
 });
