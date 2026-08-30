@@ -55,19 +55,19 @@ Decision 4 exists to prevent.
 
 ## 3. Data model and migrations
 
-- [ ] 3.1 Write a failing migration test: applying migration 8 to a database at version 7
+- [x] 3.1 Write a failing migration test: applying migration 8 to a database at version 7
       creates the extended warranties table, and existing items are unaffected and hold no
       extended warranties.
-- [ ] 3.2 Write a failing migration test: applying migration 9 adds the nullable extended
+- [x] 3.2 Write a failing migration test: applying migration 9 adds the nullable extended
       warranty reference to both the documents table and the notification schedules table,
       every pre-existing document row reads back as belonging to the item itself, and every
       pre-existing schedule row reads back as a manufacturer-period reminder — with no
       backfill statement.
-- [ ] 3.3 Write a failing migration test: a database already at version 9 has no pending
+- [x] 3.3 Write a failing migration test: a database already at version 9 has no pending
       migrations and is not re-applied.
-- [ ] 3.4 Add the DDL constants to `src/db/schema.ts` and register migrations 8 and 9 in
+- [x] 3.4 Add the DDL constants to `src/db/schema.ts` and register migrations 8 and 9 in
       `src/db/migrations.ts`. Additive only — no rename, no rewrite, no drop.
-- [ ] 3.5 Update `src/types/warranty.ts`: add `ExtendedWarranty` and its duration unit, add
+- [x] 3.5 Update `src/types/warranty.ts`: add `ExtendedWarranty` and its duration unit, add
       `extendedWarranties` and the derived `coverageEndDate` to `WarrantyItem`, and add the
       optional extended warranty reference to `ItemDocument`. Add the same reference to
       `NotificationSchedule` in `src/types/notification.ts`.
