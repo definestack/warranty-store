@@ -173,18 +173,18 @@ Land 6.3–6.8 together — see the note at the top of this file.
 
 ## 9. Copy
 
-- [ ] 9.1 Add the edit section's strings — section title and optional-toggle label,
+- [x] 9.1 Add the edit section's strings — section title and optional-toggle label,
       provider, duration and its unit options, starts-on, ends-on and its calculated
       caption, cost, notes, the two document sub-section labels and their add controls, the
       add-another control, the remove-and-confirm copy, the per-field validation messages,
       and the "how it works" explainer — to `src/i18n/locales/en.ts`.
-- [ ] 9.2 Add the detail screen's strings to `en`: the covered-till summary line, the
+- [x] 9.2 Add the detail screen's strings to `en`: the covered-till summary line, the
       Original Bills / Invoices heading and its subtitle, the Warranty Coverage heading, the
       Add Extended Warranty control, the Original Warranty (Manufacturer) and Extended
       Warranty entry titles, the Original Warranty Valid Till and Extended Warranty Valid
       Till row labels, the provider/duration/cost column labels, the `upcoming` status label
       and the starts-in countdown, and the document tile menu items.
-- [ ] 9.3 Add all of the above keys to `es`, `fr` and `de`, and run the existing i18n parity
+- [x] 9.3 Add all of the above keys to `es`, `fr` and `de`, and run the existing i18n parity
       test.
 
 ## 10. Shared components and navigation
