@@ -271,9 +271,9 @@ design.md — Decision 11.
 
 ## 13. Verification
 
-- [ ] 13.1 Run `npm test` — all suites green, including the new coverage, migration,
+- [x] 13.1 Run `npm test` — all suites green, including the new coverage, migration,
       repository, notification and backup/restore tests.
-- [ ] 13.2 Run `npm run typecheck` and `npm run lint` clean.
+- [x] 13.2 Run `npm run typecheck` and `npm run lint` clean.
 - [ ] 13.3 Verify on the Android emulator against an upgraded database that already holds
       items, documents and scheduled reminders: existing items are unchanged and still show
       the same status; adding an extended warranty moves the item's status and days-remaining
