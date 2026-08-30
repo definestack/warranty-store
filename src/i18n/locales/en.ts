@@ -47,6 +47,29 @@ const en = {
     expiredOn: 'Expired on %{date}',
     expiresOn: 'Expires %{date}',
   },
+  warrantyStatus: {
+    title: 'Warranty Status',
+    expiredHeadline: {
+      one: '%{count} warranty has expired',
+      other: '%{count} warranties have expired',
+    },
+    expiringHeadline: {
+      one: '%{count} warranty is expiring soon',
+      other: '%{count} warranties are expiring soon',
+    },
+    expiredSegment: { one: '%{count} expired', other: '%{count} expired' },
+    expiringSegment: { one: '%{count} expiring soon', other: '%{count} expiring soon' },
+    expiredSubtitle: 'Some warranties may need your attention.',
+    attentionSubtitle: 'You have warranties that may need your attention.',
+    caughtUpTitle: "You're all caught up!",
+    caughtUpSubtitle: 'No warranties expiring or expired at the moment.',
+    viewAllExpired: { one: 'View all %{count} expired', other: 'View all %{count} expired' },
+    viewAllExpiring: {
+      one: 'View all %{count} expiring soon',
+      other: 'View all %{count} expiring soon',
+    },
+    reviewAll: { one: 'Review all %{count} warranty', other: 'Review all %{count} warranties' },
+  },
   products: {
     title: 'My Products',
     subtitle: 'All your products in one place',

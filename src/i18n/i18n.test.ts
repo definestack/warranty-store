@@ -1,4 +1,8 @@
 import { i18n, resolveDeviceLocale } from './i18n';
+import de from './locales/de';
+import en from './locales/en';
+import es from './locales/es';
+import fr from './locales/fr';
 
 describe('resolveDeviceLocale', () => {
   it('picks the first supported locale from the device list', () => {
@@ -44,5 +48,27 @@ describe('i18n translations', () => {
     // French treats 0 as the "one" plural category, unlike the other supported locales.
     expect(i18n.t('date.expiresIn', { locale: 'fr', count: 0 })).toBe('Expire dans 0 jour');
     expect(i18n.t('date.expiresIn', { locale: 'en', count: 0 })).toBe('Expires in 0 days');
+  });
+});
+
+/** Every leaf key in a locale bundle, dotted and sorted, so two bundles can be compared. */
+function keyPaths(bundle: object, prefix = ''): string[] {
+  return Object.entries(bundle)
+    .flatMap(([key, value]) => {
+      const path = prefix ? `${prefix}.${key}` : key;
+      return value && typeof value === 'object' ? keyPaths(value, path) : [path];
+    })
+    .sort();
+}
+
+describe('locale bundles', () => {
+  // Fallback to English hides a missing key at runtime, so the bundles are compared
+  // directly: a string added to one locale must be added to all of them.
+  it.each([
+    ['es', es],
+    ['fr', fr],
+    ['de', de],
+  ])('%s carries exactly the keys English does', (_locale, bundle) => {
+    expect(keyPaths(bundle)).toEqual(keyPaths(en));
   });
 });

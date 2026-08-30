@@ -7,6 +7,7 @@ import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import WarrantyStatusCard from '../components/WarrantyStatusCard';
 import { useTranslation } from '../i18n/LocaleContext';
 import { useItemsStore } from '../store/itemsStore';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -79,6 +80,12 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           ))}
         </View>
+
+        <WarrantyStatusCard
+          items={allItems}
+          onSelectItem={(itemId) => navigation.navigate('ItemDetail', { itemId })}
+          onViewAll={(status) => navigation.navigate('Products', { status })}
+        />
 
         {allItems.length === 0 ? (
           <View style={styles.emptyState}>

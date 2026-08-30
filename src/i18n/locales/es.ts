@@ -49,6 +49,29 @@ const es: Messages = {
     expiredOn: 'Venció el %{date}',
     expiresOn: 'Vence el %{date}',
   },
+  warrantyStatus: {
+    title: 'Estado de la garantía',
+    expiredHeadline: {
+      one: '%{count} garantía ha vencido',
+      other: '%{count} garantías han vencido',
+    },
+    expiringHeadline: {
+      one: '%{count} garantía vence pronto',
+      other: '%{count} garantías vencen pronto',
+    },
+    expiredSegment: { one: '%{count} vencida', other: '%{count} vencidas' },
+    expiringSegment: { one: '%{count} vence pronto', other: '%{count} vencen pronto' },
+    expiredSubtitle: 'Algunas garantías pueden necesitar tu atención.',
+    attentionSubtitle: 'Tienes garantías que pueden necesitar tu atención.',
+    caughtUpTitle: '¡Todo está al día!',
+    caughtUpSubtitle: 'No hay garantías vencidas ni próximas a vencer.',
+    viewAllExpired: { one: 'Ver %{count} vencida', other: 'Ver las %{count} vencidas' },
+    viewAllExpiring: {
+      one: 'Ver %{count} que vence pronto',
+      other: 'Ver las %{count} que vencen pronto',
+    },
+    reviewAll: { one: 'Revisar %{count} garantía', other: 'Revisar las %{count} garantías' },
+  },
   products: {
     title: 'Mis productos',
     subtitle: 'Todos tus productos en un solo lugar',

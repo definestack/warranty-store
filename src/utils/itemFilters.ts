@@ -86,9 +86,10 @@ function compareStrings(a: string, b: string): number {
 
 /**
  * The tie-break every sort ends with, so equal keys never reorder between renders:
- * name first, then id, which is unique.
+ * name first, then id, which is unique. Exported so other orderings over the same items
+ * (the Home warranty-status card) settle ties identically.
  */
-function compareFallback(a: WarrantyItem, b: WarrantyItem): number {
+export function compareByNameThenId(a: WarrantyItem, b: WarrantyItem): number {
   return (
     compareStrings(a.name.toLowerCase(), b.name.toLowerCase()) || compareStrings(a.id, b.id)
   );
@@ -131,5 +132,5 @@ export function filterAndSortItems(
   );
 
   const compare = SORT_COMPARATORS[sort];
-  return filtered.sort((a, b) => compare(a, b) || compareFallback(a, b));
+  return filtered.sort((a, b) => compare(a, b) || compareByNameThenId(a, b));
 }
