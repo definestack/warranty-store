@@ -338,12 +338,9 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
         </Card>
 
         <Card style={styles.sectionCard}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {t('itemDetail.warrantyCoverage')}
-            </Text>
-            {renderAddAction(t('itemDetail.addExtendedWarranty'), { section: 'extendedWarranties' })}
-          </View>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {t('itemDetail.warrantyCoverage')}
+          </Text>
 
           {periods.map((period, index) => (
             <CoveragePeriodCard
@@ -357,6 +354,20 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
             />
           ))}
         </Card>
+
+        {/*
+          Sits outside the coverage card, matching the edit screen: adding cover is an
+          action on the item, not part of the list of periods it already has.
+        */}
+        <Pressable
+          onPress={() => openEditor({ section: 'extendedWarranties' })}
+          style={[styles.addCoverageButton, { borderColor: theme.primary }]}
+        >
+          <Ionicons name="add" size={16} color={theme.primary} />
+          <Text style={[styles.sectionActionText, { color: theme.primary }]}>
+            {t('itemDetail.addExtendedWarranty')}
+          </Text>
+        </Pressable>
 
         {/*
           The mockup shows no notes section, but its sample item has none. Notes are a
@@ -486,6 +497,16 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  addCoverageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingVertical: 14,
   },
   emptySection: {
     fontSize: 13,
