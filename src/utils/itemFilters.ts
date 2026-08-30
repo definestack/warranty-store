@@ -1,7 +1,7 @@
 import type { TranslateFn } from '../i18n/i18n';
 import type { WarrantyItem } from '../types/warranty';
 import { DEFAULT_CATEGORY } from './categories';
-import { getDaysRemaining, getWarrantyStatus } from './date';
+import { getWarrantyStatus } from './date';
 import type { WarrantyStatus } from './date';
 
 export const ALL_CATEGORIES = 'all';
@@ -11,7 +11,7 @@ export interface ItemFilters {
   category: string;
 }
 
-/** Filters items by name (case-insensitive substring) and category, for the Home screen list. */
+/** Filters items by name (case-insensitive substring) and category, for the product list. */
 export function filterItems(items: WarrantyItem[], { search, category }: ItemFilters): WarrantyItem[] {
   const query = search.trim().toLowerCase();
   return items.filter((item) => {
@@ -20,23 +20,6 @@ export function filterItems(items: WarrantyItem[], { search, category }: ItemFil
     const matchesSearch = item.name.toLowerCase().includes(query);
     return matchesCategory && matchesSearch;
   });
-}
-
-/**
- * Items whose cover ends within the next 30 days (not yet ended), sorted soonest-first,
- * for the Home screen's "Expiring Soon" section.
- *
- * Read from the coverage end date, not the manufacturer expiry date: an item carried by an
- * extended warranty is not expiring just because its manufacturer cover is.
- */
-export function getExpiringSoonItems(items: WarrantyItem[], referenceDate: Date = new Date()): WarrantyItem[] {
-  return items
-    .filter((item) => getWarrantyStatus(item.coverageEndDate, referenceDate) === 'expiring')
-    .sort(
-      (a, b) =>
-        getDaysRemaining(a.coverageEndDate, referenceDate) -
-        getDaysRemaining(b.coverageEndDate, referenceDate)
-    );
 }
 
 /** The "no status filter" sentinel, matching `ALL_CATEGORIES`'s role for categories. */
