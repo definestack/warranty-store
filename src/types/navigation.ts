@@ -17,6 +17,7 @@ export type AddEditSection =
 
 export type MainTabParamList = {
   Home: undefined;
+  Products: undefined;
   Settings: undefined;
 };
 

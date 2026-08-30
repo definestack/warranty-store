@@ -15,6 +15,7 @@ const de: Messages = {
   },
   nav: {
     home: 'Start',
+    products: 'Produkte',
     settings: 'Einstellungen',
     goBack: 'Zurück',
     addItem: 'Artikel hinzufügen',
@@ -31,6 +32,7 @@ const de: Messages = {
     selectCategory: 'Kategorie auswählen',
   },
   status: {
+    all: 'Alle',
     active: 'Aktiv',
     expiringSoon: 'Läuft bald ab',
     expired: 'Abgelaufen',
@@ -49,6 +51,24 @@ const de: Messages = {
     expiredOn: 'Abgelaufen am %{date}',
     expiresOn: 'Läuft ab am %{date}',
     expiringSoon: 'Läuft bald ab',
+  },
+  products: {
+    title: 'Meine Produkte',
+    subtitle: 'Alle deine Produkte an einem Ort',
+    count: { one: '%{count} Produkt', other: '%{count} Produkte' },
+    emptyTitle: 'Noch keine Produkte.',
+    emptySubtitle: 'Füge dein erstes Produkt hinzu, um seine Garantie zu verfolgen.',
+    noResultsTitle: 'Keine Produkte entsprechen deinen Filtern.',
+    noResultsSubtitle: 'Versuche eine andere Suche, einen anderen Status oder eine andere Kategorie.',
+  },
+  sort: {
+    title: 'Sortieren nach',
+    newest: 'Neueste zuerst',
+    oldest: 'Älteste zuerst',
+    nameAsc: 'A–Z',
+    priceDesc: 'Preis (hoch bis niedrig)',
+    expirySoonest: 'Garantieablauf (nächster zuerst)',
+    expiryLatest: 'Garantieablauf (spätester zuerst)',
   },
   itemDetail: {
     title: 'Artikeldetails',

@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AppTabBar from '../components/AppTabBar';
 import { useTranslation } from '../i18n/LocaleContext';
 import HomeScreen from '../screens/HomeScreen';
+import ProductListScreen from '../screens/ProductListScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import type { MainTabParamList } from '../types/navigation';
 
@@ -14,6 +15,7 @@ export default function MainTabNavigator() {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <AppTabBar {...props} />}>
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: t('nav.home') }} />
+      <Tab.Screen name="Products" component={ProductListScreen} options={{ title: t('nav.products') }} />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: t('nav.settings') }} />
     </Tab.Navigator>
   );

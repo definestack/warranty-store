@@ -15,6 +15,7 @@ const es: Messages = {
   },
   nav: {
     home: 'Inicio',
+    products: 'Productos',
     settings: 'Ajustes',
     goBack: 'Volver',
     addItem: 'Añadir artículo',
@@ -31,6 +32,7 @@ const es: Messages = {
     selectCategory: 'Seleccionar categoría',
   },
   status: {
+    all: 'Todos',
     active: 'Activa',
     expiringSoon: 'Por vencer',
     expired: 'Vencida',
@@ -49,6 +51,24 @@ const es: Messages = {
     expiredOn: 'Venció el %{date}',
     expiresOn: 'Vence el %{date}',
     expiringSoon: 'Por vencer',
+  },
+  products: {
+    title: 'Mis productos',
+    subtitle: 'Todos tus productos en un solo lugar',
+    count: { one: '%{count} producto', other: '%{count} productos' },
+    emptyTitle: 'Aún no hay productos.',
+    emptySubtitle: 'Añade tu primer producto para empezar a seguir su garantía.',
+    noResultsTitle: 'Ningún producto coincide con tus filtros.',
+    noResultsSubtitle: 'Prueba con otra búsqueda, estado o categoría.',
+  },
+  sort: {
+    title: 'Ordenar por',
+    newest: 'Más recientes primero',
+    oldest: 'Más antiguos primero',
+    nameAsc: 'A–Z',
+    priceDesc: 'Precio (de mayor a menor)',
+    expirySoonest: 'Vencimiento de garantía (más próximo)',
+    expiryLatest: 'Vencimiento de garantía (más lejano)',
   },
   itemDetail: {
     title: 'Detalle del artículo',
