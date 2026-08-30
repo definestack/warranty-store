@@ -3,64 +3,33 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Card from '../components/Card';
-import ItemIcon from '../components/ItemIcon';
-import SelectModal from '../components/SelectModal';
 import { useTranslation } from '../i18n/LocaleContext';
-import type { TranslateFn } from '../i18n/i18n';
 import { useItemsStore } from '../store/itemsStore';
 import { useAppTheme } from '../theme/ThemeContext';
-import type { AppTheme } from '../theme/palette';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
-import type { WarrantyItem } from '../types/warranty';
-import { CATEGORIES, DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
-import { formatDaysRemaining, formatIsoDate, getWarrantyStatus } from '../utils/date';
-import type { WarrantyStatus } from '../utils/date';
-import { ALL_CATEGORIES, filterItems, getExpiringSoonItems } from '../utils/itemFilters';
+import { getWarrantyStatus } from '../utils/date';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const STATUS_TEXT_COLOR: Record<WarrantyStatus, keyof AppTheme> = {
-  active: 'success',
-  expiring: 'warning',
-  expired: 'danger',
-};
-
-function expiryLabel(item: WarrantyItem, status: WarrantyStatus, t: TranslateFn, locale: string): string {
-  const date = formatIsoDate(item.coverageEndDate, locale);
-  return status === 'expired' ? t('home.expiredOn', { date }) : t('home.expiresOn', { date });
-}
-
 export default function HomeScreen({ navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const allItems = useItemsStore((state) => state.items);
   const loadItems = useItemsStore((state) => state.loadItems);
-  const [search, setSearch] = useState('');
-  const [searchVisible, setSearchVisible] = useState(false);
-  const [category, setCategory] = useState(ALL_CATEGORIES);
-  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       loadItems();
     }, [loadItems])
   );
-
-  const items = useMemo(
-    () => filterItems(allItems, { search, category }),
-    [allItems, search, category]
-  );
-
-  const expiringSoonItems = useMemo(() => getExpiringSoonItems(allItems), [allItems]);
 
   const overview = useMemo(() => {
     let active = 0;
@@ -92,153 +61,40 @@ export default function HomeScreen({ navigation }: Props) {
     ];
   }, [allItems, theme, t]);
 
-  const categoryOptions = useMemo(
-    () => [
-      { value: ALL_CATEGORIES, label: t('category.allCategories') },
-      ...CATEGORIES.map((c) => ({ value: c, label: getCategoryLabel(c, t) })),
-    ],
-    [t]
-  );
-  const categoryLabel =
-    category === ALL_CATEGORIES ? t('category.allCategories') : getCategoryLabel(category, t);
-
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Text style={[styles.brandText, { color: theme.text }]}>{t('common.appName')}</Text>
-        <Pressable
-          hitSlop={12}
-          onPress={() => setSearchVisible((visible) => !visible)}
-          accessibilityLabel={t('home.search')}
-        >
-          <Ionicons name="search" size={22} color={theme.text} />
-        </Pressable>
       </View>
 
-      {searchVisible ? (
-        <View style={[styles.searchBar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-          <Ionicons name="search" size={18} color={theme.mutedText} />
-          <TextInput
-            autoFocus
-            style={[styles.searchInput, { color: theme.text }]}
-            placeholder={t('home.searchPlaceholder')}
-            placeholderTextColor={theme.mutedText}
-            value={search}
-            onChangeText={setSearch}
-          />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.overview')}</Text>
+        <View style={styles.overviewRow}>
+          {overview.map((stat) => (
+            <View key={stat.key} style={[styles.statCard, { backgroundColor: stat.bg }]}>
+              <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
+              <Text style={[styles.statLabel, { color: stat.color }]} numberOfLines={1}>
+                {stat.label}
+              </Text>
+            </View>
+          ))}
         </View>
-      ) : null}
 
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <View>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.overview')}</Text>
-            <View style={styles.overviewRow}>
-              {overview.map((stat) => (
-                <View key={stat.key} style={[styles.statCard, { backgroundColor: stat.bg }]}>
-                  <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-                  <Text style={[styles.statLabel, { color: stat.color }]} numberOfLines={1}>
-                    {stat.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            {expiringSoonItems.length > 0 ? (
-              <View>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.expiringSoon')}</Text>
-                <FlatList
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  data={expiringSoonItems}
-                  keyExtractor={(item) => item.id}
-                  contentContainerStyle={styles.expiringSoonList}
-                  renderItem={({ item }) => {
-                    const itemCategory = item.category ?? DEFAULT_CATEGORY;
-                    return (
-                      <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>
-                        <Card style={styles.expiringSoonCard}>
-                          <ItemIcon category={itemCategory} size={36} photoUri={item.photoUri} />
-                          <Text
-                            style={[styles.expiringSoonName, { color: theme.text }]}
-                            numberOfLines={1}
-                          >
-                            {item.name}
-                          </Text>
-                          <Text style={[styles.expiringSoonDays, { color: theme.warning }]}>
-                            {formatDaysRemaining(item.coverageEndDate, t)}
-                          </Text>
-                        </Card>
-                      </Pressable>
-                    );
-                  }}
-                />
-              </View>
-            ) : null}
-
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.myItems')}</Text>
-              <Pressable style={styles.categoryFilter} onPress={() => setCategoryModalVisible(true)}>
-                <Text style={[styles.categoryFilterText, { color: theme.subtleText }]}>{categoryLabel}</Text>
-                <Ionicons name="chevron-down" size={16} color={theme.mutedText} />
-              </Pressable>
-            </View>
-          </View>
-        }
-        renderItem={({ item }) => {
-          const status = getWarrantyStatus(item.coverageEndDate);
-          const itemCategory = item.category ?? DEFAULT_CATEGORY;
-          return (
-            <Pressable onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}>
-              <Card style={styles.itemCard}>
-                <ItemIcon category={itemCategory} photoUri={item.photoUri} />
-                <View style={styles.itemInfo}>
-                  <Text style={[styles.itemName, { color: theme.text }]} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={[styles.itemMeta, { color: theme.subtleText }]}>
-                    {getCategoryLabel(itemCategory, t)}
-                  </Text>
-                  <Text style={[styles.itemWarranty, { color: theme[STATUS_TEXT_COLOR[status]] as string }]}>
-                    {expiryLabel(item, status, t, locale)}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.mutedText} />
-              </Card>
+        {allItems.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="file-tray-outline" size={40} color={theme.mutedText} />
+            <Text style={[styles.emptyText, { color: theme.subtleText }]}>{t('home.emptyTitle')}</Text>
+            <Text style={[styles.emptySubtext, { color: theme.mutedText }]}>{t('home.emptySubtitle')}</Text>
+            <Pressable
+              style={[styles.emptyCta, { backgroundColor: theme.primary }]}
+              onPress={() => navigation.navigate('AddEditItem', {})}
+            >
+              <Ionicons name="add" size={18} color={theme.primaryText} />
+              <Text style={[styles.emptyCtaText, { color: theme.primaryText }]}>{t('home.addItem')}</Text>
             </Pressable>
-          );
-        }}
-        ListEmptyComponent={
-          allItems.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="file-tray-outline" size={40} color={theme.mutedText} />
-              <Text style={[styles.emptyText, { color: theme.subtleText }]}>{t('home.emptyTitle')}</Text>
-              <Text style={[styles.emptySubtext, { color: theme.mutedText }]}>{t('home.emptySubtitle')}</Text>
-              <Pressable
-                style={[styles.emptyCta, { backgroundColor: theme.primary }]}
-                onPress={() => navigation.navigate('AddEditItem', {})}
-              >
-                <Ionicons name="add" size={18} color={theme.primaryText} />
-                <Text style={[styles.emptyCtaText, { color: theme.primaryText }]}>{t('home.addItem')}</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <Text style={[styles.emptyText, { color: theme.subtleText }]}>{t('home.noSearchResults')}</Text>
-          )
-        }
-      />
-
-      <SelectModal
-        visible={categoryModalVisible}
-        title={t('category.filterByCategory')}
-        options={categoryOptions}
-        selected={category}
-        onSelect={setCategory}
-        onClose={() => setCategoryModalVisible(false)}
-      />
+          </View>
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
@@ -259,28 +115,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginTop: 8,
-    paddingHorizontal: 14,
-    minHeight: 44,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    paddingVertical: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 8,
+  content: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   sectionTitle: {
     fontSize: 16,
@@ -308,58 +145,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  expiringSoonList: {
-    gap: 10,
-    marginTop: 10,
-  },
-  expiringSoonCard: {
-    width: 120,
-    padding: 12,
-    gap: 8,
-  },
-  expiringSoonName: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  expiringSoonDays: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  categoryFilter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  categoryFilterText: {
-    fontSize: 14,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 12,
-  },
-  itemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 12,
-  },
-  itemInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  itemMeta: {
-    fontSize: 13,
-  },
-  itemWarranty: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 2,
   },
   emptyText: {
     textAlign: 'center',
