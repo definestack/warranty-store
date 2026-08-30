@@ -22,8 +22,6 @@ interface WarrantyStatusCardProps {
 
 interface HeadlineSegment {
   key: WarrantyStatus;
-  /** Outline glyphs throughout, so the leading icon and any inline one read as one set. */
-  icon: 'alert-circle-outline' | 'time-outline';
   color: string;
   text: string;
 }
@@ -100,7 +98,6 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
   if (expiredCount > 0) {
     segments.push({
       key: 'expired',
-      icon: 'alert-circle-outline',
       color: theme.danger,
       text: t(mixed ? 'warrantyStatus.expiredSegment' : 'warrantyStatus.expiredHeadline', {
         count: expiredCount,
@@ -111,13 +108,17 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
   if (expiringCount > 0) {
     segments.push({
       key: 'expiring',
-      icon: 'time-outline',
       color: theme.warning,
       text: t(mixed ? 'warrantyStatus.expiringSegment' : 'warrantyStatus.expiringHeadline', {
         count: expiringCount,
       }),
     });
   }
+
+  // One icon for the whole headline rather than one per segment: the most severe bucket's,
+  // which is the first segment, since expired is always pushed ahead of expiring.
+  const [leadSegment] = segments;
+  const leadIcon = leadSegment.key === 'expired' ? 'alert-circle-outline' : 'time-outline';
 
   // Expiring-soon items are the softer warning, so their colour leads the footer whenever
   // any of them is counted; a purely expired card stays on the danger colour.
@@ -133,16 +134,13 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
     <Surface style={styles.card}>
       {title}
       <View style={styles.header}>
-        <Ionicons name={segments[0].icon} size={28} color={segments[0].color} />
+        <Ionicons name={leadIcon} size={28} color={leadSegment.color} />
         <View style={styles.headerText}>
           <View style={styles.headlineRow}>
             {segments.map((segment, index) => (
               <Fragment key={segment.key}>
                 {index > 0 ? (
-                  <>
-                    <Text style={[styles.separator, { color: theme.mutedText }]}>·</Text>
-                    <Ionicons name={segment.icon} size={20} color={segment.color} />
-                  </>
+                  <Text style={[styles.separator, { color: theme.mutedText }]}>·</Text>
                 ) : null}
                 <Text style={[styles.headline, { color: segment.color }]}>{segment.text}</Text>
               </Fragment>
