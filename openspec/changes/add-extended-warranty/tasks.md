@@ -204,7 +204,7 @@ Land 6.3–6.8 together — see the note at the top of this file.
       colours, corner radius and icon placement, per `.claude/rules/ui-design.md`. Reproduce
       the collapse affordance and the "how it works" panel.
 - [x] 10.5 Support dark mode through the existing theme, as the surrounding cards do.
-- [ ] 10.6 List the remaining visual differences against the mockup and the reason for each
+- [x] 10.6 List the remaining visual differences against the mockup and the reason for each
       — the PDF badges, filenames and file sizes are known, confirmed divergences
       (proposal.md — Non-goals).
 
@@ -233,39 +233,39 @@ Land 6.3–6.8 together — see the note at the top of this file.
 Measured against the mockup saved in 1.2. The screen stays read-only throughout — see
 design.md — Decision 11.
 
-- [ ] 12.1 Derive the screen's `CoveragePeriod` list per design.md — Decision 12: the
+- [x] 12.1 Derive the screen's `CoveragePeriod` list per design.md — Decision 12: the
       manufacturer warranty mapped into the same shape as the extended warranties, then each
       extended warranty in stored order. The manufacturer entry must not be special-cased in
       the JSX.
-- [ ] 12.2 Build `src/components/CoveragePeriodCard.tsx`: the state chip, the date range,
+- [x] 12.2 Build `src/components/CoveragePeriodCard.tsx`: the state chip, the date range,
       the countdown line, the optional provider/duration/cost row, and the entry's document
       sections. One component renders every entry.
-- [ ] 12.3 Build the timeline wrapper that draws the connecting rail and the per-entry
+- [x] 12.3 Build the timeline wrapper that draws the connecting rail and the per-entry
       leading icon between cards, as drawn in the mockup.
-- [ ] 12.4 Rework the summary card: photo, name, category, the item's status badge, and the
+- [x] 12.4 Rework the summary card: photo, name, category, the item's status badge, and the
       covered-till line reading the coverage end date and its days remaining.
-- [ ] 12.5 Rework the details card to the mockup's rows — Brand, Category, Purchase Date,
+- [x] 12.5 Rework the details card to the mockup's rows — Brand, Category, Purchase Date,
       Purchase Price, Store, Original Warranty Valid Till, and Extended Warranty Valid Till
       shown only when the item has extended cover. Drop the Warranty Period row; its
       duration now appears against its period. Keep optional rows hidden when unset, as they
       are today.
-- [ ] 12.6 Add the Original Bills / Invoices section card with its subtitle and its Add
+- [x] 12.6 Add the Original Bills / Invoices section card with its subtitle and its Add
       Invoice control, holding the item's own invoice documents.
-- [ ] 12.7 Render every document section even when empty, with its add affordance reachable,
+- [x] 12.7 Render every document section even when empty, with its add affordance reachable,
       replacing the current behaviour of hiding an empty section.
-- [ ] 12.8 Wire every add control — Add Invoice, each section's Add More, and Add Extended
+- [x] 12.8 Wire every add control — Add Invoice, each section's Add More, and Add Extended
       Warranty — to navigate to the editor at the matching section using the parameter from
       10.2. None of them may write anything.
-- [ ] 12.9 Add the per-tile overflow menu offering viewing the document and jumping to the
+- [x] 12.9 Add the per-tile overflow menu offering viewing the document and jumping to the
       editor, and keep tapping the tile itself opening the existing document viewer, paging
       within that section only.
-- [ ] 12.10 Keep Notes, rendered only when the item has some. Recorded divergence from the
+- [x] 12.10 Keep Notes, rendered only when the item has some. Recorded divergence from the
       mockup — design.md — Risks.
-- [ ] 12.11 Pin the Edit Item and Delete Item actions to the bottom bar as drawn, keeping the
+- [x] 12.11 Pin the Edit Item and Delete Item actions to the bottom bar as drawn, keeping the
       existing delete confirmation and its behaviour.
-- [ ] 12.12 Confirm returning from the editor shows what was saved; the screen already
+- [x] 12.12 Confirm returning from the editor shows what was saved; the screen already
       reloads the item on focus, so this should need no new code — verify rather than add.
-- [ ] 12.13 Support dark mode, and list the remaining visual differences against the mockup
+- [x] 12.13 Support dark mode, and list the remaining visual differences against the mockup
       with the reason for each. The PDF badges, filenames, file sizes, the dropped Warranty
       Period row and the retained Notes section are known, recorded divergences.
 
