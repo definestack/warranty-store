@@ -608,18 +608,29 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     );
   };
 
-  const renderAddAction = (ref: DocumentSectionRef, label: string) => (
-    <Pressable
-      onPress={() => handleAttachDocument(ref)}
-      disabled={attachingSection !== null}
-      style={[styles.sectionAction, { borderColor: theme.primary }]}
-    >
-      <Ionicons name="add" size={14} color={theme.primary} />
-      <Text style={[styles.sectionActionText, { color: theme.primary }]}>
-        {attachingSection === sectionKey(ref) ? t('addEditItem.savingEllipsis') : label}
-      </Text>
-    </Pressable>
-  );
+  /**
+   * A section's header add control. Once the section holds a document, the "Add More" tile
+   * at the end of its strip does exactly the same job, so this is disabled rather than
+   * offering a second route to the same action.
+   */
+  const renderAddAction = (ref: DocumentSectionRef, label: string) => {
+    const disabled = attachingSection !== null || draftsFor(documentDrafts, ref).length > 0;
+    const tint = disabled ? theme.mutedText : theme.primary;
+
+    return (
+      <Pressable
+        onPress={() => handleAttachDocument(ref)}
+        disabled={disabled}
+        accessibilityState={{ disabled }}
+        style={[styles.sectionAction, { borderColor: tint }]}
+      >
+        <Ionicons name="add" size={14} color={tint} />
+        <Text style={[styles.sectionActionText, { color: tint }]}>
+          {attachingSection === sectionKey(ref) ? t('addEditItem.savingEllipsis') : label}
+        </Text>
+      </Pressable>
+    );
+  };
 
   const renderMultipleImagesHint = () => (
     <View style={styles.sectionHintRow}>
