@@ -61,7 +61,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
     );
   }
 
-  const status = getWarrantyStatus(item.expiryDate);
+  const status = getWarrantyStatus(item.coverageEndDate);
   const category = item.category ?? DEFAULT_CATEGORY;
 
   const handleConfirmDelete = async () => {
@@ -136,7 +136,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
             <Text style={[styles.itemMeta, { color: theme.subtleText }]}>{getCategoryLabel(category, t)}</Text>
             <StatusBadge status={status} />
             <Text style={[styles.daysRemaining, { color: theme.subtleText }]}>
-              {formatDaysRemaining(item.expiryDate, t)} · {formatIsoDate(item.expiryDate, locale)}
+              {formatDaysRemaining(item.coverageEndDate, t)} · {formatIsoDate(item.coverageEndDate, locale)}
             </Text>
           </View>
         </Card>

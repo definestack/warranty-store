@@ -2,7 +2,8 @@ import { __setFileExists, getInfoAsync } from 'expo-file-system/legacy';
 import * as Notifications from 'expo-notifications';
 
 import { getDatabase, initDatabase } from '../db/database';
-import { saveDocumentsForItem } from '../db/invoiceImagesRepository';
+import { saveExtendedWarrantiesForItem } from '../db/extendedWarrantyRepository';
+import { saveDocumentsForScope } from '../db/invoiceImagesRepository';
 import * as notificationSchedulesRepository from '../db/notificationSchedulesRepository';
 import { getSchedulesForItem, saveSchedulesForItem } from '../db/notificationSchedulesRepository';
 import * as warrantyRepository from '../db/warrantyRepository';
@@ -16,6 +17,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await getDatabase().runAsync('DELETE FROM invoice_images');
+  await getDatabase().runAsync('DELETE FROM extended_warranties');
   await getDatabase().runAsync('DELETE FROM warranty_items');
   await getDatabase().runAsync('DELETE FROM notification_schedules');
   useItemsStore.setState({ items: [], loading: false, selectedItem: null, selectedItemLoading: false });
@@ -136,11 +138,11 @@ describe('deleteItem', () => {
 
   it('removes every attached document file of both kinds', async () => {
     const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
-    await saveDocumentsForItem(created.id, 'invoice', [
+    await saveDocumentsForScope({ itemId: created.id, kind: 'invoice' }, [
       { id: 'temp-1', uri: 'file:///invoice-1.jpg', isPersisted: false },
       { id: 'temp-2', uri: 'file:///invoice-2.jpg', isPersisted: false },
     ]);
-    await saveDocumentsForItem(created.id, 'warranty', [
+    await saveDocumentsForScope({ itemId: created.id, kind: 'warranty' }, [
       { id: 'temp-3', uri: 'file:///warranty-card.jpg', isPersisted: false },
     ]);
     await useItemsStore.getState().loadItems();
@@ -153,6 +155,60 @@ describe('deleteItem', () => {
     expect((await getInfoAsync('file:///invoice-1.jpg')).exists).toBe(false);
     expect((await getInfoAsync('file:///invoice-2.jpg')).exists).toBe(false);
     expect((await getInfoAsync('file:///warranty-card.jpg')).exists).toBe(false);
+  });
+
+  it('removes the document files of every extended warranty too', async () => {
+    const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
+    await saveExtendedWarrantiesForItem(created.id, [
+      {
+        id: 'ew-1',
+        durationValue: 24,
+        durationUnit: 'months',
+        startsOn: '2027-01-16',
+        isPersisted: false,
+      },
+    ]);
+    await saveDocumentsForScope({ itemId: created.id, kind: 'invoice' }, [
+      { id: 'temp-own', uri: 'file:///own-invoice.jpg', isPersisted: false },
+    ]);
+    await saveDocumentsForScope(
+      { itemId: created.id, extendedWarrantyId: 'ew-1', kind: 'invoice' },
+      [{ id: 'temp-ew-invoice', uri: 'file:///ew-invoice.jpg', isPersisted: false }]
+    );
+    await saveDocumentsForScope(
+      { itemId: created.id, extendedWarrantyId: 'ew-1', kind: 'warranty' },
+      [{ id: 'temp-ew-cert', uri: 'file:///ew-certificate.jpg', isPersisted: false }]
+    );
+    await useItemsStore.getState().loadItems();
+    __setFileExists('file:///own-invoice.jpg', true);
+    __setFileExists('file:///ew-invoice.jpg', true);
+    __setFileExists('file:///ew-certificate.jpg', true);
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect((await getInfoAsync('file:///own-invoice.jpg')).exists).toBe(false);
+    expect((await getInfoAsync('file:///ew-invoice.jpg')).exists).toBe(false);
+    expect((await getInfoAsync('file:///ew-certificate.jpg')).exists).toBe(false);
+  });
+
+  it('cancels the reminders of every cover period', async () => {
+    const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
+    await saveSchedulesForItem(created.id, [
+      { reminderKind: 'onExpiry', notificationId: 'notif-manufacturer', triggerAt: '2027-01-15T09:00:00.000Z' },
+      {
+        reminderKind: 'onExpiry',
+        notificationId: 'notif-extended',
+        triggerAt: '2029-01-15T09:00:00.000Z',
+        extendedWarrantyId: 'ew-1',
+      },
+    ]);
+    await useItemsStore.getState().loadItems();
+
+    await useItemsStore.getState().deleteItem(created.id);
+
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notif-manufacturer');
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notif-extended');
+    expect(await getSchedulesForItem(created.id)).toEqual([]);
   });
 
   it('removes the item photo file', async () => {

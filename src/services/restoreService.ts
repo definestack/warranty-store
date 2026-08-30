@@ -296,7 +296,7 @@ async function restoreItemPhoto(item: WarrantyItem, zip: JSZip): Promise<string 
 async function scheduleRemindersForImported(items: WarrantyItem[], t: TranslateFn): Promise<void> {
   if (items.length === 0 || !(await getNotificationsEnabled())) return;
 
-  const nonExpired = items.filter((item) => getWarrantyStatus(item.expiryDate) !== 'expired');
+  const nonExpired = items.filter((item) => getWarrantyStatus(item.coverageEndDate) !== 'expired');
   for (const item of nonExpired) {
     try {
       const scheduled = await scheduleExpiryReminders(item, t);

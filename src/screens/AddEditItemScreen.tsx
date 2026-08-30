@@ -41,7 +41,7 @@ import {
 } from '../services/imageService';
 import {
   cancelScheduledReminders,
-  hasExpiryDateChanged,
+  hasCoverageChanged,
   requestNotificationPermissionIfNeeded,
   scheduleExpiryReminders,
 } from '../services/notificationService';
@@ -565,7 +565,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         await useItemsStore.getState().loadItemById(itemId);
         useToastStore.getState().show(t('addEditItem.itemUpdated'));
 
-        if (existing && updatedItem && hasExpiryDateChanged(existing, updatedItem)) {
+        if (existing && updatedItem && hasCoverageChanged(existing, updatedItem)) {
           try {
             const existingSchedules = await getSchedulesForItem(existing.id);
             await cancelScheduledReminders(existingSchedules);

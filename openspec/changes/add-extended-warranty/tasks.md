@@ -107,49 +107,49 @@ Decision 4 exists to prevent.
 
 Land 6.3–6.8 together — see the note at the top of this file.
 
-- [ ] 6.1 Write failing tests for the item mapper: an item's extended warranties are loaded
+- [x] 6.1 Write failing tests for the item mapper: an item's extended warranties are loaded
       with it, and its coverage end date is the derived maximum, for the single-item read
       and the list read alike.
-- [ ] 6.2 Write a failing test that deleting an item removes its extended warranties along
+- [x] 6.2 Write a failing test that deleting an item removes its extended warranties along
       with its documents and schedules, inside the existing transaction.
-- [ ] 6.3 Implement the mapper and delete changes in `src/db/warrantyRepository.ts`. Leave
+- [x] 6.3 Implement the mapper and delete changes in `src/db/warrantyRepository.ts`. Leave
       `expiry_date` and its derivation exactly as they are.
-- [ ] 6.4 Write failing tests for `src/utils/itemFilters.ts`: an item whose manufacturer
+- [x] 6.4 Write failing tests for `src/utils/itemFilters.ts`: an item whose manufacturer
       warranty has expired but whose extended warranty is live is not expired, appears in
       the expiring-soon list when that extended cover ends within 30 days, and is ordered by
       that date.
-- [ ] 6.5 Update `src/utils/itemFilters.ts` to read the coverage end date.
-- [ ] 6.6 Write a failing test for `src/store/notificationsStore.ts`: an item kept alive only
+- [x] 6.5 Update `src/utils/itemFilters.ts` to read the coverage end date.
+- [x] 6.6 Write a failing test for `src/store/notificationsStore.ts`: an item kept alive only
       by an extended warranty is not filtered out as expired.
-- [ ] 6.7 Update `src/store/notificationsStore.ts` and `src/services/restoreService.ts`'s
+- [x] 6.7 Update `src/store/notificationsStore.ts` and `src/services/restoreService.ts`'s
       non-expired filter to read the coverage end date.
-- [ ] 6.8 Update `src/screens/HomeScreen.tsx` and `src/screens/ItemDetailScreen.tsx` to read
+- [x] 6.8 Update `src/screens/HomeScreen.tsx` and `src/screens/ItemDetailScreen.tsx` to read
       the coverage end date for the status badge and the days-remaining text. The detail
       screen keeps showing the manufacturer valid-till date in its own right.
 
 ## 7. Reminders per coverage period
 
-- [ ] 7.1 Write failing tests for period planning: an item yields one period for its
+- [x] 7.1 Write failing tests for period planning: an item yields one period for its
       manufacturer warranty plus one per extended warranty, each with its own end date, and
       periods that have already ended plan no reminders.
-- [ ] 7.2 Write failing tests for scheduling: each period gets its own 30/7/0-day reminders
+- [x] 7.2 Write failing tests for scheduling: each period gets its own 30/7/0-day reminders
       for the moments still in the future, each carrying the item id so a tap still opens
       the item, and a failure on one reminder does not lose the others.
-- [ ] 7.3 Write failing tests for the reschedule decision: adding an extended warranty,
+- [x] 7.3 Write failing tests for the reschedule decision: adding an extended warranty,
       removing one, and moving one's end date each require rescheduling; a name-only edit
       does not.
-- [ ] 7.4 Implement period planning and per-period scheduling in
+- [x] 7.4 Implement period planning and per-period scheduling in
       `src/services/notificationService.ts`, replacing `hasExpiryDateChanged` with the
       coverage-signature comparison per design.md — Decision 7.
-- [ ] 7.5 Write failing tests for `src/db/notificationSchedulesRepository.ts`: schedules
+- [x] 7.5 Write failing tests for `src/db/notificationSchedulesRepository.ts`: schedules
       persist which period they belong to, a row with no reference reads back as the
       manufacturer period, and reading and deleting by item still returns and removes every
       period's schedules.
-- [ ] 7.6 Implement the schedules repository changes.
-- [ ] 7.7 Write a failing test for `src/store/itemsStore.ts`: deleting an item cancels the
+- [x] 7.6 Implement the schedules repository changes.
+- [x] 7.7 Write a failing test for `src/store/itemsStore.ts`: deleting an item cancels the
       reminders of every one of its periods and deletes its documents' files across every
       scope.
-- [ ] 7.8 Implement the `itemsStore` delete changes.
+- [x] 7.8 Implement the `itemsStore` delete changes.
 
 ## 8. Backup and restore
 

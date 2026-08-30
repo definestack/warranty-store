@@ -1,12 +1,20 @@
 import * as Crypto from 'expo-crypto';
 
+import { getCoverageEndDate } from '../utils/coverage';
 import { addMonths, nowIso } from '../utils/date';
 import type {
+  ExtendedWarranty,
   NewWarrantyItem,
   WarrantyItem,
   WarrantyItemUpdate,
 } from '../types/warranty';
 import { getDatabase } from './database';
+import {
+  deleteExtendedWarrantiesForItem,
+  getExtendedWarrantiesForItem,
+  getExtendedWarrantiesForItems,
+  insertImportedExtendedWarranties,
+} from './extendedWarrantyRepository';
 import type { GroupedDocuments } from './invoiceImagesRepository';
 import { getDocumentsForItem, getDocumentsForItems } from './invoiceImagesRepository';
 
@@ -26,7 +34,11 @@ interface WarrantyItemRow {
   updated_at: string;
 }
 
-function mapRowToItem(row: WarrantyItemRow, documents: GroupedDocuments): WarrantyItem {
+function mapRowToItem(
+  row: WarrantyItemRow,
+  documents: GroupedDocuments,
+  extendedWarranties: ExtendedWarranty[]
+): WarrantyItem {
   return {
     id: row.id,
     name: row.name,
@@ -41,6 +53,10 @@ function mapRowToItem(row: WarrantyItemRow, documents: GroupedDocuments): Warran
     photoUri: row.photo_uri ?? undefined,
     invoiceDocuments: documents.invoice,
     warrantyDocuments: documents.warranty,
+    extendedWarranties,
+    // Derived here rather than stored, so it can never drift from the periods it
+    // summarises. This is what the item's status is read from — not expiry_date.
+    coverageEndDate: getCoverageEndDate(row.expiry_date, extendedWarranties),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -83,9 +99,15 @@ export async function getAllItems(): Promise<WarrantyItem[]> {
   const rows = await db.getAllAsync<WarrantyItemRow>(
     'SELECT * FROM warranty_items ORDER BY created_at DESC'
   );
-  const documentsByItem = await getDocumentsForItems(rows.map((row) => row.id));
+  const itemIds = rows.map((row) => row.id);
+  const documentsByItem = await getDocumentsForItems(itemIds);
+  const extendedByItem = await getExtendedWarrantiesForItems(itemIds);
   return rows.map((row) =>
-    mapRowToItem(row, documentsByItem.get(row.id) ?? { invoice: [], warranty: [] })
+    mapRowToItem(
+      row,
+      documentsByItem.get(row.id) ?? { invoice: [], warranty: [] },
+      extendedByItem.get(row.id) ?? []
+    )
   );
 }
 
@@ -97,7 +119,8 @@ export async function getItemById(id: string): Promise<WarrantyItem | null> {
   );
   if (!row) return null;
   const documents = await getDocumentsForItem(id);
-  return mapRowToItem(row, documents);
+  const extendedWarranties = await getExtendedWarrantiesForItem(id);
+  return mapRowToItem(row, documents, extendedWarranties);
 }
 
 /**
@@ -140,7 +163,14 @@ export async function updateItem(
     id
   );
 
-  return { ...merged, expiryDate, updatedAt };
+  // Recomputed rather than carried over from `existing`: the expiry date may have just
+  // moved, and the coverage end date is derived from it.
+  return {
+    ...merged,
+    expiryDate,
+    coverageEndDate: getCoverageEndDate(expiryDate, merged.extendedWarranties),
+    updatedAt,
+  };
 }
 
 /** Which of the given item ids are already stored — used to merge a backup without duplicating items. */
@@ -187,15 +217,28 @@ export async function insertImportedItems(items: WarrantyItem[]): Promise<void> 
         item.updatedAt
       );
 
-      for (const document of [...item.invoiceDocuments, ...item.warrantyDocuments]) {
+      await insertImportedExtendedWarranties(item.extendedWarranties);
+
+      const documents = [
+        ...item.invoiceDocuments,
+        ...item.warrantyDocuments,
+        ...item.extendedWarranties.flatMap((extended) => [
+          ...extended.invoiceDocuments,
+          ...extended.warrantyDocuments,
+        ]),
+      ];
+      for (const document of documents) {
         await db.runAsync(
-          'INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at, kind) VALUES (?, ?, ?, ?, ?, ?)',
+          `INSERT INTO invoice_images
+            (id, item_id, uri, sort_order, created_at, kind, extended_warranty_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
           document.id,
           item.id,
           document.uri,
           document.sortOrder,
           document.createdAt,
-          document.kind
+          document.kind,
+          document.extendedWarrantyId ?? null
         );
       }
     }
@@ -205,7 +248,10 @@ export async function insertImportedItems(items: WarrantyItem[]): Promise<void> 
 export async function deleteItem(id: string): Promise<void> {
   const db = getDatabase();
   await db.withTransactionAsync(async () => {
+    // Documents of every scope go with the item: extended warranty documents carry the
+    // item id too, so this one statement covers them as well.
     await db.runAsync('DELETE FROM invoice_images WHERE item_id = ?', id);
+    await deleteExtendedWarrantiesForItem(id);
     await db.runAsync('DELETE FROM warranty_items WHERE id = ?', id);
   });
 }

@@ -30,7 +30,7 @@ async function cancelAllReminders(): Promise<void> {
 
 async function rescheduleAllReminders(t: TranslateFn): Promise<void> {
   const items = await getAllItems();
-  const nonExpired = items.filter((item) => getWarrantyStatus(item.expiryDate) !== 'expired');
+  const nonExpired = items.filter((item) => getWarrantyStatus(item.coverageEndDate) !== 'expired');
 
   for (const item of nonExpired) {
     try {

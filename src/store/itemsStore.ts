@@ -55,7 +55,18 @@ export const useItemsStore = create<ItemsState>((set, get) => ({
 
     await deleteItemRow(id);
 
-    const documents = item ? [...item.invoiceDocuments, ...item.warrantyDocuments] : [];
+    // Every scope's files, not just the item's own: an extended warranty's documents are
+    // deleted with it, so their files must go too.
+    const documents = item
+      ? [
+          ...item.invoiceDocuments,
+          ...item.warrantyDocuments,
+          ...item.extendedWarranties.flatMap((extended) => [
+            ...extended.invoiceDocuments,
+            ...extended.warrantyDocuments,
+          ]),
+        ]
+      : [];
     if (documents.length) {
       await Promise.all(documents.map((document) => deleteDocumentFile(document.uri)));
     }
