@@ -148,12 +148,57 @@ describe('parseBackupPayload', () => {
     expect(() => parseBackupPayload(JSON.stringify(makePayload([broken])))).toThrow(BackupValidationError);
   });
 
-  it('defaults a missing invoiceImages list to empty rather than failing', () => {
+  it('defaults a missing document list to empty rather than failing', () => {
     const payload = parseBackupPayload(
       JSON.stringify(makePayload([makeBackupItem({ invoiceImages: undefined })]))
     );
 
-    expect(payload.items[0].invoiceImages).toEqual([]);
+    expect(payload.items[0].invoiceDocuments).toEqual([]);
+    expect(payload.items[0].warrantyDocuments).toEqual([]);
+  });
+
+  it('splits the archive list into the two kinds', () => {
+    const documents = [
+      { id: 'img-1', uri: 'invoices/img-1.jpg', sortOrder: 0, createdAt: '2026-01-15T00:00:00.000Z', kind: 'invoice' },
+      { id: 'img-2', uri: 'invoices/img-2.jpg', sortOrder: 0, createdAt: '2026-01-15T00:00:00.000Z', kind: 'warranty' },
+    ];
+
+    const payload = parseBackupPayload(
+      JSON.stringify(makePayload([makeBackupItem({ invoiceImages: documents })]))
+    );
+
+    expect(payload.items[0].invoiceDocuments.map((document) => document.id)).toEqual(['img-1']);
+    expect(payload.items[0].warrantyDocuments.map((document) => document.id)).toEqual(['img-2']);
+  });
+
+  it('files documents with no kind as invoices, so a pre-split archive still imports', () => {
+    const documents = [
+      { id: 'img-1', uri: 'invoices/img-1.jpg', sortOrder: 0, createdAt: '2026-01-15T00:00:00.000Z' },
+      { id: 'img-2', uri: 'invoices/img-2.jpg', sortOrder: 1, createdAt: '2026-01-15T00:00:00.000Z' },
+    ];
+
+    const payload = parseBackupPayload(
+      JSON.stringify(makePayload([makeBackupItem({ invoiceImages: documents })]))
+    );
+
+    expect(payload.items[0].invoiceDocuments.map((document) => document.id)).toEqual([
+      'img-1',
+      'img-2',
+    ]);
+    expect(payload.items[0].warrantyDocuments).toEqual([]);
+  });
+
+  it('never rejects an archive over an unrecognised document kind', () => {
+    const documents = [
+      { id: 'img-1', uri: 'invoices/img-1.jpg', sortOrder: 0, createdAt: '2026-01-15T00:00:00.000Z', kind: 'extended' },
+    ];
+
+    const payload = parseBackupPayload(
+      JSON.stringify(makePayload([makeBackupItem({ invoiceImages: documents })]))
+    );
+
+    expect(payload.items[0].invoiceDocuments).toHaveLength(1);
+    expect(payload.items[0].invoiceDocuments[0].kind).toBe('invoice');
   });
 });
 
@@ -244,9 +289,44 @@ describe('applyBackup', () => {
     await applyBackup(loaded, t);
 
     const [item] = await getAllItems();
-    expect(item.invoiceImages).toHaveLength(1);
-    expect(item.invoiceImages[0].uri).toBe('file:///mock-documents/invoices/invoice-img-1.jpg');
-    expect(await readAsStringAsync(item.invoiceImages[0].uri, { encoding: 'base64' })).toBe(IMAGE_BASE64);
+    expect(item.invoiceDocuments).toHaveLength(1);
+    expect(item.invoiceDocuments[0].uri).toBe('file:///mock-documents/invoices/invoice-img-1.jpg');
+    expect(await readAsStringAsync(item.invoiceDocuments[0].uri, { encoding: 'base64' })).toBe(IMAGE_BASE64);
+  });
+
+  it('restores each document to the kind it was exported from', async () => {
+    const documents = [
+      {
+        id: 'img-1',
+        itemId: 'item-1',
+        kind: 'invoice',
+        uri: 'invoices/img-1.jpg',
+        sortOrder: 0,
+        createdAt: '2026-01-15T00:00:00.000Z',
+      },
+      {
+        id: 'img-2',
+        itemId: 'item-1',
+        kind: 'warranty',
+        uri: 'invoices/img-2.jpg',
+        sortOrder: 0,
+        createdAt: '2026-01-15T00:00:00.000Z',
+      },
+    ];
+    await writeBackupZip(makePayload([makeBackupItem({ invoiceImages: documents })]), {
+      'invoices/img-1.jpg': IMAGE_BASE64,
+      'invoices/img-2.jpg': IMAGE_BASE64,
+    });
+    const loaded = await loadBackupArchive(BACKUP_URI);
+
+    await applyBackup(loaded, t);
+
+    const [item] = await getAllItems();
+    expect(item.invoiceDocuments.map((document) => document.id)).toEqual(['img-1']);
+    expect(item.warrantyDocuments.map((document) => document.id)).toEqual(['img-2']);
+    expect(item.warrantyDocuments[0].kind).toBe('warranty');
+    expect(item.invoiceDocuments[0].sortOrder).toBe(0);
+    expect(item.warrantyDocuments[0].sortOrder).toBe(0);
   });
 
   it('still imports an item whose invoice file is missing from the archive', async () => {
@@ -265,7 +345,7 @@ describe('applyBackup', () => {
 
     expect(result.imported).toBe(1);
     const [item] = await getAllItems();
-    expect(item.invoiceImages).toEqual([]);
+    expect(item.invoiceDocuments).toEqual([]);
     expect(warnSpy).toHaveBeenCalled();
 
     warnSpy.mockRestore();

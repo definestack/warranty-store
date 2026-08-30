@@ -5,11 +5,11 @@ import JSZip from 'jszip';
 import { saveSchedulesForItem } from '../db/notificationSchedulesRepository';
 import { getExistingItemIds, insertImportedItems } from '../db/warrantyRepository';
 import type { TranslateFn } from '../i18n/i18n';
-import type { InvoiceImage, WarrantyItem } from '../types/warranty';
+import type { ItemDocument, ItemDocumentKind, WarrantyItem } from '../types/warranty';
 import { getWarrantyStatus } from '../utils/date';
 import { BACKUP_DATA_FILE_NAME, BACKUP_FORMAT_VERSION } from './backupService';
-import type { BackupPayload } from './backupService';
-import { writeInvoiceImageFile, writeItemPhotoFile } from './fileService';
+
+import { writeDocumentImageFile, writeItemPhotoFile } from './fileService';
 import { getNotificationsEnabled } from './notificationPreferenceService';
 import { scheduleExpiryReminders } from './notificationService';
 
@@ -31,13 +31,23 @@ export class BackupValidationError extends Error {
 /** A validated backup archive, held in memory so the user can confirm before anything is written. */
 export interface LoadedBackup {
   uri: string;
-  payload: BackupPayload;
+  payload: ValidatedBackupPayload;
   zip: JSZip;
 }
 
 export interface RestoreResult {
   imported: number;
   skipped: number;
+}
+
+/**
+ * A backup once it has been parsed and validated: documents are already split into the
+ * two kinds, matching the in-app shape rather than the archive's single legacy list.
+ */
+export interface ValidatedBackupPayload {
+  formatVersion: number;
+  exportedAt: string;
+  items: WarrantyItem[];
 }
 
 function invalid(message: string): BackupValidationError {
@@ -48,25 +58,35 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
 
-function validateInvoiceImage(raw: unknown, itemId: string, index: number): InvoiceImage {
+/**
+ * A document's kind is optional in the archive and anything unrecognised falls back to
+ * 'invoice'. That is what lets an archive written before the invoice/warranty split
+ * import cleanly instead of being rejected over a field it could not have carried.
+ */
+function documentKind(raw: unknown): ItemDocumentKind {
+  return raw === 'warranty' ? 'warranty' : 'invoice';
+}
+
+function validateDocument(raw: unknown, itemId: string, index: number): ItemDocument {
   if (typeof raw !== 'object' || raw === null) {
-    throw invalid(`Invoice image ${index} of item ${itemId} is not an object`);
+    throw invalid(`Document ${index} of item ${itemId} is not an object`);
   }
 
-  const image = raw as Record<string, unknown>;
-  if (!isNonEmptyString(image.id) || !isNonEmptyString(image.uri)) {
-    throw invalid(`Invoice image ${index} of item ${itemId} is missing an id or path`);
+  const document = raw as Record<string, unknown>;
+  if (!isNonEmptyString(document.id) || !isNonEmptyString(document.uri)) {
+    throw invalid(`Document ${index} of item ${itemId} is missing an id or path`);
   }
-  if (typeof image.sortOrder !== 'number' || !isNonEmptyString(image.createdAt)) {
-    throw invalid(`Invoice image ${image.id} of item ${itemId} has invalid metadata`);
+  if (typeof document.sortOrder !== 'number' || !isNonEmptyString(document.createdAt)) {
+    throw invalid(`Document ${document.id} of item ${itemId} has invalid metadata`);
   }
 
   return {
-    id: image.id,
+    id: document.id,
     itemId,
-    uri: image.uri,
-    sortOrder: image.sortOrder,
-    createdAt: image.createdAt,
+    kind: documentKind(document.kind),
+    uri: document.uri,
+    sortOrder: document.sortOrder,
+    createdAt: document.createdAt,
   };
 }
 
@@ -100,11 +120,16 @@ function validateItem(raw: unknown, index: number): WarrantyItem {
     throw invalid(`Item ${item.id} has an invalid price`);
   }
 
-  // Older or hand-edited backups may omit the list entirely; that just means no invoices.
-  const rawImages = item.invoiceImages ?? [];
-  if (!Array.isArray(rawImages)) {
-    throw invalid(`Item ${item.id} has an invalid invoice image list`);
+  // Older or hand-edited backups may omit the list entirely; that just means no documents.
+  // Both kinds share this one list — see BackupItem in backupService.
+  const rawDocuments = item.invoiceImages ?? [];
+  if (!Array.isArray(rawDocuments)) {
+    throw invalid(`Item ${item.id} has an invalid document list`);
   }
+
+  const documents = rawDocuments.map((document, documentIndex) =>
+    validateDocument(document, item.id as string, documentIndex)
+  );
 
   return {
     id: item.id,
@@ -118,9 +143,8 @@ function validateItem(raw: unknown, index: number): WarrantyItem {
     store: optionalString(item.store, 'store', item.id),
     notes: optionalString(item.notes, 'notes', item.id),
     photoUri: optionalString(item.photoUri, 'photo', item.id),
-    invoiceImages: rawImages.map((image, imageIndex) =>
-      validateInvoiceImage(image, item.id as string, imageIndex)
-    ),
+    invoiceDocuments: documents.filter((document) => document.kind === 'invoice'),
+    warrantyDocuments: documents.filter((document) => document.kind === 'warranty'),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -130,7 +154,7 @@ function validateItem(raw: unknown, index: number): WarrantyItem {
  * Parses and fully validates a backup's `data.json`. Throws `BackupValidationError`
  * for anything unusable, so a corrupt file is rejected before the database is touched.
  */
-export function parseBackupPayload(raw: string): BackupPayload {
+export function parseBackupPayload(raw: string): ValidatedBackupPayload {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -201,31 +225,40 @@ function fileExtension(uri: string): string {
   return extMatch ? extMatch[0] : '.jpg';
 }
 
-function restoredImageFileName(image: InvoiceImage): string {
-  return `invoice-${image.id}${fileExtension(image.uri)}`;
+function restoredDocumentFileName(document: ItemDocument): string {
+  return `invoice-${document.id}${fileExtension(document.uri)}`;
 }
 
 /**
- * Unpacks an item's invoice images into app-private storage. An image whose file is
+ * Unpacks an item's documents into app-private storage, keeping each in the kind it was
+ * exported from and renumbering each kind densely from zero. A document whose file is
  * missing or unreadable is dropped rather than failing the whole restore — losing one
  * picture is better than losing the item.
  */
-async function restoreInvoiceImages(item: WarrantyItem, zip: JSZip): Promise<InvoiceImage[]> {
-  const restored: InvoiceImage[] = [];
+async function restoreDocuments(
+  item: WarrantyItem,
+  zip: JSZip
+): Promise<Pick<WarrantyItem, 'invoiceDocuments' | 'warrantyDocuments'>> {
+  const restored: Pick<WarrantyItem, 'invoiceDocuments' | 'warrantyDocuments'> = {
+    invoiceDocuments: [],
+    warrantyDocuments: [],
+  };
 
-  for (const image of item.invoiceImages) {
-    const entry = zip.file(image.uri);
+  for (const document of [...item.invoiceDocuments, ...item.warrantyDocuments]) {
+    const entry = zip.file(document.uri);
     if (!entry) {
-      if (__DEV__) console.warn(`Backup archive is missing invoice image ${image.uri}`);
+      if (__DEV__) console.warn(`Backup archive is missing document ${document.uri}`);
       continue;
     }
 
     try {
       const base64 = await entry.async('base64');
-      const uri = await writeInvoiceImageFile(restoredImageFileName(image), base64);
-      restored.push({ ...image, itemId: item.id, uri, sortOrder: restored.length });
+      const uri = await writeDocumentImageFile(restoredDocumentFileName(document), base64);
+      const target =
+        document.kind === 'warranty' ? restored.warrantyDocuments : restored.invoiceDocuments;
+      target.push({ ...document, itemId: item.id, uri, sortOrder: target.length });
     } catch (err) {
-      console.error(`Failed to restore invoice image ${image.uri}`, err);
+      console.error(`Failed to restore document ${document.uri}`, err);
     }
   }
 
@@ -296,7 +329,7 @@ export async function applyBackup(backup: LoadedBackup, t: TranslateFn): Promise
     restored.push({
       ...item,
       photoUri: await restoreItemPhoto(item, backup.zip),
-      invoiceImages: await restoreInvoiceImages(item, backup.zip),
+      ...(await restoreDocuments(item, backup.zip)),
     });
   }
 

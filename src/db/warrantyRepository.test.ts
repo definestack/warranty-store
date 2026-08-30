@@ -1,5 +1,5 @@
 import { getDatabase, initDatabase } from './database';
-import { saveInvoiceImagesForItem } from './invoiceImagesRepository';
+import { saveDocumentsForItem } from './invoiceImagesRepository';
 import {
   createItem,
   deleteItem,
@@ -46,7 +46,8 @@ describe('createItem', () => {
     expect(created.price).toBeUndefined();
     expect(created.store).toBeUndefined();
     expect(created.notes).toBeUndefined();
-    expect(created.invoiceImages).toEqual([]);
+    expect(created.invoiceDocuments).toEqual([]);
+    expect(created.warrantyDocuments).toEqual([]);
   });
 
   it('persists optional fields when provided', async () => {
@@ -112,15 +113,23 @@ describe('getItemById', () => {
     expect(await getItemById('missing-id')).toBeNull();
   });
 
-  it('includes invoice images ordered by sort order', async () => {
+  it('exposes documents already grouped by kind, each ordered by sort order', async () => {
     const created = await createItem(baseItem);
-    await saveInvoiceImagesForItem(created.id, [
+    await saveDocumentsForItem(created.id, 'invoice', [
       { id: 'temp-1', uri: 'file:///1.jpg', isPersisted: false },
       { id: 'temp-2', uri: 'file:///2.jpg', isPersisted: false },
     ]);
+    await saveDocumentsForItem(created.id, 'warranty', [
+      { id: 'temp-3', uri: 'file:///card.jpg', isPersisted: false },
+    ]);
 
     const fetched = await getItemById(created.id);
-    expect(fetched?.invoiceImages.map((image) => image.uri)).toEqual(['file:///1.jpg', 'file:///2.jpg']);
+    expect(fetched?.invoiceDocuments.map((document) => document.uri)).toEqual([
+      'file:///1.jpg',
+      'file:///2.jpg',
+    ]);
+    expect(fetched?.warrantyDocuments.map((document) => document.uri)).toEqual(['file:///card.jpg']);
+    expect(fetched?.warrantyDocuments[0].kind).toBe('warranty');
   });
 });
 
@@ -200,10 +209,13 @@ describe('deleteItem', () => {
     await expect(deleteItem('missing-id')).resolves.toBeUndefined();
   });
 
-  it('also removes the item invoice_images rows', async () => {
+  it('also removes the item document rows of both kinds', async () => {
     const created = await createItem(baseItem);
-    await saveInvoiceImagesForItem(created.id, [
+    await saveDocumentsForItem(created.id, 'invoice', [
       { id: 'temp-1', uri: 'file:///1.jpg', isPersisted: false },
+    ]);
+    await saveDocumentsForItem(created.id, 'warranty', [
+      { id: 'temp-2', uri: 'file:///card.jpg', isPersisted: false },
     ]);
 
     await deleteItem(created.id);
@@ -244,11 +256,22 @@ describe('insertImportedItems', () => {
     price: 899,
     store: 'Reliance',
     notes: 'From backup',
-    invoiceImages: [
+    invoiceDocuments: [
       {
         id: 'img-9',
         itemId: 'imported-1',
+        kind: 'invoice' as const,
         uri: 'file:///mock-documents/invoices/invoice-img-9.jpg',
+        sortOrder: 0,
+        createdAt: '2026-02-01T00:00:00.000Z',
+      },
+    ],
+    warrantyDocuments: [
+      {
+        id: 'img-10',
+        itemId: 'imported-1',
+        kind: 'warranty' as const,
+        uri: 'file:///mock-documents/invoices/invoice-img-10.jpg',
         sortOrder: 0,
         createdAt: '2026-02-01T00:00:00.000Z',
       },
@@ -270,15 +293,26 @@ describe('insertImportedItems', () => {
     });
   });
 
-  it('inserts the accompanying invoice image rows', async () => {
+  it('inserts the accompanying document rows, preserving each kind', async () => {
     await insertImportedItems([imported]);
 
     const stored = await getItemById('imported-1');
-    expect(stored?.invoiceImages).toEqual([
+    expect(stored?.invoiceDocuments).toEqual([
       {
         id: 'img-9',
         itemId: 'imported-1',
+        kind: 'invoice',
         uri: 'file:///mock-documents/invoices/invoice-img-9.jpg',
+        sortOrder: 0,
+        createdAt: '2026-02-01T00:00:00.000Z',
+      },
+    ]);
+    expect(stored?.warrantyDocuments).toEqual([
+      {
+        id: 'img-10',
+        itemId: 'imported-1',
+        kind: 'warranty',
+        uri: 'file:///mock-documents/invoices/invoice-img-10.jpg',
         sortOrder: 0,
         createdAt: '2026-02-01T00:00:00.000Z',
       },
@@ -297,7 +331,7 @@ describe('insertImportedItems', () => {
   it('preserves photoUri exactly as given, including items with none', async () => {
     await insertImportedItems([
       { ...imported, photoUri: 'file:///mock-documents/photos/photo-imported-1.jpg' },
-      { ...imported, id: 'imported-2', invoiceImages: [], photoUri: undefined },
+      { ...imported, id: 'imported-2', invoiceDocuments: [], warrantyDocuments: [], photoUri: undefined },
     ]);
 
     expect((await getItemById('imported-1'))?.photoUri).toBe(

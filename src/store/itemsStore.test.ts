@@ -2,7 +2,7 @@ import { __setFileExists, getInfoAsync } from 'expo-file-system/legacy';
 import * as Notifications from 'expo-notifications';
 
 import { getDatabase, initDatabase } from '../db/database';
-import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
+import { saveDocumentsForItem } from '../db/invoiceImagesRepository';
 import * as notificationSchedulesRepository from '../db/notificationSchedulesRepository';
 import { getSchedulesForItem, saveSchedulesForItem } from '../db/notificationSchedulesRepository';
 import * as warrantyRepository from '../db/warrantyRepository';
@@ -134,20 +134,25 @@ describe('deleteItem', () => {
     expect(useItemsStore.getState().selectedItem?.id).toBe(kept.id);
   });
 
-  it('removes every attached invoice file', async () => {
+  it('removes every attached document file of both kinds', async () => {
     const created = await createItem({ name: 'Blender', purchaseDate: '2026-01-15', warrantyMonths: 12 });
-    await saveInvoiceImagesForItem(created.id, [
+    await saveDocumentsForItem(created.id, 'invoice', [
       { id: 'temp-1', uri: 'file:///invoice-1.jpg', isPersisted: false },
       { id: 'temp-2', uri: 'file:///invoice-2.jpg', isPersisted: false },
+    ]);
+    await saveDocumentsForItem(created.id, 'warranty', [
+      { id: 'temp-3', uri: 'file:///warranty-card.jpg', isPersisted: false },
     ]);
     await useItemsStore.getState().loadItems();
     __setFileExists('file:///invoice-1.jpg', true);
     __setFileExists('file:///invoice-2.jpg', true);
+    __setFileExists('file:///warranty-card.jpg', true);
 
     await useItemsStore.getState().deleteItem(created.id);
 
     expect((await getInfoAsync('file:///invoice-1.jpg')).exists).toBe(false);
     expect((await getInfoAsync('file:///invoice-2.jpg')).exists).toBe(false);
+    expect((await getInfoAsync('file:///warranty-card.jpg')).exists).toBe(false);
   });
 
   it('removes the item photo file', async () => {

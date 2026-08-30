@@ -173,7 +173,7 @@ describe('runMigrations', () => {
     expect(row?.photo_uri).toBeNull();
   });
 
-  it('applies nothing when re-run on a database already at version 6', async () => {
+  it('applies nothing when re-run on a fully migrated database', async () => {
     const db = await freshDb();
     await runMigrations(db);
 
@@ -181,6 +181,78 @@ describe('runMigrations', () => {
 
     const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(warranty_items)');
     expect(columns.filter((column) => column.name === 'photo_uri')).toHaveLength(1);
+
+    const applied = await db.getAllAsync('SELECT * FROM schema_migrations');
+    expect(applied).toHaveLength(migrations.length);
+  });
+
+  it('adds a non-null kind column defaulting to invoice on invoice_images', async () => {
+    const db = await freshDb();
+    await runMigrations(db);
+
+    const columns = await db.getAllAsync<{ name: string; notnull: number; dflt_value: string | null }>(
+      'PRAGMA table_info(invoice_images)'
+    );
+    const kindColumn = columns.find((column) => column.name === 'kind');
+
+    expect(kindColumn).toBeDefined();
+    expect(kindColumn?.notnull).toBe(1);
+    expect(kindColumn?.dflt_value).toBe("'invoice'");
+  });
+
+  it('files documents attached before migration 7 as invoice documents', async () => {
+    const db = await freshDb();
+    await migrateToVersion(db, 6);
+    await db.runAsync(
+      `INSERT INTO warranty_items
+        (id, name, purchase_date, warranty_months, expiry_date, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      'pre-kind-item',
+      'Microwave',
+      '2026-01-15',
+      24,
+      '2028-01-15',
+      '2026-01-15T00:00:00.000Z',
+      '2026-01-15T00:00:00.000Z'
+    );
+    // A warranty card and a receipt, indistinguishable before the split.
+    await db.runAsync(
+      'INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
+      'doc-receipt',
+      'pre-kind-item',
+      'file:///receipt.jpg',
+      0,
+      '2026-01-15T00:00:00.000Z'
+    );
+    await db.runAsync(
+      'INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
+      'doc-warranty-card',
+      'pre-kind-item',
+      'file:///warranty-card.jpg',
+      1,
+      '2026-01-15T00:00:00.000Z'
+    );
+
+    await runMigrations(db);
+
+    const rows = await db.getAllAsync<{ id: string; uri: string; sort_order: number; kind: string }>(
+      'SELECT * FROM invoice_images WHERE item_id = ? ORDER BY sort_order ASC',
+      'pre-kind-item'
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.kind)).toEqual(['invoice', 'invoice']);
+    expect(rows.map((row) => row.uri)).toEqual(['file:///receipt.jpg', 'file:///warranty-card.jpg']);
+    expect(rows.map((row) => row.sort_order)).toEqual([0, 1]);
+  });
+
+  it('applies nothing when re-run on a database already at version 7', async () => {
+    const db = await freshDb();
+    await migrateToVersion(db, 7);
+
+    await expect(runMigrations(db)).resolves.toBeUndefined();
+
+    const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(invoice_images)');
+    expect(columns.filter((column) => column.name === 'kind')).toHaveLength(1);
 
     const applied = await db.getAllAsync('SELECT * FROM schema_migrations');
     expect(applied).toHaveLength(migrations.length);

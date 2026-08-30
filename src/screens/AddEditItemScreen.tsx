@@ -23,8 +23,8 @@ import FormRow from '../components/FormRow';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
-import type { InvoiceImageDraft } from '../db/invoiceImagesRepository';
-import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
+import type { ItemDocumentDraft } from '../db/invoiceImagesRepository';
+import { saveDocumentsForItem } from '../db/invoiceImagesRepository';
 import {
   deleteSchedulesForItem,
   getSchedulesForItem,
@@ -32,11 +32,10 @@ import {
 } from '../db/notificationSchedulesRepository';
 import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useTranslation } from '../i18n/LocaleContext';
-import { deleteInvoiceFile, deleteItemPhotoFile } from '../services/fileService';
+import { deleteDocumentFile, deleteItemPhotoFile } from '../services/fileService';
 import {
-  MAX_INVOICE_PAGES,
-  pickInvoiceFromCamera,
-  pickInvoiceFromGallery,
+  pickDocumentFromCamera,
+  pickDocumentFromGallery,
   pickItemPhotoFromCamera,
   pickItemPhotoFromGallery,
 } from '../services/imageService';
@@ -51,12 +50,21 @@ import { useNotificationsStore } from '../store/notificationsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
-import type { WarrantyItem } from '../types/warranty';
+import type { ItemDocument, ItemDocumentKind, WarrantyItem } from '../types/warranty';
 import { CATEGORIES, getCategoryLabel, resolveCategory } from '../utils/categories';
 import { addMonths, formatDate, formatIsoDate, fromIsoDate, toIsoDate } from '../utils/date';
+import { MAX_DOCUMENTS_PER_KIND } from '../utils/documents';
 import { NOTES_MAX_LENGTH, parsePrice, parseWarrantyMonths } from '../utils/validation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
+
+type DocumentDrafts = Record<ItemDocumentKind, ItemDocumentDraft[]>;
+
+const EMPTY_DRAFTS: DocumentDrafts = { invoice: [], warranty: [] };
+
+function toDraft(document: ItemDocument): ItemDocumentDraft {
+  return { id: document.id, uri: document.uri, isPersisted: true };
+}
 
 /**
  * The item's photo while it is being edited. `isPersisted` marks a file that is
@@ -86,7 +94,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const [warrantyMonths, setWarrantyMonths] = useState('');
   const [warrantyMonthsError, setWarrantyMonthsError] = useState<string | null>(null);
   const [store, setStore] = useState('');
-  const [invoiceDrafts, setInvoiceDrafts] = useState<InvoiceImageDraft[]>([]);
+  const [documentDrafts, setDocumentDrafts] = useState<DocumentDrafts>(EMPTY_DRAFTS);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -114,9 +122,10 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         setPrice(item.price !== undefined ? String(item.price) : '');
         setWarrantyMonths(String(item.warrantyMonths));
         setStore(item.store ?? '');
-        setInvoiceDrafts(
-          item.invoiceImages.map((image) => ({ id: image.id, uri: image.uri, isPersisted: true }))
-        );
+        setDocumentDrafts({
+          invoice: item.invoiceDocuments.map(toDraft),
+          warranty: item.warrantyDocuments.map(toDraft),
+        });
         setNotes(item.notes ?? '');
       } catch (err) {
         console.error('Failed to load warranty item for editing', err);
@@ -150,6 +159,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
    */
   const unsavedPhotoUriRef = useRef<string | null>(null);
 
+  /** Same contract as `unsavedPhotoUriRef`, for document files of either kind. */
+  const unsavedDocumentUrisRef = useRef<string[]>([]);
+
   useEffect(
     () => () => {
       const orphanUri = unsavedPhotoUriRef.current;
@@ -157,27 +169,39 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         unsavedPhotoUriRef.current = null;
         void deleteItemPhotoFile(orphanUri);
       }
+
+      const orphanDocuments = unsavedDocumentUrisRef.current;
+      if (orphanDocuments.length > 0) {
+        unsavedDocumentUrisRef.current = [];
+        void Promise.all(orphanDocuments.map((uri) => deleteDocumentFile(uri)));
+      }
     },
     []
   );
 
-  const [attachingInvoice, setAttachingInvoice] = useState(false);
-  const [invoiceSourceModalVisible, setInvoiceSourceModalVisible] = useState(false);
+  const forgetUnsavedDocument = (uri: string) => {
+    unsavedDocumentUrisRef.current = unsavedDocumentUrisRef.current.filter(
+      (candidate) => candidate !== uri
+    );
+  };
+
+  const [attachingKind, setAttachingKind] = useState<ItemDocumentKind | null>(null);
+  const [sourceModalKind, setSourceModalKind] = useState<ItemDocumentKind | null>(null);
   const [replaceTargetIndex, setReplaceTargetIndex] = useState<number | null>(null);
 
-  const handleAttachInvoice = () => {
-    if (attachingInvoice) return;
+  const handleAttachDocument = (kind: ItemDocumentKind) => {
+    if (attachingKind) return;
     setReplaceTargetIndex(null);
-    setInvoiceSourceModalVisible(true);
+    setSourceModalKind(kind);
   };
 
-  const handleReplaceInvoicePage = (index: number) => {
-    if (attachingInvoice) return;
+  const handleReplaceDocument = (kind: ItemDocumentKind, index: number) => {
+    if (attachingKind) return;
     setReplaceTargetIndex(index);
-    setInvoiceSourceModalVisible(true);
+    setSourceModalKind(kind);
   };
 
-  const showInvoicePermissionAlert = (source: 'camera' | 'gallery') => {
+  const showDocumentPermissionAlert = (source: 'camera' | 'gallery') => {
     const isCamera = source === 'camera';
     Alert.alert(
       isCamera ? t('addEditItem.cameraPermissionTitle') : t('addEditItem.galleryPermissionTitle'),
@@ -224,7 +248,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           await deleteItemPhotoFile(previous.uri);
         }
       } else if (result.status === 'permission-denied') {
-        showInvoicePermissionAlert(source);
+        showDocumentPermissionAlert(source);
       }
     } catch (err) {
       console.error('Failed to save item photo', err);
@@ -247,91 +271,221 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       );
     });
 
-  const handlePickInvoiceSource = async (source: 'camera' | 'gallery') => {
-    setInvoiceSourceModalVisible(false);
+  const handlePickDocumentSource = async (source: 'camera' | 'gallery') => {
+    const kind = sourceModalKind;
     const targetIndex = replaceTargetIndex;
+    setSourceModalKind(null);
     setReplaceTargetIndex(null);
+    if (!kind) return;
 
     if (targetIndex !== null) {
-      setAttachingInvoice(true);
+      setAttachingKind(kind);
       try {
         const result =
-          source === 'camera' ? await pickInvoiceFromCamera() : await pickInvoiceFromGallery(1);
+          source === 'camera' ? await pickDocumentFromCamera() : await pickDocumentFromGallery(1);
 
         if (result.status === 'success' && result.uris.length > 0) {
           const [newUri] = result.uris;
-          const oldDraft = invoiceDrafts[targetIndex];
+          const oldDraft = documentDrafts[kind][targetIndex];
+          unsavedDocumentUrisRef.current = [...unsavedDocumentUrisRef.current, newUri];
           if (oldDraft && !oldDraft.isPersisted) {
-            await deleteInvoiceFile(oldDraft.uri);
+            forgetUnsavedDocument(oldDraft.uri);
+            await deleteDocumentFile(oldDraft.uri);
           }
-          setInvoiceDrafts((drafts) =>
-            drafts.map((draft, i) =>
+          setDocumentDrafts((drafts) => ({
+            ...drafts,
+            [kind]: drafts[kind].map((draft, i) =>
               i === targetIndex ? { id: Crypto.randomUUID(), uri: newUri, isPersisted: false } : draft
-            )
-          );
+            ),
+          }));
         } else if (result.status === 'permission-denied') {
-          showInvoicePermissionAlert(source);
+          showDocumentPermissionAlert(source);
         }
       } catch (err) {
-        console.error('Failed to replace invoice photo', err);
-        useToastStore.getState().show(t('addEditItem.invoiceSaveFailed'));
+        console.error('Failed to replace document', err);
+        useToastStore.getState().show(t('addEditItem.documentSaveFailed'));
       } finally {
-        setAttachingInvoice(false);
+        setAttachingKind(null);
       }
       return;
     }
 
-    const remainingCapacity = MAX_INVOICE_PAGES - invoiceDrafts.length;
+    const remainingCapacity = MAX_DOCUMENTS_PER_KIND - documentDrafts[kind].length;
     if (remainingCapacity <= 0) {
-      useToastStore.getState().show(t('addEditItem.maxPagesReached', { max: MAX_INVOICE_PAGES }));
+      useToastStore
+        .getState()
+        .show(t('addEditItem.maxDocumentsReached', { max: MAX_DOCUMENTS_PER_KIND }));
       return;
     }
 
-    setAttachingInvoice(true);
+    setAttachingKind(kind);
     try {
       const result =
         source === 'camera'
-          ? await pickInvoiceFromCamera()
-          : await pickInvoiceFromGallery(remainingCapacity);
+          ? await pickDocumentFromCamera()
+          : await pickDocumentFromGallery(remainingCapacity);
 
       if (result.status === 'success') {
         const uris = result.uris.slice(0, remainingCapacity);
-        if (result.uris.length > uris.length) {
-          useToastStore.getState().show(t('addEditItem.maxPagesReached', { max: MAX_INVOICE_PAGES }));
+        // Anything past the cap was already copied into app storage by the picker, so it
+        // has to be discarded here rather than simply ignored.
+        const overflow = result.uris.slice(remainingCapacity);
+        if (overflow.length > 0) {
+          useToastStore
+            .getState()
+            .show(t('addEditItem.maxDocumentsReached', { max: MAX_DOCUMENTS_PER_KIND }));
+          await Promise.all(overflow.map((uri) => deleteDocumentFile(uri)));
         }
-        setInvoiceDrafts((drafts) => [
+        unsavedDocumentUrisRef.current = [...unsavedDocumentUrisRef.current, ...uris];
+        setDocumentDrafts((drafts) => ({
           ...drafts,
-          ...uris.map((uri) => ({ id: Crypto.randomUUID(), uri, isPersisted: false })),
-        ]);
+          [kind]: [
+            ...drafts[kind],
+            ...uris.map((uri) => ({ id: Crypto.randomUUID(), uri, isPersisted: false })),
+          ],
+        }));
       } else if (result.status === 'permission-denied') {
-        showInvoicePermissionAlert(source);
+        showDocumentPermissionAlert(source);
       }
     } catch (err) {
-      console.error('Failed to save invoice photo', err);
-      useToastStore.getState().show(t('addEditItem.invoiceSaveFailed'));
+      console.error('Failed to save document', err);
+      useToastStore.getState().show(t('addEditItem.documentSaveFailed'));
     } finally {
-      setAttachingInvoice(false);
+      setAttachingKind(null);
     }
   };
 
-  const handleRemoveInvoicePage = async (index: number) => {
-    const draft = invoiceDrafts[index];
+  const handleRemoveDocument = async (kind: ItemDocumentKind, index: number) => {
+    const draft = documentDrafts[kind][index];
     if (!draft) return;
     if (!draft.isPersisted) {
-      await deleteInvoiceFile(draft.uri);
+      forgetUnsavedDocument(draft.uri);
+      await deleteDocumentFile(draft.uri);
     }
-    setInvoiceDrafts((drafts) => drafts.filter((_, i) => i !== index));
+    setDocumentDrafts((drafts) => ({
+      ...drafts,
+      [kind]: drafts[kind].filter((_, i) => i !== index),
+    }));
   };
 
-  const handleMoveInvoicePage = (index: number, direction: -1 | 1) => {
+  const handleMoveDocument = (kind: ItemDocumentKind, index: number, direction: -1 | 1) => {
     const targetIndex = index + direction;
-    setInvoiceDrafts((drafts) => {
-      if (targetIndex < 0 || targetIndex >= drafts.length) return drafts;
-      const next = [...drafts];
+    setDocumentDrafts((drafts) => {
+      const current = drafts[kind];
+      if (targetIndex < 0 || targetIndex >= current.length) return drafts;
+      const next = [...current];
       [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-      return next;
+      return { ...drafts, [kind]: next };
     });
   };
+
+  const renderDocumentStrip = (kind: ItemDocumentKind) => {
+    const drafts = documentDrafts[kind];
+    if (drafts.length === 0) return null;
+
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.documentTileScroll}
+        contentContainerStyle={styles.documentTileRow}
+      >
+        {drafts.map((draft, index) => (
+          <View key={draft.id} style={[styles.documentTileCard, { backgroundColor: theme.surfaceAlt }]}>
+            <View style={styles.documentTileImageWrapper}>
+              <Image source={{ uri: draft.uri }} style={styles.documentTileThumbnail} />
+              <Pressable
+                hitSlop={8}
+                disabled={attachingKind !== null}
+                onPress={() => handleReplaceDocument(kind, index)}
+                accessibilityLabel={t('addEditItem.replacePage')}
+                style={[
+                  styles.documentTileBadge,
+                  styles.documentTileReplace,
+                  { backgroundColor: theme.primary, borderColor: theme.surfaceAlt },
+                ]}
+              >
+                <Ionicons name="sync-outline" size={9} color={theme.primaryText} />
+              </Pressable>
+              <Pressable
+                hitSlop={8}
+                onPress={() => handleRemoveDocument(kind, index)}
+                accessibilityLabel={t('addEditItem.removePage')}
+                style={[
+                  styles.documentTileBadge,
+                  styles.documentTileRemove,
+                  { backgroundColor: theme.danger, borderColor: theme.surfaceAlt },
+                ]}
+              >
+                <Ionicons name="close" size={11} color="#ffffff" />
+              </Pressable>
+            </View>
+            <View style={styles.documentTileReorderRow}>
+              <Pressable
+                hitSlop={6}
+                disabled={index === 0}
+                onPress={() => handleMoveDocument(kind, index, -1)}
+                accessibilityLabel={t('addEditItem.movePageLeft')}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={16}
+                  color={index === 0 ? theme.mutedText : theme.text}
+                />
+              </Pressable>
+              <Text style={[styles.documentTileNumber, { color: theme.subtleText }]}>{index + 1}</Text>
+              <Pressable
+                hitSlop={6}
+                disabled={index === drafts.length - 1}
+                onPress={() => handleMoveDocument(kind, index, 1)}
+                accessibilityLabel={t('addEditItem.movePageRight')}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={index === drafts.length - 1 ? theme.mutedText : theme.text}
+                />
+              </Pressable>
+            </View>
+          </View>
+        ))}
+        {drafts.length < MAX_DOCUMENTS_PER_KIND ? (
+          <Pressable
+            onPress={() => handleAttachDocument(kind)}
+            accessibilityLabel={t('addEditItem.addPage')}
+            style={[styles.documentTileAddTile, { borderColor: theme.border }]}
+          >
+            <Ionicons name="add" size={22} color={theme.subtleText} />
+            <Text style={[styles.documentTileAddLabel, { color: theme.subtleText }]}>
+              {t('addEditItem.addMore')}
+            </Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+    );
+  };
+
+  const renderAddAction = (kind: ItemDocumentKind, label: string) => (
+    <Pressable
+      onPress={() => handleAttachDocument(kind)}
+      disabled={attachingKind !== null}
+      style={[styles.sectionAction, { borderColor: theme.primary }]}
+    >
+      <Ionicons name="add" size={14} color={theme.primary} />
+      <Text style={[styles.sectionActionText, { color: theme.primary }]}>
+        {attachingKind === kind ? t('addEditItem.savingEllipsis') : label}
+      </Text>
+    </Pressable>
+  );
+
+  const renderMultipleImagesHint = () => (
+    <View style={styles.sectionHintRow}>
+      <Ionicons name="information-circle-outline" size={14} color={theme.mutedText} />
+      <Text style={[styles.sectionHint, { color: theme.mutedText }]}>
+        {t('addEditItem.multipleImagesHint')}
+      </Text>
+    </View>
+  );
 
   const handleSave = async () => {
     const trimmedName = name.trim();
@@ -392,11 +546,16 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       }
 
       try {
-        const { removedUris } = await saveInvoiceImagesForItem(itemId, invoiceDrafts);
-        await Promise.all(removedUris.map((uri) => deleteInvoiceFile(uri)));
+        // Each kind reconciles independently; the write committed, so nothing still held
+        // in the drafts is an orphan any more.
+        unsavedDocumentUrisRef.current = [];
+        for (const kind of ['invoice', 'warranty'] as const) {
+          const { removedUris } = await saveDocumentsForItem(itemId, kind, documentDrafts[kind]);
+          await Promise.all(removedUris.map((uri) => deleteDocumentFile(uri)));
+        }
       } catch (err) {
-        console.error('Failed to save invoice pages', err);
-        useToastStore.getState().show(t('addEditItem.invoiceSaveFailed'));
+        console.error('Failed to save documents', err);
+        useToastStore.getState().show(t('addEditItem.documentSaveFailed'));
       }
 
       if (isEditing) {
@@ -579,125 +738,92 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             value={store}
             onChangeText={setStore}
           />
-          <FormRow
-            label={t('addEditItem.invoiceBill')}
-            placeholder={attachingInvoice ? t('addEditItem.savingEllipsis') : t('addEditItem.attachInvoice')}
-            value={
-              invoiceDrafts.length > 0
-                ? t('addEditItem.pagesAttached', { count: invoiceDrafts.length })
-                : undefined
-            }
-            icon="camera-outline"
-            onPress={handleAttachInvoice}
-          />
         </Card>
 
-        {invoiceDrafts.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.invoicePageScroll}
-            contentContainerStyle={styles.invoicePageRow}
-          >
-            {invoiceDrafts.map((draft, index) => (
-              <View key={draft.id} style={[styles.invoicePageCard, { backgroundColor: theme.surfaceAlt }]}>
-                <View style={styles.invoicePageImageWrapper}>
-                  <Image source={{ uri: draft.uri }} style={styles.invoicePageThumbnail} />
-                  <Pressable
-                    hitSlop={8}
-                    disabled={attachingInvoice}
-                    onPress={() => handleReplaceInvoicePage(index)}
-                    accessibilityLabel={t('addEditItem.replacePage')}
-                    style={[
-                      styles.invoicePageBadge,
-                      styles.invoicePageReplace,
-                      { backgroundColor: theme.primary, borderColor: theme.surfaceAlt },
-                    ]}
-                  >
-                    <Ionicons name="sync-outline" size={9} color={theme.primaryText} />
-                  </Pressable>
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() => handleRemoveInvoicePage(index)}
-                    accessibilityLabel={t('addEditItem.removePage')}
-                    style={[
-                      styles.invoicePageBadge,
-                      styles.invoicePageRemove,
-                      { backgroundColor: theme.danger, borderColor: theme.surfaceAlt },
-                    ]}
-                  >
-                    <Ionicons name="close" size={11} color="#ffffff" />
-                  </Pressable>
-                </View>
-                <View style={styles.invoicePageReorderRow}>
-                  <Pressable
-                    hitSlop={6}
-                    disabled={index === 0}
-                    onPress={() => handleMoveInvoicePage(index, -1)}
-                    accessibilityLabel={t('addEditItem.movePageLeft')}
-                  >
-                    <Ionicons
-                      name="chevron-back"
-                      size={16}
-                      color={index === 0 ? theme.mutedText : theme.text}
-                    />
-                  </Pressable>
-                  <Text style={[styles.invoicePageNumber, { color: theme.subtleText }]}>{index + 1}</Text>
-                  <Pressable
-                    hitSlop={6}
-                    disabled={index === invoiceDrafts.length - 1}
-                    onPress={() => handleMoveInvoicePage(index, 1)}
-                    accessibilityLabel={t('addEditItem.movePageRight')}
-                  >
-                    <Ionicons
-                      name="chevron-forward"
-                      size={16}
-                      color={index === invoiceDrafts.length - 1 ? theme.mutedText : theme.text}
-                    />
-                  </Pressable>
-                </View>
-              </View>
-            ))}
-            {invoiceDrafts.length < MAX_INVOICE_PAGES ? (
-              <Pressable
-                onPress={handleAttachInvoice}
-                accessibilityLabel={t('addEditItem.addPage')}
-                style={[styles.invoicePageAddTile, { borderColor: theme.border }]}
-              >
-                <Ionicons name="add" size={22} color={theme.subtleText} />
-              </Pressable>
-            ) : null}
-          </ScrollView>
-        ) : null}
+        <Card style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderText}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                {t('addEditItem.invoiceSection')}
+              </Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
+                {t('addEditItem.invoiceSectionSubtitle')}
+              </Text>
+            </View>
+            {renderAddAction('invoice', t('addEditItem.addInvoice'))}
+          </View>
+          {renderMultipleImagesHint()}
+          {renderDocumentStrip('invoice')}
+        </Card>
 
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.warrantyMonths')}</Text>
-          <TextInput
-            style={[
-              styles.textBox,
-              {
-                backgroundColor: theme.surfaceAlt,
-                borderColor: warrantyMonthsError ? theme.danger : theme.border,
-                color: theme.text,
-              },
-            ]}
-            placeholder={t('addEditItem.warrantyMonthsPlaceholder')}
-            placeholderTextColor={theme.mutedText}
-            value={warrantyMonths}
-            onChangeText={(text) => {
-              setWarrantyMonths(text);
-              if (warrantyMonthsError) setWarrantyMonthsError(null);
-            }}
-            keyboardType="numeric"
-          />
+        <Card style={styles.sectionCard}>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
+            <Text style={[styles.sectionTitle, styles.sectionTitleWithIcon, { color: theme.primary }]}>
+              {t('addEditItem.warrantySection')}
+            </Text>
+          </View>
+
+          <View style={styles.warrantyRow}>
+            <Text style={[styles.fieldLabel, styles.warrantyRowLabel, { color: theme.text }]}>
+              {t('addEditItem.warrantyMonths')}
+            </Text>
+            <TextInput
+              style={[
+                styles.warrantyMonthsInput,
+                {
+                  backgroundColor: theme.surfaceAlt,
+                  borderColor: warrantyMonthsError ? theme.danger : theme.border,
+                  color: theme.text,
+                },
+              ]}
+              placeholder={t('addEditItem.warrantyMonthsPlaceholder')}
+              placeholderTextColor={theme.mutedText}
+              value={warrantyMonths}
+              onChangeText={(text) => {
+                setWarrantyMonths(text);
+                if (warrantyMonthsError) setWarrantyMonthsError(null);
+              }}
+              keyboardType="numeric"
+            />
+          </View>
           {warrantyMonthsError ? (
             <Text style={[styles.fieldCaption, { color: theme.danger }]}>{warrantyMonthsError}</Text>
-          ) : (
-            <Text style={[styles.fieldCaption, { color: theme.subtleText }]}>
-              {expiryPreview ? t('addEditItem.expiresPreview', { date: expiryPreview }) : t('addEditItem.expiryAutoCalc')}
+          ) : null}
+
+          {/*
+            Valid-till is derived from purchase date and warranty months on every write and
+            is never supplied by a caller, so it is rendered as read-only text. The mockup
+            draws a calendar affordance here to match the row above; reproducing it would
+            let an expiry date be entered directly and break the status badge, the filters
+            and reminder scheduling.
+          */}
+          <View style={styles.warrantyRow}>
+            <Text style={[styles.fieldLabel, styles.warrantyRowLabel, { color: theme.text }]}>
+              {t('addEditItem.warrantyValidTill')}
             </Text>
-          )}
-        </View>
+            <Text style={[styles.warrantyRowValue, { color: expiryPreview ? theme.text : theme.mutedText }]}>
+              {expiryPreview ?? '—'}
+            </Text>
+          </View>
+          <Text style={[styles.fieldCaption, { color: theme.subtleText }]}>
+            {t('addEditItem.warrantyValidTillCaption')}
+          </Text>
+
+          <View style={[styles.sectionHeaderRow, styles.warrantyDocumentsHeader]}>
+            <View style={styles.sectionHeaderText}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                {t('addEditItem.warrantyDocumentsLabel')}
+              </Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
+                {t('addEditItem.warrantyDocumentsSubtitle')}
+              </Text>
+            </View>
+            {renderAddAction('warranty', t('addEditItem.addDocument'))}
+          </View>
+          {renderMultipleImagesHint()}
+          {renderDocumentStrip('warranty')}
+        </Card>
 
         <View style={styles.field}>
           <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.notes')}</Text>
@@ -747,19 +873,19 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         onClose={() => setCategoryModalVisible(false)}
       />
       <SelectModal
-        visible={invoiceSourceModalVisible}
+        visible={sourceModalKind !== null}
         title={
           replaceTargetIndex !== null
-            ? t('addEditItem.replaceInvoiceTitle')
-            : t('addEditItem.attachInvoiceTitle')
+            ? t('addEditItem.replaceDocumentTitle')
+            : t('addEditItem.attachDocumentTitle')
         }
         options={[
           { value: 'camera', label: t('addEditItem.takePhoto') },
           { value: 'gallery', label: t('addEditItem.chooseFromGallery') },
         ]}
-        onSelect={(value) => handlePickInvoiceSource(value as 'camera' | 'gallery')}
+        onSelect={(value) => handlePickDocumentSource(value as 'camera' | 'gallery')}
         onClose={() => {
-          setInvoiceSourceModalVisible(false);
+          setSourceModalKind(null);
           setReplaceTargetIndex(null);
         }}
       />
@@ -855,31 +981,114 @@ const styles = StyleSheet.create({
   formCard: {
     paddingVertical: 4,
   },
-  invoicePageScroll: {
+  sectionCard: {
+    // No margin here: this style lands on Card's inner Surface, while the shadow is cast
+    // by its wrapper. A margin would stretch the shadow box past the visible card. The
+    // ScrollView's content container already spaces the cards apart.
+    padding: 16,
+    gap: 12,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  sectionHeaderText: {
+    flex: 1,
+    gap: 2,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  sectionTitleWithIcon: {
+    fontSize: 14,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+  },
+  sectionAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  sectionActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  sectionHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sectionHint: {
+    fontSize: 11,
+  },
+  warrantyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  warrantyRowLabel: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  warrantyRowValue: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  warrantyMonthsInput: {
+    minWidth: 120,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    textAlign: 'right',
+  },
+  warrantyDocumentsHeader: {
+    marginTop: 4,
+  },
+  documentTileAddLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  documentTileScroll: {
     marginTop: -8,
   },
-  invoicePageRow: {
+  documentTileRow: {
     flexDirection: 'row',
     gap: 12,
   },
-  invoicePageCard: {
+  documentTileCard: {
     width: 72,
     borderRadius: 12,
     padding: 6,
     gap: 4,
     alignItems: 'center',
   },
-  invoicePageImageWrapper: {
+  documentTileImageWrapper: {
     position: 'relative',
     width: 60,
     height: 60,
   },
-  invoicePageThumbnail: {
+  documentTileThumbnail: {
     width: 60,
     height: 60,
     borderRadius: 8,
   },
-  invoicePageBadge: {
+  documentTileBadge: {
     position: 'absolute',
     width: 16,
     height: 16,
@@ -888,26 +1097,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  invoicePageRemove: {
+  documentTileRemove: {
     top: 2,
     right: 2,
   },
-  invoicePageReplace: {
+  documentTileReplace: {
     top: 2,
     left: 2,
   },
-  invoicePageReorderRow: {
+  documentTileReorderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
     paddingHorizontal: 2,
   },
-  invoicePageNumber: {
+  documentTileNumber: {
     fontSize: 11,
     fontWeight: '600',
   },
-  invoicePageAddTile: {
+  documentTileAddTile: {
     width: 72,
     height: 84,
     borderRadius: 12,

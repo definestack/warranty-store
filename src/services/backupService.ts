@@ -9,17 +9,29 @@ import * as Sharing from 'expo-sharing';
 import JSZip from 'jszip';
 
 import { getAllItems } from '../db/warrantyRepository';
-import type { InvoiceImage, WarrantyItem } from '../types/warranty';
+import type { ItemDocument, WarrantyItem } from '../types/warranty';
 import { nowIso } from '../utils/date';
 
 const BACKUP_DIR = `${cacheDirectory}backups/`;
 export const BACKUP_DATA_FILE_NAME = 'data.json';
 export const BACKUP_FORMAT_VERSION = 1;
 
+/**
+ * An item as it appears in `data.json`. Both document kinds share the single
+ * `invoiceImages` list, which predates the split and is retained on purpose: each entry
+ * carries its own `kind`, so a build that pre-dates the split still reads every document
+ * and files them all as invoices. Emitting warranty documents under a separate key would
+ * make those older builds drop them entirely — a degraded import beats a lossy one.
+ */
+export interface BackupItem
+  extends Omit<WarrantyItem, 'invoiceDocuments' | 'warrantyDocuments'> {
+  invoiceImages: ItemDocument[];
+}
+
 export interface BackupPayload {
   formatVersion: number;
   exportedAt: string;
-  items: WarrantyItem[];
+  items: BackupItem[];
 }
 
 export interface BackupArchiveResult {
@@ -38,7 +50,7 @@ export interface CreateBackupOptions {
 export interface MissingBackupFile {
   itemId: string;
   itemName: string;
-  kind: 'invoice' | 'photo';
+  kind: 'document' | 'photo';
   uri: string;
 }
 
@@ -64,8 +76,9 @@ function fileExtension(uri: string): string {
   return extMatch ? extMatch[0] : '.jpg';
 }
 
-function invoiceFileName(image: InvoiceImage): string {
-  return `${image.id}${fileExtension(image.uri)}`;
+/** Document ids are UUIDs, so both kinds coexist in one archive folder without collision. */
+function documentFileName(document: ItemDocument): string {
+  return `${document.id}${fileExtension(document.uri)}`;
 }
 
 /** One photo per item, so the item's own id is enough to name it unambiguously. */
@@ -78,14 +91,17 @@ export function buildBackupPayload(items: WarrantyItem[], exportedAt: string = n
   return {
     formatVersion: BACKUP_FORMAT_VERSION,
     exportedAt,
-    items: items.map((item) => ({
-      ...item,
-      photoUri: item.photoUri ? `photos/${photoFileName(item)}` : undefined,
-      invoiceImages: item.invoiceImages.map((image) => ({
-        ...image,
-        uri: `invoices/${invoiceFileName(image)}`,
-      })),
-    })),
+    items: items.map((item) => {
+      const { invoiceDocuments, warrantyDocuments, ...rest } = item;
+      return {
+        ...rest,
+        photoUri: item.photoUri ? `photos/${photoFileName(item)}` : undefined,
+        invoiceImages: [...invoiceDocuments, ...warrantyDocuments].map((document) => ({
+          ...document,
+          uri: `invoices/${documentFileName(document)}`,
+        })),
+      };
+    }),
   };
 }
 
@@ -97,7 +113,7 @@ async function ensureBackupDirExists(): Promise<void> {
 }
 
 /**
- * Bundles all warranty items, their invoice images and their photos into a single
+ * Bundles all warranty items, their attached documents and their photos into a single
  * self-contained zip file.
  *
  * A file that cannot be read — typically deleted outside the app — is reported via
@@ -128,8 +144,8 @@ export async function createBackupArchive(
   }
 
   for (const item of items) {
-    for (const image of item.invoiceImages) {
-      await addFile(item, 'invoice', image.uri, `invoices/${invoiceFileName(image)}`);
+    for (const document of [...item.invoiceDocuments, ...item.warrantyDocuments]) {
+      await addFile(item, 'document', document.uri, `invoices/${documentFileName(document)}`);
     }
     if (item.photoUri) {
       await addFile(item, 'photo', item.photoUri, `photos/${photoFileName(item)}`);

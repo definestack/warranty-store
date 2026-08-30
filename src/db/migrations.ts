@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   ADD_BRAND_AND_PRICE_COLUMNS,
+  ADD_DOCUMENT_KIND_COLUMN,
   ADD_PHOTO_URI_COLUMN,
   ADD_STORE_COLUMN,
   CREATE_INVOICE_IMAGES_TABLE,
@@ -74,6 +75,13 @@ export const migrations: Migration[] = [
     name: 'add_photo_uri_to_warranty_items',
     up: async (db) => {
       await db.execAsync(ADD_PHOTO_URI_COLUMN);
+    },
+  },
+  {
+    version: 7,
+    name: 'add_kind_to_invoice_images',
+    up: async (db) => {
+      await db.execAsync(ADD_DOCUMENT_KIND_COLUMN);
     },
   },
 ];

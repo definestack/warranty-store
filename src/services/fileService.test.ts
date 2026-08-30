@@ -13,11 +13,11 @@ import {
 } from 'expo-image-manipulator';
 
 import {
-  deleteInvoiceFile,
+  deleteDocumentFile,
   deleteItemPhotoFile,
-  saveInvoiceImage,
+  saveDocumentImage,
   saveItemPhoto,
-  writeInvoiceImageFile,
+  writeDocumentImageFile,
   writeItemPhotoFile,
 } from './fileService';
 
@@ -26,11 +26,11 @@ beforeEach(() => {
   __resetImageManipulatorMock();
 });
 
-describe('deleteInvoiceFile', () => {
+describe('deleteDocumentFile', () => {
   it('deletes the file when it exists', async () => {
     __setFileExists('file:///invoice.jpg', true);
 
-    await deleteInvoiceFile('file:///invoice.jpg');
+    await deleteDocumentFile('file:///invoice.jpg');
 
     expect((await getInfoAsync('file:///invoice.jpg')).exists).toBe(false);
   });
@@ -39,7 +39,7 @@ describe('deleteInvoiceFile', () => {
     __setFileExists('file:///missing.jpg', false);
     const deleteSpy = jest.spyOn(legacyFileSystem, 'deleteAsync');
 
-    await expect(deleteInvoiceFile('file:///missing.jpg')).resolves.toBeUndefined();
+    await expect(deleteDocumentFile('file:///missing.jpg')).resolves.toBeUndefined();
     expect(deleteSpy).not.toHaveBeenCalled();
 
     deleteSpy.mockRestore();
@@ -50,15 +50,15 @@ describe('deleteInvoiceFile', () => {
       .spyOn(legacyFileSystem, 'getInfoAsync')
       .mockRejectedValueOnce(new Error('boom'));
 
-    await expect(deleteInvoiceFile('file:///invoice.jpg')).resolves.toBeUndefined();
+    await expect(deleteDocumentFile('file:///invoice.jpg')).resolves.toBeUndefined();
 
     failingGetInfo.mockRestore();
   });
 });
 
-describe('saveInvoiceImage', () => {
+describe('saveDocumentImage', () => {
   it('copies the source file into the app-private invoices directory', async () => {
-    const savedUri = await saveInvoiceImage('file:///camera-tmp/photo.jpg');
+    const savedUri = await saveDocumentImage('file:///camera-tmp/photo.jpg');
 
     expect(savedUri).toMatch(
       /^file:\/\/\/mock-documents\/invoices\/invoice-[0-9a-f-]+\.jpg$/
@@ -69,7 +69,7 @@ describe('saveInvoiceImage', () => {
   it('creates the invoices directory the first time it is needed', async () => {
     const makeDirSpy = jest.spyOn(legacyFileSystem, 'makeDirectoryAsync');
 
-    await saveInvoiceImage('file:///camera-tmp/photo.jpg');
+    await saveDocumentImage('file:///camera-tmp/photo.jpg');
 
     expect(makeDirSpy).toHaveBeenCalledWith('file:///mock-documents/invoices/', {
       intermediates: true,
@@ -79,8 +79,8 @@ describe('saveInvoiceImage', () => {
   });
 
   it('returns a unique destination for each capture', async () => {
-    const first = await saveInvoiceImage('file:///camera-tmp/photo.jpg');
-    const second = await saveInvoiceImage('file:///camera-tmp/photo.jpg');
+    const first = await saveDocumentImage('file:///camera-tmp/photo.jpg');
+    const second = await saveDocumentImage('file:///camera-tmp/photo.jpg');
 
     expect(first).not.toBe(second);
   });
@@ -89,7 +89,7 @@ describe('saveInvoiceImage', () => {
     __setMockImageSize({ width: 3200, height: 2400 });
     const copySpy = jest.spyOn(legacyFileSystem, 'copyAsync');
 
-    const savedUri = await saveInvoiceImage('file:///camera-tmp/large.jpg');
+    const savedUri = await saveDocumentImage('file:///camera-tmp/large.jpg');
 
     expect((await getInfoAsync(savedUri)).exists).toBe(true);
     const copiedFrom = copySpy.mock.calls[0][0].from;
@@ -102,7 +102,7 @@ describe('saveInvoiceImage', () => {
     __setMockImageSize({ width: 800, height: 600 });
     const copySpy = jest.spyOn(legacyFileSystem, 'copyAsync');
 
-    await saveInvoiceImage('file:///camera-tmp/small.jpg');
+    await saveDocumentImage('file:///camera-tmp/small.jpg');
 
     expect(copySpy.mock.calls[0][0].from).toBe('file:///camera-tmp/small.jpg');
 
@@ -114,7 +114,7 @@ describe('saveInvoiceImage', () => {
     const copySpy = jest.spyOn(legacyFileSystem, 'copyAsync');
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const savedUri = await saveInvoiceImage('file:///camera-tmp/broken.jpg');
+    const savedUri = await saveDocumentImage('file:///camera-tmp/broken.jpg');
 
     expect((await getInfoAsync(savedUri)).exists).toBe(true);
     expect(copySpy.mock.calls[0][0].from).toBe('file:///camera-tmp/broken.jpg');
@@ -127,17 +127,17 @@ describe('saveInvoiceImage', () => {
   it('uses the manipulate API on the correct source image', async () => {
     __setMockImageSize({ width: 3200, height: 2400 });
 
-    await saveInvoiceImage('file:///camera-tmp/large.jpg');
+    await saveDocumentImage('file:///camera-tmp/large.jpg');
 
     expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///camera-tmp/large.jpg');
   });
 });
 
-describe('writeInvoiceImageFile', () => {
+describe('writeDocumentImageFile', () => {
   it('writes the decoded image into app-private invoice storage', async () => {
     const base64 = Buffer.from('restored-image-bytes').toString('base64');
 
-    const uri = await writeInvoiceImageFile('invoice-img-1.jpg', base64);
+    const uri = await writeDocumentImageFile('invoice-img-1.jpg', base64);
 
     expect(uri).toBe('file:///mock-documents/invoices/invoice-img-1.jpg');
     expect((await getInfoAsync(uri)).exists).toBe(true);
@@ -147,7 +147,7 @@ describe('writeInvoiceImageFile', () => {
   it('creates the invoices directory when it does not exist yet', async () => {
     const makeDirSpy = jest.spyOn(legacyFileSystem, 'makeDirectoryAsync');
 
-    await writeInvoiceImageFile('invoice-img-2.jpg', 'AAAA');
+    await writeDocumentImageFile('invoice-img-2.jpg', 'AAAA');
 
     expect(makeDirSpy).toHaveBeenCalledWith('file:///mock-documents/invoices/', {
       intermediates: true,
