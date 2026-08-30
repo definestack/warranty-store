@@ -74,33 +74,33 @@ Decision 4 exists to prevent.
 
 ## 4. Extended warranty repository
 
-- [ ] 4.1 Write failing tests for reads: an item's extended warranties come back in a stable
+- [x] 4.1 Write failing tests for reads: an item's extended warranties come back in a stable
       order, densely numbered from the first position, each carrying its own documents
       grouped by kind; an item with none yields an empty list.
-- [ ] 4.2 Write failing tests for the multi-item read used by the list screen: the same
+- [x] 4.2 Write failing tests for the multi-item read used by the list screen: the same
       grouping holds per item and an item with none yields an empty list rather than
       undefined.
-- [ ] 4.3 Write failing tests for reconciliation on save: removals delete their rows and
+- [x] 4.3 Write failing tests for reconciliation on save: removals delete their rows and
       close the numbering gap, edits update in place, new entries insert with the id they
       were given, and the returned removed-ids let the caller clean up.
-- [ ] 4.4 Write a failing test that the end date is derived on every insert and update and
+- [x] 4.4 Write a failing test that the end date is derived on every insert and update and
       is never taken from the caller, even when the caller supplies one.
-- [ ] 4.5 Write failing tests for validation at the repository boundary: a non-positive or
+- [x] 4.5 Write failing tests for validation at the repository boundary: a non-positive or
       fractional duration and a negative cost are rejected.
-- [ ] 4.6 Implement `src/db/extendedWarrantyRepository.ts` per design.md — Decision 9.
+- [x] 4.6 Implement `src/db/extendedWarrantyRepository.ts` per design.md — Decision 9.
 
 ## 5. Document scoping
 
-- [ ] 5.1 Write failing tests for scoped reads: documents come back grouped by kind within
+- [x] 5.1 Write failing tests for scoped reads: documents come back grouped by kind within
       each scope, each scope's ordering independent, and an item's own documents never mixed
       with an extended warranty's.
-- [ ] 5.2 Write failing tests for scoped reconciliation: saving one scope's kind leaves every
+- [x] 5.2 Write failing tests for scoped reconciliation: saving one scope's kind leaves every
       other scope and kind untouched, and each is renumbered from its first position.
-- [ ] 5.3 Write a failing test that the per-section limit is counted per scope per kind, so a
+- [x] 5.3 Write a failing test that the per-section limit is counted per scope per kind, so a
       full item invoice section does not restrict an extended warranty's.
-- [ ] 5.4 Rework `src/db/invoiceImagesRepository.ts` to take a scope object rather than a
+- [x] 5.4 Rework `src/db/invoiceImagesRepository.ts` to take a scope object rather than a
       bare kind, per design.md — Decision 5. Keep `item_id` populated on every row.
-- [ ] 5.5 Update the limit's documentation comment in `src/utils/documents.ts` to state that
+- [x] 5.5 Update the limit's documentation comment in `src/utils/documents.ts` to state that
       it is counted per scope per kind. Value and name unchanged.
 
 ## 6. Item repository and coverage-aware status
