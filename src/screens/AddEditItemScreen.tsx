@@ -523,8 +523,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
   const renderDocumentStrip = (ref: DocumentSectionRef) => {
     const drafts = draftsFor(documentDrafts, ref);
-    // Rendered even when empty, so the section is visibly empty rather than absent and
-    // its add tile stays reachable.
+    // An empty section is served by its header control, which is shown exactly when this
+    // strip is not. The two are never offered at once.
+    if (drafts.length === 0) return null;
 
     return (
       <ScrollView

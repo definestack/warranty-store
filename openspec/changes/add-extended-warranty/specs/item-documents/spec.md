@@ -123,10 +123,9 @@ A document added through a section's own control SHALL be added to that section 
 kind, in that scope — and SHALL NOT be added to any other.
 
 Where a section presents both a header control and an add tile at the end of its document
-strip, the two SHALL NOT both be offered at once: the header control SHALL be shown only
-while the section is empty, and SHALL NOT be shown once the section holds a document,
-leaving the tile as the way to add more. A section SHALL always offer at least one active
-way to add to it, up to its limit.
+strip, exactly one of the two SHALL be offered at any time: the header control while the
+section is empty, and the tile once it holds at least one document. A section SHALL always
+offer exactly one active way to add to it, up to its limit — never two, and never none.
 
 If the permission required by the chosen source has not been granted, the app SHALL
 request it. If permission is refused, the app SHALL explain which permission is needed,
@@ -153,10 +152,11 @@ SHALL NOT exceed that section's limit.
 - **THEN** that image is shown in that extended warranty's invoice section
 - **AND** the item's own sections and the other extended warranty's sections are unchanged
 
-#### Scenario: An empty section offers its header control
+#### Scenario: An empty section offers only its header control
 
 - **WHEN** the user views a section that holds no documents
 - **THEN** its header control for adding a document is active
+- **AND** no add tile is shown for that section
 
 #### Scenario: A populated section offers only its add tile
 

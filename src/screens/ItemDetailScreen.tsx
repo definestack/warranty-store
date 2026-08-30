@@ -139,38 +139,50 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
    * A document strip. Rendered even when the section is empty, so an empty section is
    * visibly empty rather than absent and its add tile stays reachable.
    */
-  const renderDocumentStrip = (documents: ItemDocument[], focus: AddEditSection) => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.documentRow}
-    >
-      {documents.map((document, index) => (
-        <View key={document.id} style={[styles.documentTile, { borderColor: theme.border }]}>
-          <Pressable onPress={() => openViewer(documents, index)}>
-            <Image source={{ uri: document.uri }} style={styles.documentThumbnail} />
-          </Pressable>
-          <Pressable
-            hitSlop={6}
-            onPress={() => showDocumentMenu(documents, index, focus)}
-            accessibilityLabel={t('itemDetail.documentMenu')}
-            style={[styles.documentMenuButton, { backgroundColor: theme.surface }]}
-          >
-            <Ionicons name="ellipsis-vertical" size={13} color={theme.subtleText} />
-          </Pressable>
-        </View>
-      ))}
-      <Pressable
-        onPress={() => openEditor(focus)}
-        style={[styles.documentAddTile, { borderColor: theme.primary }]}
-      >
-        <Ionicons name="add" size={20} color={theme.primary} />
-        <Text style={[styles.documentAddLabel, { color: theme.primary }]}>
-          {t('itemDetail.addMore')}
+  const renderDocumentStrip = (documents: ItemDocument[], focus: AddEditSection) => {
+    // An empty section is served by its header control, which is shown exactly when this
+    // strip is not. The section still says it is empty rather than showing nothing at all.
+    if (documents.length === 0) {
+      return (
+        <Text style={[styles.emptySection, { color: theme.mutedText }]}>
+          {t('itemDetail.noDocuments')}
         </Text>
-      </Pressable>
-    </ScrollView>
-  );
+      );
+    }
+
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.documentRow}
+      >
+        {documents.map((document, index) => (
+          <View key={document.id} style={[styles.documentTile, { borderColor: theme.border }]}>
+            <Pressable onPress={() => openViewer(documents, index)}>
+              <Image source={{ uri: document.uri }} style={styles.documentThumbnail} />
+            </Pressable>
+            <Pressable
+              hitSlop={6}
+              onPress={() => showDocumentMenu(documents, index, focus)}
+              accessibilityLabel={t('itemDetail.documentMenu')}
+              style={[styles.documentMenuButton, { backgroundColor: theme.surface }]}
+            >
+              <Ionicons name="ellipsis-vertical" size={13} color={theme.subtleText} />
+            </Pressable>
+          </View>
+        ))}
+        <Pressable
+          onPress={() => openEditor(focus)}
+          style={[styles.documentAddTile, { borderColor: theme.primary }]}
+        >
+          <Ionicons name="add" size={20} color={theme.primary} />
+          <Text style={[styles.documentAddLabel, { color: theme.primary }]}>
+            {t('itemDetail.addMore')}
+          </Text>
+        </Pressable>
+      </ScrollView>
+    );
+  };
 
   const extendedFacts = (extended: ExtendedWarranty) => {
     const facts: { label: string; value: string }[] = [];
@@ -474,6 +486,10 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  emptySection: {
+    fontSize: 13,
+    paddingVertical: 2,
   },
   documentRow: {
     flexDirection: 'row',
