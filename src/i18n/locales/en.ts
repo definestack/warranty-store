@@ -13,6 +13,7 @@ const en = {
   },
   nav: {
     home: 'Home',
+    products: 'Products',
     settings: 'Settings',
     goBack: 'Go back',
     addItem: 'Add item',
@@ -29,6 +30,7 @@ const en = {
     selectCategory: 'Select category',
   },
   status: {
+    all: 'All',
     active: 'Active',
     expiringSoon: 'Expiring Soon',
     expired: 'Expired',
@@ -47,6 +49,24 @@ const en = {
     expiredOn: 'Expired on %{date}',
     expiresOn: 'Expires %{date}',
     expiringSoon: 'Expiring Soon',
+  },
+  products: {
+    title: 'My Products',
+    subtitle: 'All your products in one place',
+    count: { one: '%{count} product', other: '%{count} products' },
+    emptyTitle: 'No products yet.',
+    emptySubtitle: 'Add your first product to start tracking its warranty.',
+    noResultsTitle: 'No products match your filters.',
+    noResultsSubtitle: 'Try a different search, status or category.',
+  },
+  sort: {
+    title: 'Sort by',
+    newest: 'Newest first',
+    oldest: 'Oldest first',
+    nameAsc: 'A–Z',
+    priceDesc: 'Price (High to low)',
+    expirySoonest: 'Warranty Expiry (Soonest)',
+    expiryLatest: 'Warranty Expiry (Latest)',
   },
   itemDetail: {
     title: 'Item Detail',
