@@ -11,8 +11,8 @@ import { DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
 import { formatDaysRemaining, getDaysRemaining } from '../utils/date';
 import type { WarrantyStatus } from '../utils/date';
 import { getAttentionStatusFilter, summarizeWarrantyAttention } from '../utils/warrantyAttention';
-import Card from './Card';
 import ItemIcon from './ItemIcon';
+import Surface from './Surface';
 
 interface WarrantyStatusCardProps {
   items: WarrantyItem[];
@@ -22,7 +22,8 @@ interface WarrantyStatusCardProps {
 
 interface HeadlineSegment {
   key: WarrantyStatus;
-  icon: 'alert-circle' | 'time';
+  /** Outline glyphs throughout, so the leading icon and any inline one read as one set. */
+  icon: 'alert-circle-outline' | 'time-outline';
   color: string;
   text: string;
 }
@@ -73,7 +74,7 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
 
   if (state === 'caughtUp') {
     return (
-      <Card style={styles.card}>
+      <Surface style={styles.card}>
         {title}
         <View style={styles.header}>
           <Ionicons name="checkmark-circle-outline" size={28} color={theme.success} />
@@ -87,7 +88,7 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
           </View>
           <CalendarBadge theme={theme} badge="checkmark-circle" badgeColor={theme.success} />
         </View>
-      </Card>
+      </Surface>
     );
   }
 
@@ -99,7 +100,7 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
   if (expiredCount > 0) {
     segments.push({
       key: 'expired',
-      icon: 'alert-circle',
+      icon: 'alert-circle-outline',
       color: theme.danger,
       text: t(mixed ? 'warrantyStatus.expiredSegment' : 'warrantyStatus.expiredHeadline', {
         count: expiredCount,
@@ -110,7 +111,7 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
   if (expiringCount > 0) {
     segments.push({
       key: 'expiring',
-      icon: 'time',
+      icon: 'time-outline',
       color: theme.warning,
       text: t(mixed ? 'warrantyStatus.expiringSegment' : 'warrantyStatus.expiringHeadline', {
         count: expiringCount,
@@ -129,10 +130,10 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
   const destination = getAttentionStatusFilter(summary);
 
   return (
-    <Card style={styles.card}>
+    <Surface style={styles.card}>
       {title}
       <View style={styles.header}>
-        <Ionicons name={`${segments[0].icon}-outline`} size={28} color={segments[0].color} />
+        <Ionicons name={segments[0].icon} size={28} color={segments[0].color} />
         <View style={styles.headerText}>
           <View style={styles.headlineRow}>
             {segments.map((segment, index) => (
@@ -140,7 +141,7 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
                 {index > 0 ? (
                   <>
                     <Text style={[styles.separator, { color: theme.mutedText }]}>·</Text>
-                    <Ionicons name={segment.icon} size={18} color={segment.color} />
+                    <Ionicons name={segment.icon} size={20} color={segment.color} />
                   </>
                 ) : null}
                 <Text style={[styles.headline, { color: segment.color }]}>{segment.text}</Text>
@@ -201,12 +202,15 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
           </Pressable>
         ) : null}
       </View>
-    </Card>
+    </Surface>
   );
 }
 
 const styles = StyleSheet.create({
+  // Flat like the Overview tiles above it: solid surface and a hairline border, no
+  // shadow. `Card`'s elevation reads far heavier at this size than it does on a list row.
   card: {
+    borderRadius: 14,
     padding: 16,
     marginTop: 16,
   },
