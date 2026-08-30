@@ -189,43 +189,43 @@ Land 6.3–6.8 together — see the note at the top of this file.
 
 ## 10. Shared components and navigation
 
-- [ ] 10.1 Widen `WarrantyStatus` in `src/components/StatusBadge.tsx` with `upcoming` and
+- [x] 10.1 Widen `WarrantyStatus` in `src/components/StatusBadge.tsx` with `upcoming` and
       extend both exhaustive maps — the label key and the colour pair — using existing
       theme tokens. Let the compiler find the call sites rather than searching for them.
-- [ ] 10.2 Add the optional section-focus parameter to the `AddEditItem` route in
+- [x] 10.2 Add the optional section-focus parameter to the `AddEditItem` route in
       `src/types/navigation.ts`, per design.md — Decision 11. Existing navigation to the
       route without it must keep compiling and behaving identically.
-- [ ] 10.3 Build `src/components/ExtendedWarrantyCard.tsx` as a presentational component
+- [x] 10.3 Build `src/components/ExtendedWarrantyCard.tsx` as a presentational component
       driven by props: the provider field, the duration value and unit selector, the
       editable start date, the read-only derived end date, cost, notes, the two document
       strips with their own add controls, and the remove control. Reuse `FormRow`,
       `SelectModal`, `Card` and the existing document tile treatment.
-- [ ] 10.4 Match the mockup saved in 1.1 for layout, spacing, control sizes, typography,
+- [x] 10.4 Match the mockup saved in 1.1 for layout, spacing, control sizes, typography,
       colours, corner radius and icon placement, per `.claude/rules/ui-design.md`. Reproduce
       the collapse affordance and the "how it works" panel.
-- [ ] 10.5 Support dark mode through the existing theme, as the surrounding cards do.
+- [x] 10.5 Support dark mode through the existing theme, as the surrounding cards do.
 - [ ] 10.6 List the remaining visual differences against the mockup and the reason for each
       — the PDF badges, filenames and file sizes are known, confirmed divergences
       (proposal.md — Non-goals).
 
 ## 11. Add/Edit screen
 
-- [ ] 11.1 Add extended warranty drafts to `AddEditItemScreen`, minting each one's id when it
+- [x] 11.1 Add extended warranty drafts to `AddEditItemScreen`, minting each one's id when it
       is added so its documents can reference it before it is saved, per design.md —
       Decision 6.
-- [ ] 11.2 Render the optional section: the toggle, one card per extended warranty, the
+- [x] 11.2 Render the optional section: the toggle, one card per extended warranty, the
       add-another control, and the confirmation before discarding recorded extended
       warranties when the section is turned off.
-- [ ] 11.3 Default each new extended warranty's start date from the current cover end, and
+- [x] 11.3 Default each new extended warranty's start date from the current cover end, and
       recompute the displayed end date live as the start date or duration changes.
-- [ ] 11.4 Route the per-card document add, replace, remove and reorder actions through the
+- [x] 11.4 Route the per-card document add, replace, remove and reorder actions through the
       scoped document handlers, enforcing the limit per scope per kind.
-- [ ] 11.5 Extend validation and the save gate to the extended warranty fields, identifying
+- [x] 11.5 Extend validation and the save gate to the extended warranty fields, identifying
       which card and which field is at fault without blocking on the optional ones.
-- [ ] 11.6 Extend `handleSave` to reconcile the extended warranties, then reconcile each
+- [x] 11.6 Extend `handleSave` to reconcile the extended warranties, then reconcile each
       scope's documents, then clean up the files of removed extended warranties and removed
       documents, then reschedule reminders when the coverage signature changed.
-- [ ] 11.7 Discard the images of extended warranties added and then abandoned by leaving the
+- [x] 11.7 Discard the images of extended warranties added and then abandoned by leaving the
       screen without saving, the way abandoned item documents and photos already are.
 
 ## 12. Item detail screen

@@ -16,15 +16,23 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
+import type { ExtendedWarrantyCardValues } from '../components/ExtendedWarrantyCard';
+import ExtendedWarrantyCard from '../components/ExtendedWarrantyCard';
 import FormRow from '../components/FormRow';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
+import type { ExtendedWarrantyDraft } from '../db/extendedWarrantyRepository';
+import { saveExtendedWarrantiesForItem } from '../db/extendedWarrantyRepository';
 import type { ItemDocumentDraft } from '../db/invoiceImagesRepository';
-import { saveDocumentsForScope } from '../db/invoiceImagesRepository';
+import {
+  deleteDocumentsForExtendedWarranties,
+  saveDocumentsForScope,
+} from '../db/invoiceImagesRepository';
 import {
   deleteSchedulesForItem,
   getSchedulesForItem,
@@ -49,21 +57,77 @@ import { useItemsStore } from '../store/itemsStore';
 import { useNotificationsStore } from '../store/notificationsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
-import type { RootStackParamList } from '../types/navigation';
-import type { ItemDocument, ItemDocumentKind, WarrantyItem } from '../types/warranty';
+import type { AddEditSection, RootStackParamList } from '../types/navigation';
+import type {
+  ExtendedWarranty,
+  ItemDocument,
+  ItemDocumentKind,
+  WarrantyDurationUnit,
+  WarrantyItem,
+} from '../types/warranty';
 import { CATEGORIES, getCategoryLabel, resolveCategory } from '../utils/categories';
+import { deriveCoverageEndDate, getNextCoverageStartDate } from '../utils/coverage';
 import { addMonths, formatDate, formatIsoDate, fromIsoDate, toIsoDate } from '../utils/date';
 import { MAX_DOCUMENTS_PER_KIND } from '../utils/documents';
 import { NOTES_MAX_LENGTH, parsePrice, parseWarrantyMonths } from '../utils/validation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
 
-type DocumentDrafts = Record<ItemDocumentKind, ItemDocumentDraft[]>;
+/**
+ * Which document section a draft belongs to: a kind within a scope. The scope is the item
+ * itself, or one of its extended warranties.
+ */
+interface DocumentSectionRef {
+  kind: ItemDocumentKind;
+  extendedWarrantyId?: string;
+}
 
-const EMPTY_DRAFTS: DocumentDrafts = { invoice: [], warranty: [] };
+/** Sections keyed by scope and kind, so every section reconciles independently. */
+type DocumentDrafts = Record<string, ItemDocumentDraft[]>;
+
+const ITEM_SCOPE = 'item';
+
+function sectionKey({ kind, extendedWarrantyId }: DocumentSectionRef): string {
+  return `${extendedWarrantyId ?? ITEM_SCOPE}:${kind}`;
+}
+
+function draftsFor(drafts: DocumentDrafts, ref: DocumentSectionRef): ItemDocumentDraft[] {
+  return drafts[sectionKey(ref)] ?? [];
+}
+
+const EMPTY_DRAFTS: DocumentDrafts = {};
 
 function toDraft(document: ItemDocument): ItemDocumentDraft {
   return { id: document.id, uri: document.uri, isPersisted: true };
+}
+
+/**
+ * One extended warranty while it is being edited. Its id is minted the moment the user
+ * adds it, so documents can be attached to it before it has ever been saved;
+ * `isPersisted` says whether a row already exists under that id.
+ */
+interface ExtendedWarrantyFormDraft {
+  id: string;
+  isPersisted: boolean;
+  provider: string;
+  durationValue: string;
+  durationUnit: WarrantyDurationUnit;
+  startsOn: Date;
+  cost: string;
+  notes: string;
+}
+
+function toExtendedDraft(extended: ExtendedWarranty): ExtendedWarrantyFormDraft {
+  return {
+    id: extended.id,
+    isPersisted: true,
+    provider: extended.provider ?? '',
+    durationValue: String(extended.durationValue),
+    durationUnit: extended.durationUnit,
+    startsOn: fromIsoDate(extended.startsOn),
+    cost: extended.cost !== undefined ? String(extended.cost) : '',
+    notes: extended.notes ?? '',
+  };
 }
 
 /**
@@ -98,8 +162,38 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [extendedEnabled, setExtendedEnabled] = useState(false);
+  const [extendedDrafts, setExtendedDrafts] = useState<ExtendedWarrantyFormDraft[]>([]);
+  const [extendedErrors, setExtendedErrors] = useState<
+    Record<string, { duration?: string | null; cost?: string | null }>
+  >({});
+  /** Which extended warranty's start-date picker or unit chooser is open, by id. */
+  const [extendedDateTarget, setExtendedDateTarget] = useState<string | null>(null);
+  const [extendedUnitTarget, setExtendedUnitTarget] = useState<string | null>(null);
+  /** Ids removed in this editing session, so their documents can be cleaned up on save. */
+  const removedExtendedIdsRef = useRef<string[]>([]);
+
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+
+  /**
+   * The detail screen is read-only, so its add controls navigate here asking for a
+   * section. Each section reports its offset as it lays out and the request is honoured
+   * once, after the item has loaded.
+   */
+  const focusRequest = route.params?.focus;
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionOffsets = useRef<Record<string, number>>({});
+  const focusHandled = useRef(false);
+
+  const focusKey = (focus: AddEditSection): string =>
+    focus.section === 'extendedWarrantyInvoice' || focus.section === 'extendedWarrantyDocuments'
+      ? `${focus.section}:${focus.extendedWarrantyId}`
+      : focus.section;
+
+  const rememberOffset = (key: string) => (event: LayoutChangeEvent) => {
+    sectionOffsets.current[key] = event.nativeEvent.layout.y;
+  };
 
   useEffect(() => {
     if (!itemId) return;
@@ -122,10 +216,19 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         setPrice(item.price !== undefined ? String(item.price) : '');
         setWarrantyMonths(String(item.warrantyMonths));
         setStore(item.store ?? '');
-        setDocumentDrafts({
-          invoice: item.invoiceDocuments.map(toDraft),
-          warranty: item.warrantyDocuments.map(toDraft),
-        });
+        const loadedDrafts: DocumentDrafts = {
+          [sectionKey({ kind: 'invoice' })]: item.invoiceDocuments.map(toDraft),
+          [sectionKey({ kind: 'warranty' })]: item.warrantyDocuments.map(toDraft),
+        };
+        for (const extended of item.extendedWarranties) {
+          loadedDrafts[sectionKey({ kind: 'invoice', extendedWarrantyId: extended.id })] =
+            extended.invoiceDocuments.map(toDraft);
+          loadedDrafts[sectionKey({ kind: 'warranty', extendedWarrantyId: extended.id })] =
+            extended.warrantyDocuments.map(toDraft);
+        }
+        setDocumentDrafts(loadedDrafts);
+        setExtendedDrafts(item.extendedWarranties.map(toExtendedDraft));
+        setExtendedEnabled(item.extendedWarranties.length > 0);
         setNotes(item.notes ?? '');
       } catch (err) {
         console.error('Failed to load warranty item for editing', err);
@@ -139,6 +242,21 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       cancelled = true;
     };
   }, [itemId]);
+
+  useEffect(() => {
+    if (!focusRequest || focusHandled.current || loadingExisting) return;
+
+    // Asking for an extended section implies opening the section it lives in.
+    if (focusRequest.section !== 'invoiceDocuments' && focusRequest.section !== 'warrantyDocuments') {
+      setExtendedEnabled(true);
+    }
+
+    const offset = sectionOffsets.current[focusKey(focusRequest)];
+    if (offset === undefined) return;
+
+    focusHandled.current = true;
+    scrollRef.current?.scrollTo({ y: Math.max(offset - 16, 0), animated: true });
+  }, [focusRequest, loadingExisting, extendedDrafts.length]);
 
   const categoryOptions = CATEGORIES.map((c) => ({ value: c, label: getCategoryLabel(c, t) }));
 
@@ -185,20 +303,20 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     );
   };
 
-  const [attachingKind, setAttachingKind] = useState<ItemDocumentKind | null>(null);
-  const [sourceModalKind, setSourceModalKind] = useState<ItemDocumentKind | null>(null);
+  const [attachingSection, setAttachingSection] = useState<string | null>(null);
+  const [sourceModalSection, setSourceModalSection] = useState<DocumentSectionRef | null>(null);
   const [replaceTargetIndex, setReplaceTargetIndex] = useState<number | null>(null);
 
-  const handleAttachDocument = (kind: ItemDocumentKind) => {
-    if (attachingKind) return;
+  const handleAttachDocument = (ref: DocumentSectionRef) => {
+    if (attachingSection) return;
     setReplaceTargetIndex(null);
-    setSourceModalKind(kind);
+    setSourceModalSection(ref);
   };
 
-  const handleReplaceDocument = (kind: ItemDocumentKind, index: number) => {
-    if (attachingKind) return;
+  const handleReplaceDocument = (ref: DocumentSectionRef, index: number) => {
+    if (attachingSection) return;
     setReplaceTargetIndex(index);
-    setSourceModalKind(kind);
+    setSourceModalSection(ref);
   };
 
   const showDocumentPermissionAlert = (source: 'camera' | 'gallery') => {
@@ -272,21 +390,23 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     });
 
   const handlePickDocumentSource = async (source: 'camera' | 'gallery') => {
-    const kind = sourceModalKind;
+    const ref = sourceModalSection;
     const targetIndex = replaceTargetIndex;
-    setSourceModalKind(null);
+    setSourceModalSection(null);
     setReplaceTargetIndex(null);
-    if (!kind) return;
+    if (!ref) return;
+
+    const key = sectionKey(ref);
 
     if (targetIndex !== null) {
-      setAttachingKind(kind);
+      setAttachingSection(key);
       try {
         const result =
           source === 'camera' ? await pickDocumentFromCamera() : await pickDocumentFromGallery(1);
 
         if (result.status === 'success' && result.uris.length > 0) {
           const [newUri] = result.uris;
-          const oldDraft = documentDrafts[kind][targetIndex];
+          const oldDraft = draftsFor(documentDrafts, ref)[targetIndex];
           unsavedDocumentUrisRef.current = [...unsavedDocumentUrisRef.current, newUri];
           if (oldDraft && !oldDraft.isPersisted) {
             forgetUnsavedDocument(oldDraft.uri);
@@ -294,7 +414,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           }
           setDocumentDrafts((drafts) => ({
             ...drafts,
-            [kind]: drafts[kind].map((draft, i) =>
+            [key]: (drafts[key] ?? []).map((draft, i) =>
               i === targetIndex ? { id: Crypto.randomUUID(), uri: newUri, isPersisted: false } : draft
             ),
           }));
@@ -305,12 +425,12 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         console.error('Failed to replace document', err);
         useToastStore.getState().show(t('addEditItem.documentSaveFailed'));
       } finally {
-        setAttachingKind(null);
+        setAttachingSection(null);
       }
       return;
     }
 
-    const remainingCapacity = MAX_DOCUMENTS_PER_KIND - documentDrafts[kind].length;
+    const remainingCapacity = MAX_DOCUMENTS_PER_KIND - draftsFor(documentDrafts, ref).length;
     if (remainingCapacity <= 0) {
       useToastStore
         .getState()
@@ -318,7 +438,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       return;
     }
 
-    setAttachingKind(kind);
+    setAttachingSection(key);
     try {
       const result =
         source === 'camera'
@@ -339,8 +459,8 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         unsavedDocumentUrisRef.current = [...unsavedDocumentUrisRef.current, ...uris];
         setDocumentDrafts((drafts) => ({
           ...drafts,
-          [kind]: [
-            ...drafts[kind],
+          [key]: [
+            ...(drafts[key] ?? []),
             ...uris.map((uri) => ({ id: Crypto.randomUUID(), uri, isPersisted: false })),
           ],
         }));
@@ -351,12 +471,13 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       console.error('Failed to save document', err);
       useToastStore.getState().show(t('addEditItem.documentSaveFailed'));
     } finally {
-      setAttachingKind(null);
+      setAttachingSection(null);
     }
   };
 
-  const handleRemoveDocument = async (kind: ItemDocumentKind, index: number) => {
-    const draft = documentDrafts[kind][index];
+  const handleRemoveDocument = async (ref: DocumentSectionRef, index: number) => {
+    const key = sectionKey(ref);
+    const draft = draftsFor(documentDrafts, ref)[index];
     if (!draft) return;
     if (!draft.isPersisted) {
       forgetUnsavedDocument(draft.uri);
@@ -364,24 +485,26 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     }
     setDocumentDrafts((drafts) => ({
       ...drafts,
-      [kind]: drafts[kind].filter((_, i) => i !== index),
+      [key]: (drafts[key] ?? []).filter((_, i) => i !== index),
     }));
   };
 
-  const handleMoveDocument = (kind: ItemDocumentKind, index: number, direction: -1 | 1) => {
+  const handleMoveDocument = (ref: DocumentSectionRef, index: number, direction: -1 | 1) => {
+    const key = sectionKey(ref);
     const targetIndex = index + direction;
     setDocumentDrafts((drafts) => {
-      const current = drafts[kind];
+      const current = drafts[key] ?? [];
       if (targetIndex < 0 || targetIndex >= current.length) return drafts;
       const next = [...current];
       [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-      return { ...drafts, [kind]: next };
+      return { ...drafts, [key]: next };
     });
   };
 
-  const renderDocumentStrip = (kind: ItemDocumentKind) => {
-    const drafts = documentDrafts[kind];
-    if (drafts.length === 0) return null;
+  const renderDocumentStrip = (ref: DocumentSectionRef) => {
+    const drafts = draftsFor(documentDrafts, ref);
+    // Rendered even when empty, so the section is visibly empty rather than absent and
+    // its add tile stays reachable.
 
     return (
       <ScrollView
@@ -396,8 +519,8 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
               <Image source={{ uri: draft.uri }} style={styles.documentTileThumbnail} />
               <Pressable
                 hitSlop={8}
-                disabled={attachingKind !== null}
-                onPress={() => handleReplaceDocument(kind, index)}
+                disabled={attachingSection !== null}
+                onPress={() => handleReplaceDocument(ref, index)}
                 accessibilityLabel={t('addEditItem.replacePage')}
                 style={[
                   styles.documentTileBadge,
@@ -409,7 +532,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
               </Pressable>
               <Pressable
                 hitSlop={8}
-                onPress={() => handleRemoveDocument(kind, index)}
+                onPress={() => handleRemoveDocument(ref, index)}
                 accessibilityLabel={t('addEditItem.removePage')}
                 style={[
                   styles.documentTileBadge,
@@ -424,7 +547,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
               <Pressable
                 hitSlop={6}
                 disabled={index === 0}
-                onPress={() => handleMoveDocument(kind, index, -1)}
+                onPress={() => handleMoveDocument(ref, index, -1)}
                 accessibilityLabel={t('addEditItem.movePageLeft')}
               >
                 <Ionicons
@@ -437,7 +560,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
               <Pressable
                 hitSlop={6}
                 disabled={index === drafts.length - 1}
-                onPress={() => handleMoveDocument(kind, index, 1)}
+                onPress={() => handleMoveDocument(ref, index, 1)}
                 accessibilityLabel={t('addEditItem.movePageRight')}
               >
                 <Ionicons
@@ -451,7 +574,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         ))}
         {drafts.length < MAX_DOCUMENTS_PER_KIND ? (
           <Pressable
-            onPress={() => handleAttachDocument(kind)}
+            onPress={() => handleAttachDocument(ref)}
             accessibilityLabel={t('addEditItem.addPage')}
             style={[styles.documentTileAddTile, { borderColor: theme.border }]}
           >
@@ -465,15 +588,15 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     );
   };
 
-  const renderAddAction = (kind: ItemDocumentKind, label: string) => (
+  const renderAddAction = (ref: DocumentSectionRef, label: string) => (
     <Pressable
-      onPress={() => handleAttachDocument(kind)}
-      disabled={attachingKind !== null}
+      onPress={() => handleAttachDocument(ref)}
+      disabled={attachingSection !== null}
       style={[styles.sectionAction, { borderColor: theme.primary }]}
     >
       <Ionicons name="add" size={14} color={theme.primary} />
       <Text style={[styles.sectionActionText, { color: theme.primary }]}>
-        {attachingKind === kind ? t('addEditItem.savingEllipsis') : label}
+        {attachingSection === sectionKey(ref) ? t('addEditItem.savingEllipsis') : label}
       </Text>
     </Pressable>
   );
@@ -487,6 +610,162 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     </View>
   );
 
+  /**
+   * Where the next extended warranty should start: the day after the cover currently
+   * ends. That is the manufacturer valid-till date when there is none yet, and the last
+   * extended period's end date otherwise.
+   */
+  const nextExtendedStartDate = (): Date => {
+    const months = parseWarrantyMonths(warrantyMonths);
+    const manufacturerEnd =
+      months !== null ? addMonths(toIsoDate(purchaseDate), months) : toIsoDate(purchaseDate);
+    const spans = extendedDrafts
+      .map((draft) => ({ endsOn: extendedEndsOn(draft) }))
+      .filter((span): span is { endsOn: string } => span.endsOn !== null);
+
+    return fromIsoDate(getNextCoverageStartDate(manufacturerEnd, spans));
+  };
+
+  /** The derived end date of a draft, or null while its duration is not yet usable. */
+  function extendedEndsOn(draft: ExtendedWarrantyFormDraft): string | null {
+    const value = Number(draft.durationValue);
+    if (!Number.isInteger(value) || value <= 0) return null;
+    return deriveCoverageEndDate(toIsoDate(draft.startsOn), value, draft.durationUnit);
+  }
+
+  const handleAddExtendedWarranty = () => {
+    // The id is minted now, not at save time, so documents can be attached to this entry
+    // before it has ever been written. See design.md - Decision 6.
+    setExtendedDrafts((drafts) => [
+      ...drafts,
+      {
+        id: Crypto.randomUUID(),
+        isPersisted: false,
+        provider: '',
+        durationValue: '',
+        durationUnit: 'months',
+        startsOn: nextExtendedStartDate(),
+        cost: '',
+        notes: '',
+      },
+    ]);
+  };
+
+  const discardExtendedDrafts = async (ids: string[]) => {
+    if (ids.length === 0) return;
+
+    const keys = ids.flatMap((id) => [
+      sectionKey({ kind: 'invoice', extendedWarrantyId: id }),
+      sectionKey({ kind: 'warranty', extendedWarrantyId: id }),
+    ]);
+
+    // Files attached to this entry and never saved are orphans the moment it goes.
+    const orphanUris = keys
+      .flatMap((key) => documentDrafts[key] ?? [])
+      .filter((draft) => !draft.isPersisted)
+      .map((draft) => draft.uri);
+    for (const uri of orphanUris) {
+      forgetUnsavedDocument(uri);
+    }
+    await Promise.all(orphanUris.map((uri) => deleteDocumentFile(uri)));
+
+    setDocumentDrafts((drafts) => {
+      const next = { ...drafts };
+      for (const key of keys) delete next[key];
+      return next;
+    });
+    setExtendedDrafts((drafts) => drafts.filter((draft) => !ids.includes(draft.id)));
+    setExtendedErrors((errors) => {
+      const next = { ...errors };
+      for (const id of ids) delete next[id];
+      return next;
+    });
+
+    // Persisted rows still need their stored documents removed when the save commits.
+    removedExtendedIdsRef.current = [
+      ...removedExtendedIdsRef.current,
+      ...ids.filter((id) => extendedDrafts.find((draft) => draft.id === id)?.isPersisted),
+    ];
+  };
+
+  const handleRemoveExtendedWarranty = (id: string) => {
+    void discardExtendedDrafts([id]);
+  };
+
+  const handleToggleExtendedSection = (next: boolean) => {
+    if (next) {
+      setExtendedEnabled(true);
+      if (extendedDrafts.length === 0) handleAddExtendedWarranty();
+      return;
+    }
+
+    if (extendedDrafts.length === 0) {
+      setExtendedEnabled(false);
+      return;
+    }
+
+    Alert.alert(
+      t('addEditItem.discardExtendedWarrantyTitle'),
+      t('addEditItem.discardExtendedWarrantyMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: () => {
+            void discardExtendedDrafts(extendedDrafts.map((draft) => draft.id)).then(() =>
+              setExtendedEnabled(false)
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const handleChangeExtended = <K extends keyof ExtendedWarrantyCardValues>(
+    id: string,
+    field: K,
+    value: ExtendedWarrantyCardValues[K]
+  ) => {
+    setExtendedDrafts((drafts) =>
+      drafts.map((draft) => (draft.id === id ? { ...draft, [field]: value } : draft))
+    );
+    if (field === 'durationValue' || field === 'cost') {
+      setExtendedErrors((errors) => ({ ...errors, [id]: {} }));
+    }
+  };
+
+  /** Validates every entry, returning the per-entry errors to show. Empty means valid. */
+  const validateExtendedDrafts = (): Record<string, { duration?: string; cost?: string }> => {
+    const errors: Record<string, { duration?: string; cost?: string }> = {};
+
+    for (const draft of extendedDrafts) {
+      const entry: { duration?: string; cost?: string } = {};
+      const duration = Number(draft.durationValue);
+      if (!draft.durationValue.trim() || !Number.isInteger(duration) || duration <= 0) {
+        entry.duration = t('addEditItem.durationInvalid');
+      }
+      if (draft.cost.trim()) {
+        const cost = Number(draft.cost);
+        if (Number.isNaN(cost) || cost < 0) entry.cost = t('addEditItem.costInvalid');
+      }
+      if (entry.duration || entry.cost) errors[draft.id] = entry;
+    }
+
+    return errors;
+  };
+
+  const toRepositoryDraft = (draft: ExtendedWarrantyFormDraft): ExtendedWarrantyDraft => ({
+    id: draft.id,
+    isPersisted: draft.isPersisted,
+    provider: draft.provider.trim() || undefined,
+    durationValue: Number(draft.durationValue),
+    durationUnit: draft.durationUnit,
+    startsOn: toIsoDate(draft.startsOn),
+    cost: draft.cost.trim() ? Number(draft.cost) : undefined,
+    notes: draft.notes.trim() || undefined,
+  });
+
   const handleSave = async () => {
     const trimmedName = name.trim();
     const months = parseWarrantyMonths(warrantyMonths);
@@ -494,7 +773,23 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     setNameError(trimmedName ? null : t('addEditItem.nameRequired'));
     setWarrantyMonthsError(months === null ? t('addEditItem.warrantyMonthsInvalid') : null);
 
+    const extendedValidationErrors = validateExtendedDrafts();
+    setExtendedErrors(extendedValidationErrors);
+
     if (!trimmedName || months === null) return;
+    if (Object.keys(extendedValidationErrors).length > 0) {
+      // Name the entry at fault, since the offending card may be scrolled out of view.
+      const firstId = Object.keys(extendedValidationErrors)[0];
+      const position = extendedDrafts.findIndex((draft) => draft.id === firstId) + 1;
+      const entry = extendedValidationErrors[firstId];
+      useToastStore.getState().show(
+        t('addEditItem.extendedWarrantyFieldInvalid', {
+          index: position,
+          message: entry.duration ?? entry.cost ?? '',
+        })
+      );
+      return;
+    }
 
     const trimmedBrand = brand.trim() || undefined;
     const parsedPrice = parsePrice(price);
@@ -509,9 +804,8 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     try {
       let itemId: string;
       let createdItem: WarrantyItem | null = null;
-      let updatedItem: WarrantyItem | null = null;
       if (isEditing && existing) {
-        updatedItem = await updateItem(existing.id, {
+        await updateItem(existing.id, {
           name: trimmedName,
           purchaseDate: toIsoDate(purchaseDate),
           warrantyMonths: months,
@@ -545,14 +839,42 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         await deleteItemPhotoFile(previousPhotoUri);
       }
 
+      // Extended cover is reconciled before its documents, so every scope a document
+      // could belong to exists by the time the documents are written.
+      let liveExtendedIds: string[] = extendedDrafts.map((draft) => draft.id);
       try {
-        // Each kind reconciles independently; the write committed, so nothing still held
-        // in the drafts is an orphan any more.
+        const { removedIds } = await saveExtendedWarrantiesForItem(
+          itemId,
+          extendedDrafts.map(toRepositoryDraft)
+        );
+        const goneIds = [...new Set([...removedIds, ...removedExtendedIdsRef.current])];
+        if (goneIds.length > 0) {
+          const { removedUris } = await deleteDocumentsForExtendedWarranties(goneIds);
+          await Promise.all(removedUris.map((uri) => deleteDocumentFile(uri)));
+        }
+        removedExtendedIdsRef.current = [];
+      } catch (err) {
+        console.error('Failed to save extended warranties', err);
+        useToastStore.getState().show(t('addEditItem.saveFailed'));
+        liveExtendedIds = [];
+      }
+
+      try {
+        // Each section reconciles independently; the write committed, so nothing still
+        // held in the drafts is an orphan any more.
         unsavedDocumentUrisRef.current = [];
-        for (const kind of ['invoice', 'warranty'] as const) {
+        const scopes: DocumentSectionRef[] = [
+          { kind: 'invoice' },
+          { kind: 'warranty' },
+          ...liveExtendedIds.flatMap((extendedWarrantyId) => [
+            { kind: 'invoice' as const, extendedWarrantyId },
+            { kind: 'warranty' as const, extendedWarrantyId },
+          ]),
+        ];
+        for (const ref of scopes) {
           const { removedUris } = await saveDocumentsForScope(
-            { itemId, kind },
-            documentDrafts[kind]
+            { itemId, kind: ref.kind, extendedWarrantyId: ref.extendedWarrantyId },
+            draftsFor(documentDrafts, ref)
           );
           await Promise.all(removedUris.map((uri) => deleteDocumentFile(uri)));
         }
@@ -561,6 +883,10 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         useToastStore.getState().show(t('addEditItem.documentSaveFailed'));
       }
 
+      // Re-read once everything has been written, so the reminder decision sees the cover
+      // as it now stands rather than as it was before the extended warranties were saved.
+      const savedItem = await getItemById(itemId);
+
       if (isEditing) {
         // Refresh both the list and the detail screen's selected item so they
         // reflect the edit immediately on goBack().
@@ -568,7 +894,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         await useItemsStore.getState().loadItemById(itemId);
         useToastStore.getState().show(t('addEditItem.itemUpdated'));
 
-        if (existing && updatedItem && hasCoverageChanged(existing, updatedItem)) {
+        if (existing && savedItem && hasCoverageChanged(existing, savedItem)) {
           try {
             const existingSchedules = await getSchedulesForItem(existing.id);
             await cancelScheduledReminders(existingSchedules);
@@ -587,9 +913,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
             if (permissionStatus === 'granted') {
               try {
-                const scheduled = await scheduleExpiryReminders(updatedItem, t);
+                const scheduled = await scheduleExpiryReminders(savedItem, t);
                 if (scheduled.length > 0) {
-                  await saveSchedulesForItem(updatedItem.id, scheduled);
+                  await saveSchedulesForItem(savedItem.id, scheduled);
                 }
               } catch (err) {
                 console.error('Failed to schedule expiry reminders', err);
@@ -612,11 +938,11 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
             console.error('Failed to request notification permission', err);
           }
 
-          if (permissionStatus === 'granted' && createdItem) {
+          if (permissionStatus === 'granted' && savedItem) {
             try {
-              const scheduled = await scheduleExpiryReminders(createdItem, t);
+              const scheduled = await scheduleExpiryReminders(savedItem, t);
               if (scheduled.length > 0) {
-                await saveSchedulesForItem(createdItem.id, scheduled);
+                await saveSchedulesForItem(savedItem.id, scheduled);
               }
             } catch (err) {
               console.error('Failed to schedule expiry reminders', err);
@@ -662,7 +988,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         onBack={() => navigation.goBack()}
         backIcon="close"
       />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         <Pressable onPress={handleOpenPhotoSource}>
           <Card style={styles.photoCard}>
             {photoDraft ? (
@@ -743,7 +1069,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           />
         </Card>
 
-        <Card style={styles.sectionCard}>
+        <Card style={styles.sectionCard} onLayout={rememberOffset('invoiceDocuments')}>
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionHeaderText}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
@@ -753,13 +1079,13 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
                 {t('addEditItem.invoiceSectionSubtitle')}
               </Text>
             </View>
-            {renderAddAction('invoice', t('addEditItem.addInvoice'))}
+            {renderAddAction({ kind: 'invoice' }, t('addEditItem.addInvoice'))}
           </View>
           {renderMultipleImagesHint()}
-          {renderDocumentStrip('invoice')}
+          {renderDocumentStrip({ kind: 'invoice' })}
         </Card>
 
-        <Card style={styles.sectionCard}>
+        <Card style={styles.sectionCard} onLayout={rememberOffset('warrantyDocuments')}>
           <View style={styles.sectionTitleRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
             <Text style={[styles.sectionTitle, styles.sectionTitleWithIcon, { color: theme.primary }]}>
@@ -822,11 +1148,121 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
                 {t('addEditItem.warrantyDocumentsSubtitle')}
               </Text>
             </View>
-            {renderAddAction('warranty', t('addEditItem.addDocument'))}
+            {renderAddAction({ kind: 'warranty' }, t('addEditItem.addDocument'))}
           </View>
           {renderMultipleImagesHint()}
-          {renderDocumentStrip('warranty')}
+          {renderDocumentStrip({ kind: 'warranty' })}
         </Card>
+
+        <Card style={styles.sectionCard} onLayout={rememberOffset('extendedWarranties')}>
+          <Pressable
+            style={styles.extendedToggleRow}
+            onPress={() => handleToggleExtendedSection(!extendedEnabled)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: extendedEnabled }}
+          >
+            <View
+              style={[
+                styles.extendedCheckbox,
+                {
+                  backgroundColor: extendedEnabled ? theme.primary : 'transparent',
+                  borderColor: extendedEnabled ? theme.primary : theme.border,
+                },
+              ]}
+            >
+              {extendedEnabled ? (
+                <Ionicons name="checkmark" size={14} color={theme.primaryText} />
+              ) : null}
+            </View>
+            <View style={styles.sectionHeaderText}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                {t('addEditItem.extendedWarrantySection')}{' '}
+                <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
+                  {t('addEditItem.extendedWarrantyOptional')}
+                </Text>
+              </Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
+                {t('addEditItem.extendedWarrantySubtitle')}
+              </Text>
+            </View>
+            <Ionicons
+              name={extendedEnabled ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={theme.subtleText}
+            />
+          </Pressable>
+        </Card>
+
+        {extendedEnabled ? (
+          <>
+            {extendedDrafts.map((draft, index) => (
+              <View
+                key={draft.id}
+                onLayout={(event) => {
+                  const y = event.nativeEvent.layout.y;
+                  sectionOffsets.current[`extendedWarrantyInvoice:${draft.id}`] = y;
+                  sectionOffsets.current[`extendedWarrantyDocuments:${draft.id}`] = y;
+                }}
+              >
+              <ExtendedWarrantyCard
+                index={index + 1}
+                showHeading={extendedDrafts.length > 1}
+                values={{
+                  provider: draft.provider,
+                  durationValue: draft.durationValue,
+                  durationUnit: draft.durationUnit,
+                  startsOn: draft.startsOn,
+                  cost: draft.cost,
+                  notes: draft.notes,
+                }}
+                errors={extendedErrors[draft.id]}
+                startsOnLabel={formatDate(draft.startsOn, locale)}
+                endsOnLabel={(() => {
+                  const endsOn = extendedEndsOn(draft);
+                  return endsOn ? formatIsoDate(endsOn, locale) : '';
+                })()}
+                onChange={(field, value) => handleChangeExtended(draft.id, field, value)}
+                onPressStartDate={() => setExtendedDateTarget(draft.id)}
+                onPressDurationUnit={() => setExtendedUnitTarget(draft.id)}
+                onRemove={() => handleRemoveExtendedWarranty(draft.id)}
+                renderAddAction={(kind) =>
+                  renderAddAction(
+                    { kind, extendedWarrantyId: draft.id },
+                    kind === 'invoice' ? t('addEditItem.addInvoice') : t('addEditItem.addDocument')
+                  )
+                }
+                renderDocuments={(kind) =>
+                  renderDocumentStrip({ kind, extendedWarrantyId: draft.id })
+                }
+              />
+              </View>
+            ))}
+
+            <Pressable
+              onPress={handleAddExtendedWarranty}
+              style={[styles.addAnotherButton, { borderColor: theme.primary }]}
+            >
+              <Ionicons name="add" size={16} color={theme.primary} />
+              <Text style={[styles.sectionActionText, { color: theme.primary }]}>
+                {extendedDrafts.length === 0
+                  ? t('addEditItem.addExtendedWarranty')
+                  : t('addEditItem.addAnotherExtendedWarranty')}
+              </Text>
+            </Pressable>
+
+            <Card style={[styles.howItWorksCard, { backgroundColor: theme.primaryContainer }]}>
+              <Ionicons name="shield-checkmark" size={18} color={theme.onPrimaryContainer} />
+              <View style={styles.sectionHeaderText}>
+                <Text style={[styles.howItWorksTitle, { color: theme.onPrimaryContainer }]}>
+                  {t('addEditItem.howItWorksTitle')}
+                </Text>
+                <Text style={[styles.howItWorksBody, { color: theme.onPrimaryContainer }]}>
+                  {t('addEditItem.howItWorksBody')}
+                </Text>
+              </View>
+            </Card>
+          </>
+        ) : null}
 
         <View style={styles.field}>
           <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.notes')}</Text>
@@ -876,7 +1312,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         onClose={() => setCategoryModalVisible(false)}
       />
       <SelectModal
-        visible={sourceModalKind !== null}
+        visible={sourceModalSection !== null}
         title={
           replaceTargetIndex !== null
             ? t('addEditItem.replaceDocumentTitle')
@@ -888,7 +1324,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         ]}
         onSelect={(value) => handlePickDocumentSource(value as 'camera' | 'gallery')}
         onClose={() => {
-          setSourceModalKind(null);
+          setSourceModalSection(null);
           setReplaceTargetIndex(null);
         }}
       />
@@ -914,6 +1350,37 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           }}
         />
       ) : null}
+      {extendedDateTarget ? (
+        <DateTimePicker
+          value={
+            extendedDrafts.find((draft) => draft.id === extendedDateTarget)?.startsOn ?? new Date()
+          }
+          mode="date"
+          display="default"
+          onChange={(_event, selectedDate) => {
+            const target = extendedDateTarget;
+            setExtendedDateTarget(null);
+            if (selectedDate && target) handleChangeExtended(target, 'startsOn', selectedDate);
+          }}
+        />
+      ) : null}
+      <SelectModal
+        visible={extendedUnitTarget !== null}
+        title={t('addEditItem.duration')}
+        options={[
+          { value: 'months', label: t('addEditItem.durationMonths') },
+          { value: 'years', label: t('addEditItem.durationYears') },
+        ]}
+        selected={
+          extendedDrafts.find((draft) => draft.id === extendedUnitTarget)?.durationUnit ?? 'months'
+        }
+        onSelect={(value) => {
+          if (extendedUnitTarget) {
+            handleChangeExtended(extendedUnitTarget, 'durationUnit', value as WarrantyDurationUnit);
+          }
+        }}
+        onClose={() => setExtendedUnitTarget(null)}
+      />
     </View>
   );
 }
@@ -1059,6 +1526,45 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     textAlign: 'right',
+  },
+  extendedToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  extendedCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  addAnotherButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingVertical: 14,
+  },
+  howItWorksCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
+  },
+  howItWorksTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  howItWorksBody: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 2,
   },
   warrantyDocumentsHeader: {
     marginTop: 4,
