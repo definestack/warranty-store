@@ -28,7 +28,7 @@ import { formatDate, nowIso } from '../utils/date';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Settings'>;
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '0.5.2';
 
 export default function SettingsScreen(_props: Props) {
   const theme = useAppTheme();

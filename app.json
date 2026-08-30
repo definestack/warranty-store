@@ -2,7 +2,7 @@
   "expo": {
     "name": "Warranty Store",
     "slug": "warranty-store",
-    "version": "1.0.0",
+    "version": "0.5.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
