@@ -1165,20 +1165,6 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           {renderDocumentStrip({ kind: 'warranty' })}
         </Card>
 
-        <Card style={styles.sectionCard} onLayout={rememberOffset('extendedWarranties')}>
-          <View style={styles.sectionHeaderText}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {t('addEditItem.extendedWarrantySection')}{' '}
-              <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
-                {t('addEditItem.extendedWarrantyOptional')}
-              </Text>
-            </Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
-              {t('addEditItem.extendedWarrantySubtitle')}
-            </Text>
-          </View>
-        </Card>
-
         {extendedDrafts.map((draft, index) => (
           <View
             key={draft.id}
