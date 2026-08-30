@@ -982,7 +982,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   sectionCard: {
-    marginTop: 16,
+    // No margin here: this style lands on Card's inner Surface, while the shadow is cast
+    // by its wrapper. A margin would stretch the shadow box past the visible card. The
+    // ScrollView's content container already spaces the cards apart.
     padding: 16,
     gap: 12,
   },
