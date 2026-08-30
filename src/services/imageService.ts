@@ -1,23 +1,21 @@
 import * as ImagePicker from 'expo-image-picker';
 
-import { saveInvoiceImage, saveItemPhoto } from './fileService';
+import { saveDocumentImage, saveItemPhoto } from './fileService';
 
-export const MAX_INVOICE_PAGES = 10;
-
-export type InvoicePickResult =
+export type DocumentPickResult =
   | { status: 'success'; uris: string[] }
   | { status: 'canceled' }
   | { status: 'permission-denied' };
 
-async function finalizePick(result: ImagePicker.ImagePickerResult): Promise<InvoicePickResult> {
+async function finalizePick(result: ImagePicker.ImagePickerResult): Promise<DocumentPickResult> {
   if (result.canceled || result.assets.length === 0) {
     return { status: 'canceled' };
   }
-  const uris = await Promise.all(result.assets.map((asset) => saveInvoiceImage(asset.uri)));
+  const uris = await Promise.all(result.assets.map((asset) => saveDocumentImage(asset.uri)));
   return { status: 'success', uris };
 }
 
-export async function pickInvoiceFromCamera(): Promise<InvoicePickResult> {
+export async function pickDocumentFromCamera(): Promise<DocumentPickResult> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
   if (!permission.granted) {
     return { status: 'permission-denied' };
@@ -27,7 +25,7 @@ export async function pickInvoiceFromCamera(): Promise<InvoicePickResult> {
   return finalizePick(result);
 }
 
-export async function pickInvoiceFromGallery(selectionLimit?: number): Promise<InvoicePickResult> {
+export async function pickDocumentFromGallery(selectionLimit?: number): Promise<DocumentPickResult> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
     return { status: 'permission-denied' };

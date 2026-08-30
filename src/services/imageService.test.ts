@@ -3,8 +3,8 @@ import * as legacyFileSystem from 'expo-file-system/legacy';
 import { __resetMockFileSystem } from 'expo-file-system/legacy';
 
 import {
-  pickInvoiceFromCamera,
-  pickInvoiceFromGallery,
+  pickDocumentFromCamera,
+  pickDocumentFromGallery,
   pickItemPhotoFromCamera,
   pickItemPhotoFromGallery,
 } from './imageService';
@@ -14,9 +14,9 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('pickInvoiceFromCamera', () => {
+describe('pickDocumentFromCamera', () => {
   it('copies the captured photo into app storage on success', async () => {
-    const result = await pickInvoiceFromCamera();
+    const result = await pickDocumentFromCamera();
 
     expect(result.status).toBe('success');
     if (result.status === 'success') {
@@ -28,7 +28,7 @@ describe('pickInvoiceFromCamera', () => {
   it('returns permission-denied without launching the camera when permission is refused', async () => {
     (ImagePicker.requestCameraPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: false });
 
-    const result = await pickInvoiceFromCamera();
+    const result = await pickDocumentFromCamera();
 
     expect(result).toEqual({ status: 'permission-denied' });
     expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
@@ -37,15 +37,15 @@ describe('pickInvoiceFromCamera', () => {
   it('returns canceled when the user backs out of the camera', async () => {
     (ImagePicker.launchCameraAsync as jest.Mock).mockResolvedValueOnce({ canceled: true, assets: null });
 
-    const result = await pickInvoiceFromCamera();
+    const result = await pickDocumentFromCamera();
 
     expect(result).toEqual({ status: 'canceled' });
   });
 });
 
-describe('pickInvoiceFromGallery', () => {
+describe('pickDocumentFromGallery', () => {
   it('copies the selected photo into app storage on success', async () => {
-    const result = await pickInvoiceFromGallery();
+    const result = await pickDocumentFromGallery();
 
     expect(result.status).toBe('success');
     if (result.status === 'success') {
@@ -64,7 +64,7 @@ describe('pickInvoiceFromGallery', () => {
       ],
     });
 
-    const result = await pickInvoiceFromGallery();
+    const result = await pickDocumentFromGallery();
 
     expect(result.status).toBe('success');
     if (result.status === 'success') {
@@ -76,7 +76,7 @@ describe('pickInvoiceFromGallery', () => {
   });
 
   it('passes the selection limit and multi-select flag through to the picker', async () => {
-    await pickInvoiceFromGallery(5);
+    await pickDocumentFromGallery(5);
 
     expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalledWith(
       expect.objectContaining({ allowsMultipleSelection: true, selectionLimit: 5 })
@@ -88,7 +88,7 @@ describe('pickInvoiceFromGallery', () => {
       granted: false,
     });
 
-    const result = await pickInvoiceFromGallery();
+    const result = await pickDocumentFromGallery();
 
     expect(result).toEqual({ status: 'permission-denied' });
     expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
@@ -100,7 +100,7 @@ describe('pickInvoiceFromGallery', () => {
       assets: null,
     });
 
-    const result = await pickInvoiceFromGallery();
+    const result = await pickDocumentFromGallery();
 
     expect(result).toEqual({ status: 'canceled' });
   });

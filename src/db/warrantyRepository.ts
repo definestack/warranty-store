@@ -7,7 +7,8 @@ import type {
   WarrantyItemUpdate,
 } from '../types/warranty';
 import { getDatabase } from './database';
-import { getImagesForItem, getImagesForItems } from './invoiceImagesRepository';
+import type { GroupedDocuments } from './invoiceImagesRepository';
+import { getDocumentsForItem, getDocumentsForItems } from './invoiceImagesRepository';
 
 interface WarrantyItemRow {
   id: string;
@@ -25,7 +26,7 @@ interface WarrantyItemRow {
   updated_at: string;
 }
 
-function mapRowToItem(row: WarrantyItemRow, invoiceImages: WarrantyItem['invoiceImages']): WarrantyItem {
+function mapRowToItem(row: WarrantyItemRow, documents: GroupedDocuments): WarrantyItem {
   return {
     id: row.id,
     name: row.name,
@@ -38,7 +39,8 @@ function mapRowToItem(row: WarrantyItemRow, invoiceImages: WarrantyItem['invoice
     store: row.store ?? undefined,
     notes: row.notes ?? undefined,
     photoUri: row.photo_uri ?? undefined,
-    invoiceImages,
+    invoiceDocuments: documents.invoice,
+    warrantyDocuments: documents.warranty,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -81,8 +83,10 @@ export async function getAllItems(): Promise<WarrantyItem[]> {
   const rows = await db.getAllAsync<WarrantyItemRow>(
     'SELECT * FROM warranty_items ORDER BY created_at DESC'
   );
-  const imagesByItem = await getImagesForItems(rows.map((row) => row.id));
-  return rows.map((row) => mapRowToItem(row, imagesByItem.get(row.id) ?? []));
+  const documentsByItem = await getDocumentsForItems(rows.map((row) => row.id));
+  return rows.map((row) =>
+    mapRowToItem(row, documentsByItem.get(row.id) ?? { invoice: [], warranty: [] })
+  );
 }
 
 export async function getItemById(id: string): Promise<WarrantyItem | null> {
@@ -92,8 +96,8 @@ export async function getItemById(id: string): Promise<WarrantyItem | null> {
     id
   );
   if (!row) return null;
-  const invoiceImages = await getImagesForItem(id);
-  return mapRowToItem(row, invoiceImages);
+  const documents = await getDocumentsForItem(id);
+  return mapRowToItem(row, documents);
 }
 
 /**
@@ -183,14 +187,15 @@ export async function insertImportedItems(items: WarrantyItem[]): Promise<void> 
         item.updatedAt
       );
 
-      for (const image of item.invoiceImages) {
+      for (const document of [...item.invoiceDocuments, ...item.warrantyDocuments]) {
         await db.runAsync(
-          'INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
-          image.id,
+          'INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at, kind) VALUES (?, ?, ?, ?, ?, ?)',
+          document.id,
           item.id,
-          image.uri,
-          image.sortOrder,
-          image.createdAt
+          document.uri,
+          document.sortOrder,
+          document.createdAt,
+          document.kind
         );
       }
     }

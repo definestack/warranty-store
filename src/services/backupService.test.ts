@@ -4,7 +4,7 @@ import { __getLastSharedUri, __resetMockSharing, __setAvailable } from 'expo-sha
 import JSZip from 'jszip';
 
 import { getDatabase, initDatabase } from '../db/database';
-import { saveInvoiceImagesForItem } from '../db/invoiceImagesRepository';
+import { saveDocumentsForItem } from '../db/invoiceImagesRepository';
 import { createItem } from '../db/warrantyRepository';
 import type { NewWarrantyItem, WarrantyItem } from '../types/warranty';
 import {
@@ -44,9 +44,17 @@ describe('buildBackupPayload', () => {
     purchaseDate: '2026-01-15',
     warrantyMonths: 12,
     expiryDate: '2027-01-15',
-    invoiceImages: [
-      { id: 'img-1', itemId: 'item-1', uri: IMAGE_URI, sortOrder: 0, createdAt: '2026-01-15T00:00:00.000Z' },
+    invoiceDocuments: [
+      {
+        id: 'img-1',
+        itemId: 'item-1',
+        kind: 'invoice',
+        uri: IMAGE_URI,
+        sortOrder: 0,
+        createdAt: '2026-01-15T00:00:00.000Z',
+      },
     ],
+    warrantyDocuments: [],
     createdAt: '2026-01-15T00:00:00.000Z',
     updatedAt: '2026-01-15T00:00:00.000Z',
   };
@@ -60,10 +68,58 @@ describe('buildBackupPayload', () => {
     expect(payload.items[0].name).toBe('Washing Machine');
   });
 
-  it('leaves items with no invoice images untouched', () => {
-    const payload = buildBackupPayload([{ ...item, invoiceImages: [] }], '2026-08-18T10:00:00.000Z');
+  it('leaves items with no documents untouched', () => {
+    const payload = buildBackupPayload([{ ...item, invoiceDocuments: [] }], '2026-08-18T10:00:00.000Z');
 
     expect(payload.items[0].invoiceImages).toEqual([]);
+  });
+
+  it('records each document kind and keeps both kinds in one archive folder', () => {
+    const withWarranty: WarrantyItem = {
+      ...item,
+      warrantyDocuments: [
+        {
+          id: 'img-2',
+          itemId: 'item-1',
+          kind: 'warranty',
+          uri: 'file:///mock-documents/invoices/invoice-warranty.jpg',
+          sortOrder: 0,
+          createdAt: '2026-01-15T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const payload = buildBackupPayload([withWarranty], '2026-08-18T10:00:00.000Z');
+
+    const documents = payload.items[0].invoiceImages;
+    expect(documents.map((document) => document.kind)).toEqual(['invoice', 'warranty']);
+    const paths = documents.map((document) => document.uri);
+    expect(paths).toEqual(['invoices/img-1.jpg', 'invoices/img-2.jpg']);
+    // Ids are UUIDs in production, so both kinds share the folder without colliding.
+    expect(new Set(paths).size).toBe(2);
+  });
+
+  it('emits both kinds under the single legacy list so older builds still read them', () => {
+    const withWarranty: WarrantyItem = {
+      ...item,
+      warrantyDocuments: [
+        {
+          id: 'img-2',
+          itemId: 'item-1',
+          kind: 'warranty',
+          uri: 'file:///mock-documents/invoices/invoice-warranty.jpg',
+          sortOrder: 0,
+          createdAt: '2026-01-15T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const payload = buildBackupPayload([withWarranty], '2026-08-18T10:00:00.000Z');
+
+    expect(payload.formatVersion).toBe(1);
+    expect(payload.items[0].invoiceImages).toHaveLength(2);
+    expect(payload.items[0]).not.toHaveProperty('warrantyDocuments');
+    expect(payload.items[0]).not.toHaveProperty('invoiceDocuments');
   });
 
   it("rewrites an item photo's uri to its bundled relative path", () => {
@@ -83,7 +139,7 @@ describe('createBackupArchive', () => {
   it('bundles all items as JSON plus their invoice images into a single zip file', async () => {
     const item = await createItem(baseItem);
     __setFileContent(IMAGE_URI, IMAGE_BASE64);
-    await saveInvoiceImagesForItem(item.id, [{ id: 'draft-1', uri: IMAGE_URI, isPersisted: false }]);
+    await saveDocumentsForItem(item.id, 'invoice', [{ id: 'draft-1', uri: IMAGE_URI, isPersisted: false }]);
 
     const result = await createBackupArchive();
 
@@ -123,9 +179,9 @@ describe('createBackupArchive', () => {
     expect(await photoEntry!.async('base64')).toBe(PHOTO_BASE64);
   });
 
-  it('reports unreadable photo and invoice files instead of writing an archive', async () => {
+  it('reports unreadable photo and document files instead of writing an archive', async () => {
     const item = await createItem({ ...baseItem, photoUri: PHOTO_URI });
-    await saveInvoiceImagesForItem(item.id, [{ id: 'draft-1', uri: IMAGE_URI, isPersisted: false }]);
+    await saveDocumentsForItem(item.id, 'invoice', [{ id: 'draft-1', uri: IMAGE_URI, isPersisted: false }]);
 
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -136,7 +192,7 @@ describe('createBackupArchive', () => {
       expect(err).toBeInstanceOf(BackupMissingFilesError);
       const missing = (err as BackupMissingFilesError).missingFiles;
       expect(missing).toHaveLength(2);
-      expect(missing.map((file) => file.kind).sort()).toEqual(['invoice', 'photo']);
+      expect(missing.map((file) => file.kind).sort()).toEqual(['document', 'photo']);
       expect(missing.every((file) => file.itemName === 'Washing Machine')).toBe(true);
     } finally {
       warnSpy.mockRestore();
@@ -146,7 +202,7 @@ describe('createBackupArchive', () => {
   it('exports without the unreadable files once the user opts to continue', async () => {
     const item = await createItem({ ...baseItem, photoUri: PHOTO_URI });
     __setFileContent(IMAGE_URI, IMAGE_BASE64);
-    await saveInvoiceImagesForItem(item.id, [{ id: 'draft-1', uri: IMAGE_URI, isPersisted: false }]);
+    await saveDocumentsForItem(item.id, 'invoice', [{ id: 'draft-1', uri: IMAGE_URI, isPersisted: false }]);
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     const result = await createBackupArchive({ skipMissingFiles: true });

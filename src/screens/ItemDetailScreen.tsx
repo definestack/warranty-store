@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
 import DetailRow from '../components/DetailRow';
-import InvoiceImageViewer from '../components/InvoiceImageViewer';
+import DocumentViewer from '../components/DocumentViewer';
 import ItemIcon from '../components/ItemIcon';
 import ScreenHeader from '../components/ScreenHeader';
 import StatusBadge from '../components/StatusBadge';
@@ -14,6 +14,7 @@ import { useTranslation } from '../i18n/LocaleContext';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
+import type { ItemDocument } from '../types/warranty';
 import type { RootStackParamList } from '../types/navigation';
 import { DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
 import { formatDaysRemaining, formatIsoDate, formatWarrantyDuration, getWarrantyStatus } from '../utils/date';
@@ -34,8 +35,10 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
   const loadItemById = useItemsStore((state) => state.loadItemById);
   const deleteItem = useItemsStore((state) => state.deleteItem);
   const [deleting, setDeleting] = useState(false);
-  const [invoiceViewerVisible, setInvoiceViewerVisible] = useState(false);
-  const [invoiceViewerIndex, setInvoiceViewerIndex] = useState(0);
+  // The viewer pages within one section only, so it holds that section's uris rather
+  // than an index into a combined list.
+  const [viewerDocuments, setViewerDocuments] = useState<string[] | null>(null);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,6 +85,37 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('common.delete'), style: 'destructive', onPress: handleConfirmDelete },
       ]
+    );
+  };
+
+  const renderDocumentSection = (label: string, documents: ItemDocument[]) => {
+    if (documents.length === 0) return null;
+
+    return (
+      <View style={styles.notesSection}>
+        <Text style={[styles.notesLabel, { color: theme.text }]}>{label}</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.documentThumbnailRow}
+        >
+          {documents.map((document, index) => (
+            <Pressable
+              key={document.id}
+              onPress={() => {
+                setViewerIndex(index);
+                setViewerDocuments(documents.map((entry) => entry.uri));
+              }}
+              accessibilityLabel={label}
+            >
+              <Image source={{ uri: document.uri }} style={styles.documentThumbnail} />
+            </Pressable>
+          ))}
+        </ScrollView>
+        <Text style={[styles.notesText, { color: theme.subtleText }]}>
+          {t('itemDetail.viewDocumentHint')}
+        </Text>
+      </View>
     );
   };
 
@@ -137,28 +171,8 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           </Text>
         </View>
 
-        {item.invoiceImages.length > 0 ? (
-          <View style={styles.notesSection}>
-            <Text style={[styles.notesLabel, { color: theme.text }]}>{t('itemDetail.invoice')}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.invoiceThumbnailRow}>
-              {item.invoiceImages.map((image, index) => (
-                <Pressable
-                  key={image.id}
-                  onPress={() => {
-                    setInvoiceViewerIndex(index);
-                    setInvoiceViewerVisible(true);
-                  }}
-                  accessibilityLabel={t('itemDetail.invoice')}
-                >
-                  <Image source={{ uri: image.uri }} style={styles.invoiceThumbnail} />
-                </Pressable>
-              ))}
-            </ScrollView>
-            <Text style={[styles.notesText, { color: theme.subtleText }]}>
-              {t('itemDetail.viewInvoiceHint')}
-            </Text>
-          </View>
-        ) : null}
+        {renderDocumentSection(t('itemDetail.invoiceDocuments'), item.invoiceDocuments)}
+        {renderDocumentSection(t('itemDetail.warrantyDocuments'), item.warrantyDocuments)}
 
         <View style={styles.actions}>
           <Pressable
@@ -178,12 +192,12 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
       </ScrollView>
-      {item.invoiceImages.length > 0 ? (
-        <InvoiceImageViewer
-          visible={invoiceViewerVisible}
-          images={item.invoiceImages.map((image) => image.uri)}
-          initialIndex={invoiceViewerIndex}
-          onClose={() => setInvoiceViewerVisible(false)}
+      {viewerDocuments ? (
+        <DocumentViewer
+          visible
+          images={viewerDocuments}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerDocuments(null)}
         />
       ) : null}
     </View>
@@ -241,12 +255,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  invoiceThumbnailRow: {
+  documentThumbnailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  invoiceThumbnail: {
+  documentThumbnail: {
     width: 56,
     height: 56,
     borderRadius: 10,

@@ -15,7 +15,7 @@ import { useTranslation } from '../i18n/LocaleContext';
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 
-interface InvoiceImageViewerProps {
+interface DocumentViewerProps {
   visible: boolean;
   images: string[];
   initialIndex: number;
@@ -101,12 +101,12 @@ function ZoomablePage({ uri, width, height }: ZoomablePageProps) {
   );
 }
 
-export default function InvoiceImageViewer({
+export default function DocumentViewer({
   visible,
   images,
   initialIndex,
   onClose,
-}: InvoiceImageViewerProps) {
+}: DocumentViewerProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();

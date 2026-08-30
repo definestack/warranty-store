@@ -9,7 +9,15 @@ import {
 } from 'expo-file-system/legacy';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
-const INVOICES_DIR = `${documentDirectory}invoices/`;
+/**
+ * Holds attached documents of BOTH kinds — invoices and manufacturer warranty paperwork.
+ * The `invoices/` path and the `invoice-` filename prefix predate the split and are kept
+ * deliberately: a document's kind lives on its database row, never in its file name or
+ * location. Sharing one directory is what lets a document be reclassified with a single
+ * database write instead of a copy/update/delete that could half-succeed. Do not infer a
+ * document's kind from where its file sits.
+ */
+const DOCUMENTS_DIR = `${documentDirectory}invoices/`;
 const PHOTOS_DIR = `${documentDirectory}photos/`;
 const MAX_DIMENSION = 1600;
 const COMPRESSION_QUALITY = 0.8;
@@ -50,7 +58,7 @@ async function compressIfNeeded(sourceUri: string): Promise<string> {
 
 /**
  * Copies a picked image into app-private storage under `<directory><prefix>-<uuid>.jpg`,
- * compressing it first when it exceeds the size budget. Shared by invoice pages and
+ * compressing it first when it exceeds the size budget. Shared by attached documents and
  * item photos so both get identical resize/compress behaviour.
  */
 async function saveImageInto(
@@ -102,21 +110,21 @@ async function deleteImageFile(uri: string, description: string): Promise<void> 
   }
 }
 
-export async function saveInvoiceImage(sourceUri: string): Promise<string> {
-  return saveImageInto(INVOICES_DIR, 'invoice', sourceUri);
+export async function saveDocumentImage(sourceUri: string): Promise<string> {
+  return saveImageInto(DOCUMENTS_DIR, 'invoice', sourceUri);
 }
 
-export async function writeInvoiceImageFile(fileName: string, base64: string): Promise<string> {
-  return writeImageInto(INVOICES_DIR, fileName, base64);
+export async function writeDocumentImageFile(fileName: string, base64: string): Promise<string> {
+  return writeImageInto(DOCUMENTS_DIR, fileName, base64);
 }
 
-export async function deleteInvoiceFile(uri: string): Promise<void> {
-  return deleteImageFile(uri, 'invoice file');
+export async function deleteDocumentFile(uri: string): Promise<void> {
+  return deleteImageFile(uri, 'document file');
 }
 
 /**
- * Item photos live in their own directory so the backup packer's listing stays
- * unambiguous and a photo can never be mistaken for an invoice page during cleanup.
+ * Item photos live in their own directory so a photo can never be mistaken for an
+ * attached document during cleanup.
  */
 export async function saveItemPhoto(sourceUri: string): Promise<string> {
   return saveImageInto(PHOTOS_DIR, 'photo', sourceUri);

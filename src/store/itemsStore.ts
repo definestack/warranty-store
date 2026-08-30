@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { deleteSchedulesForItem, getSchedulesForItem } from '../db/notificationSchedulesRepository';
 import { deleteItem as deleteItemRow, getAllItems, getItemById } from '../db/warrantyRepository';
-import { deleteInvoiceFile, deleteItemPhotoFile } from '../services/fileService';
+import { deleteDocumentFile, deleteItemPhotoFile } from '../services/fileService';
 import { cancelScheduledReminders } from '../services/notificationService';
 import type { WarrantyItem } from '../types/warranty';
 
@@ -55,8 +55,9 @@ export const useItemsStore = create<ItemsState>((set, get) => ({
 
     await deleteItemRow(id);
 
-    if (item?.invoiceImages.length) {
-      await Promise.all(item.invoiceImages.map((image) => deleteInvoiceFile(image.uri)));
+    const documents = item ? [...item.invoiceDocuments, ...item.warrantyDocuments] : [];
+    if (documents.length) {
+      await Promise.all(documents.map((document) => deleteDocumentFile(document.uri)));
     }
 
     if (item?.photoUri) {

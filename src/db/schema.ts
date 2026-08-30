@@ -53,3 +53,12 @@ export const CREATE_NOTIFICATION_SCHEDULES_TABLE = `
 export const ADD_PHOTO_URI_COLUMN = `
   ALTER TABLE warranty_items ADD COLUMN photo_uri TEXT;
 `;
+
+/**
+ * Splits attached documents into invoices and manufacturer-warranty paperwork.
+ * Rows written before this column existed carry no record of which they were, so the
+ * default files every one of them as an invoice; the user reclassifies from the UI.
+ */
+export const ADD_DOCUMENT_KIND_COLUMN = `
+  ALTER TABLE invoice_images ADD COLUMN kind TEXT NOT NULL DEFAULT 'invoice';
+`;
