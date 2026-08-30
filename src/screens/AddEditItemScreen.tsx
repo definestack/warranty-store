@@ -24,7 +24,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
 import Surface from '../components/Surface';
 import type { ItemDocumentDraft } from '../db/invoiceImagesRepository';
-import { saveDocumentsForItem } from '../db/invoiceImagesRepository';
+import { saveDocumentsForScope } from '../db/invoiceImagesRepository';
 import {
   deleteSchedulesForItem,
   getSchedulesForItem,
@@ -550,7 +550,10 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         // in the drafts is an orphan any more.
         unsavedDocumentUrisRef.current = [];
         for (const kind of ['invoice', 'warranty'] as const) {
-          const { removedUris } = await saveDocumentsForItem(itemId, kind, documentDrafts[kind]);
+          const { removedUris } = await saveDocumentsForScope(
+            { itemId, kind },
+            documentDrafts[kind]
+          );
           await Promise.all(removedUris.map((uri) => deleteDocumentFile(uri)));
         }
       } catch (err) {

@@ -9,7 +9,7 @@ import * as Sharing from 'expo-sharing';
 import JSZip from 'jszip';
 
 import { getAllItems } from '../db/warrantyRepository';
-import type { ItemDocument, WarrantyItem } from '../types/warranty';
+import type { ExtendedWarranty, ItemDocument, WarrantyItem } from '../types/warranty';
 import { nowIso } from '../utils/date';
 
 const BACKUP_DIR = `${cacheDirectory}backups/`;
@@ -24,8 +24,28 @@ export const BACKUP_FORMAT_VERSION = 1;
  * make those older builds drop them entirely — a degraded import beats a lossy one.
  */
 export interface BackupItem
-  extends Omit<WarrantyItem, 'invoiceDocuments' | 'warrantyDocuments'> {
+  extends Omit<
+    WarrantyItem,
+    'invoiceDocuments' | 'warrantyDocuments' | 'extendedWarranties' | 'coverageEndDate'
+  > {
   invoiceImages: ItemDocument[];
+  extendedWarranties: BackupExtendedWarranty[];
+}
+
+/**
+ * An extended warranty in `data.json`, with its own documents nested inside it rather
+ * than in the item's flat `invoiceImages` list.
+ *
+ * The nesting is load-bearing. The format version stays 1 so an older build still accepts
+ * the archive, and such a build ignores the key it does not know — importing the item with
+ * its own documents intact and its extended cover simply absent. Were these documents in
+ * the flat list, that same build would ignore the scope it does not understand and file an
+ * extended warranty's paperwork into the item's own sections. A clean partial import beats
+ * a silently mixed-up one.
+ */
+export interface BackupExtendedWarranty
+  extends Omit<ExtendedWarranty, 'invoiceDocuments' | 'warrantyDocuments'> {
+  documents: ItemDocument[];
 }
 
 export interface BackupPayload {
@@ -92,7 +112,15 @@ export function buildBackupPayload(items: WarrantyItem[], exportedAt: string = n
     formatVersion: BACKUP_FORMAT_VERSION,
     exportedAt,
     items: items.map((item) => {
-      const { invoiceDocuments, warrantyDocuments, ...rest } = item;
+      const {
+        invoiceDocuments,
+        warrantyDocuments,
+        extendedWarranties,
+        // Derived on read, so it is not exported — it would only be able to disagree with
+        // the periods it is derived from.
+        coverageEndDate: _coverageEndDate,
+        ...rest
+      } = item;
       return {
         ...rest,
         photoUri: item.photoUri ? `photos/${photoFileName(item)}` : undefined,
@@ -100,6 +128,17 @@ export function buildBackupPayload(items: WarrantyItem[], exportedAt: string = n
           ...document,
           uri: `invoices/${documentFileName(document)}`,
         })),
+        extendedWarranties: extendedWarranties.map((extended) => {
+          const { invoiceDocuments: extendedInvoices, warrantyDocuments: extendedWarrantyDocs, ...extendedRest } =
+            extended;
+          return {
+            ...extendedRest,
+            documents: [...extendedInvoices, ...extendedWarrantyDocs].map((document) => ({
+              ...document,
+              uri: `invoices/${documentFileName(document)}`,
+            })),
+          };
+        }),
       };
     }),
   };
@@ -144,7 +183,15 @@ export async function createBackupArchive(
   }
 
   for (const item of items) {
-    for (const document of [...item.invoiceDocuments, ...item.warrantyDocuments]) {
+    const documents = [
+      ...item.invoiceDocuments,
+      ...item.warrantyDocuments,
+      ...item.extendedWarranties.flatMap((extended) => [
+        ...extended.invoiceDocuments,
+        ...extended.warrantyDocuments,
+      ]),
+    ];
+    for (const document of documents) {
       await addFile(item, 'document', document.uri, `invoices/${documentFileName(document)}`);
     }
     if (item.photoUri) {

@@ -5,7 +5,14 @@ import JSZip from 'jszip';
 import { saveSchedulesForItem } from '../db/notificationSchedulesRepository';
 import { getExistingItemIds, insertImportedItems } from '../db/warrantyRepository';
 import type { TranslateFn } from '../i18n/i18n';
-import type { ItemDocument, ItemDocumentKind, WarrantyItem } from '../types/warranty';
+import type {
+  ExtendedWarranty,
+  ItemDocument,
+  ItemDocumentKind,
+  WarrantyDurationUnit,
+  WarrantyItem,
+} from '../types/warranty';
+import { getCoverageEndDate } from '../utils/coverage';
 import { getWarrantyStatus } from '../utils/date';
 import { BACKUP_DATA_FILE_NAME, BACKUP_FORMAT_VERSION } from './backupService';
 
@@ -67,7 +74,12 @@ function documentKind(raw: unknown): ItemDocumentKind {
   return raw === 'warranty' ? 'warranty' : 'invoice';
 }
 
-function validateDocument(raw: unknown, itemId: string, index: number): ItemDocument {
+function validateDocument(
+  raw: unknown,
+  itemId: string,
+  index: number,
+  extendedWarrantyId?: string
+): ItemDocument {
   if (typeof raw !== 'object' || raw === null) {
     throw invalid(`Document ${index} of item ${itemId} is not an object`);
   }
@@ -84,6 +96,7 @@ function validateDocument(raw: unknown, itemId: string, index: number): ItemDocu
     id: document.id,
     itemId,
     kind: documentKind(document.kind),
+    extendedWarrantyId,
     uri: document.uri,
     sortOrder: document.sortOrder,
     createdAt: document.createdAt,
@@ -96,6 +109,68 @@ function optionalString(value: unknown, field: string, itemId: string): string |
     throw invalid(`Item ${itemId} has a non-text ${field}`);
   }
   return value;
+}
+
+/** Anything unrecognised is read as months, the unit a bare number would have meant. */
+function durationUnit(raw: unknown): WarrantyDurationUnit {
+  return raw === 'years' ? 'years' : 'months';
+}
+
+/**
+ * An extended warranty's documents are nested inside its own entry, so a build that
+ * predates extended cover ignores the whole key rather than misfiling its paperwork into
+ * the item's own sections. See BackupExtendedWarranty in backupService.
+ */
+function validateExtendedWarranty(
+  raw: unknown,
+  itemId: string,
+  index: number
+): ExtendedWarranty {
+  if (typeof raw !== 'object' || raw === null) {
+    throw invalid(`Extended warranty ${index} of item ${itemId} is not an object`);
+  }
+
+  const extended = raw as Record<string, unknown>;
+  if (!isNonEmptyString(extended.id)) {
+    throw invalid(`Extended warranty ${index} of item ${itemId} is missing an id`);
+  }
+  if (!isNonEmptyString(extended.startsOn) || !isNonEmptyString(extended.endsOn)) {
+    throw invalid(`Extended warranty ${extended.id} of item ${itemId} is missing its dates`);
+  }
+  if (typeof extended.durationValue !== 'number' || Number.isNaN(extended.durationValue)) {
+    throw invalid(`Extended warranty ${extended.id} of item ${itemId} has an invalid duration`);
+  }
+  if (extended.cost !== undefined && extended.cost !== null && typeof extended.cost !== 'number') {
+    throw invalid(`Extended warranty ${extended.id} of item ${itemId} has an invalid cost`);
+  }
+  if (!isNonEmptyString(extended.createdAt) || !isNonEmptyString(extended.updatedAt)) {
+    throw invalid(`Extended warranty ${extended.id} of item ${itemId} is missing its timestamps`);
+  }
+
+  const rawDocuments = extended.documents ?? [];
+  if (!Array.isArray(rawDocuments)) {
+    throw invalid(`Extended warranty ${extended.id} of item ${itemId} has an invalid document list`);
+  }
+  const documents = rawDocuments.map((document, documentIndex) =>
+    validateDocument(document, itemId, documentIndex, extended.id as string)
+  );
+
+  return {
+    id: extended.id,
+    itemId,
+    provider: optionalString(extended.provider, 'provider', itemId),
+    durationValue: extended.durationValue,
+    durationUnit: durationUnit(extended.durationUnit),
+    startsOn: extended.startsOn,
+    endsOn: extended.endsOn,
+    cost: (extended.cost as number | undefined) ?? undefined,
+    notes: optionalString(extended.notes, 'notes', itemId),
+    sortOrder: typeof extended.sortOrder === 'number' ? extended.sortOrder : index,
+    invoiceDocuments: documents.filter((document) => document.kind === 'invoice'),
+    warrantyDocuments: documents.filter((document) => document.kind === 'warranty'),
+    createdAt: extended.createdAt,
+    updatedAt: extended.updatedAt,
+  };
 }
 
 function validateItem(raw: unknown, index: number): WarrantyItem {
@@ -131,6 +206,15 @@ function validateItem(raw: unknown, index: number): WarrantyItem {
     validateDocument(document, item.id as string, documentIndex)
   );
 
+  // Absent in an archive written before extended cover existed, which just means none.
+  const rawExtended = item.extendedWarranties ?? [];
+  if (!Array.isArray(rawExtended)) {
+    throw invalid(`Item ${item.id} has an invalid extended warranty list`);
+  }
+  const extendedWarranties = rawExtended.map((extended, extendedIndex) =>
+    validateExtendedWarranty(extended, item.id as string, extendedIndex)
+  );
+
   return {
     id: item.id,
     name: item.name,
@@ -145,6 +229,9 @@ function validateItem(raw: unknown, index: number): WarrantyItem {
     photoUri: optionalString(item.photoUri, 'photo', item.id),
     invoiceDocuments: documents.filter((document) => document.kind === 'invoice'),
     warrantyDocuments: documents.filter((document) => document.kind === 'warranty'),
+    extendedWarranties,
+    // Derived, never carried in the archive.
+    coverageEndDate: getCoverageEndDate(item.expiryDate, extendedWarranties),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
@@ -235,16 +322,17 @@ function restoredDocumentFileName(document: ItemDocument): string {
  * missing or unreadable is dropped rather than failing the whole restore — losing one
  * picture is better than losing the item.
  */
-async function restoreDocuments(
-  item: WarrantyItem,
-  zip: JSZip
-): Promise<Pick<WarrantyItem, 'invoiceDocuments' | 'warrantyDocuments'>> {
-  const restored: Pick<WarrantyItem, 'invoiceDocuments' | 'warrantyDocuments'> = {
-    invoiceDocuments: [],
-    warrantyDocuments: [],
-  };
+type RestoredDocuments = Pick<WarrantyItem, 'invoiceDocuments' | 'warrantyDocuments'>;
 
-  for (const document of [...item.invoiceDocuments, ...item.warrantyDocuments]) {
+/** Unpacks one section's documents, renumbering it densely from zero as it goes. */
+async function restoreSection(
+  itemId: string,
+  documents: ItemDocument[],
+  zip: JSZip
+): Promise<RestoredDocuments> {
+  const restored: RestoredDocuments = { invoiceDocuments: [], warrantyDocuments: [] };
+
+  for (const document of documents) {
     const entry = zip.file(document.uri);
     if (!entry) {
       if (__DEV__) console.warn(`Backup archive is missing document ${document.uri}`);
@@ -256,10 +344,36 @@ async function restoreDocuments(
       const uri = await writeDocumentImageFile(restoredDocumentFileName(document), base64);
       const target =
         document.kind === 'warranty' ? restored.warrantyDocuments : restored.invoiceDocuments;
-      target.push({ ...document, itemId: item.id, uri, sortOrder: target.length });
+      target.push({ ...document, itemId, uri, sortOrder: target.length });
     } catch (err) {
       console.error(`Failed to restore document ${document.uri}`, err);
     }
+  }
+
+  return restored;
+}
+
+async function restoreDocuments(item: WarrantyItem, zip: JSZip): Promise<RestoredDocuments> {
+  return restoreSection(item.id, [...item.invoiceDocuments, ...item.warrantyDocuments], zip);
+}
+
+/**
+ * Unpacks each extended warranty's own documents, back into the extended warranty they
+ * were exported from rather than into the item's own sections.
+ */
+async function restoreExtendedWarranties(
+  item: WarrantyItem,
+  zip: JSZip
+): Promise<ExtendedWarranty[]> {
+  const restored: ExtendedWarranty[] = [];
+
+  for (const extended of item.extendedWarranties) {
+    const documents = await restoreSection(
+      item.id,
+      [...extended.invoiceDocuments, ...extended.warrantyDocuments],
+      zip
+    );
+    restored.push({ ...extended, itemId: item.id, ...documents });
   }
 
   return restored;
@@ -330,6 +444,7 @@ export async function applyBackup(backup: LoadedBackup, t: TranslateFn): Promise
       ...item,
       photoUri: await restoreItemPhoto(item, backup.zip),
       ...(await restoreDocuments(item, backup.zip)),
+      extendedWarranties: await restoreExtendedWarranties(item, backup.zip),
     });
   }
 

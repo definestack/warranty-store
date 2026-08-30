@@ -153,21 +153,21 @@ Land 6.3–6.8 together — see the note at the top of this file.
 
 ## 8. Backup and restore
 
-- [ ] 8.1 Write a failing test for export: an item's extended warranties are written with
+- [x] 8.1 Write a failing test for export: an item's extended warranties are written with
       their fields, dates and order, and each one's documents are nested inside its own
       entry rather than in the item's flat document list. The format version stays 1.
-- [ ] 8.2 Write a failing test for export: an extended warranty document's image is written
+- [x] 8.2 Write a failing test for export: an extended warranty document's image is written
       into the archive and referenced by its relative path, like every other document.
-- [ ] 8.3 Implement the export changes in `src/services/backupService.ts`.
-- [ ] 8.4 Write failing tests for import: an exported extended warranty is restored to the
+- [x] 8.3 Implement the export changes in `src/services/backupService.ts`.
+- [x] 8.4 Write failing tests for import: an exported extended warranty is restored to the
       same item with the same fields, dates, order and documents; an archive whose items
       record no extended warranties imports unchanged; and an archive predating extended
       warranties is accepted rather than rejected.
-- [ ] 8.5 Write a failing test for import: a missing or unwritable extended warranty document
+- [x] 8.5 Write a failing test for import: a missing or unwritable extended warranty document
       image is dropped without failing the extended warranty or the item.
-- [ ] 8.6 Write a failing test for import: reminders scheduled for imported items cover every
+- [x] 8.6 Write a failing test for import: reminders scheduled for imported items cover every
       period, not only the manufacturer one.
-- [ ] 8.7 Implement the import changes in `src/services/restoreService.ts`, including
+- [x] 8.7 Implement the import changes in `src/services/restoreService.ts`, including
       inserting the extended warranty rows in `insertImportedItems` with their exported ids
       and dates preserved.
 

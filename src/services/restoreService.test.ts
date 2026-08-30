@@ -75,6 +75,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await getDatabase().runAsync('DELETE FROM notification_schedules');
   await getDatabase().runAsync('DELETE FROM invoice_images');
+  await getDatabase().runAsync('DELETE FROM extended_warranties');
   await getDatabase().runAsync('DELETE FROM warranty_items');
   __resetMockFileSystem();
   __resetMockDocumentPicker();
@@ -475,5 +476,156 @@ describe('pickBackupFile', () => {
     __setNextDocumentResult({ canceled: true, assets: null });
 
     expect(await pickBackupFile()).toBeNull();
+  });
+});
+
+describe('extended cover on import', () => {
+  function makeBackupExtendedWarranty(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'ew-1',
+      itemId: 'item-1',
+      provider: 'ABC Protection',
+      durationValue: 2,
+      durationUnit: 'years',
+      startsOn: '2027-01-16',
+      endsOn: '2029-01-15',
+      cost: 4999,
+      notes: 'Bought online',
+      sortOrder: 0,
+      documents: [],
+      createdAt: '2026-01-15T00:00:00.000Z',
+      updatedAt: '2026-01-15T00:00:00.000Z',
+      ...overrides,
+    };
+  }
+
+  it('restores each extended warranty with its fields, dates and order', async () => {
+    const uri = await writeBackupZip(
+      makePayload([
+        makeBackupItem({
+          extendedWarranties: [
+            makeBackupExtendedWarranty(),
+            makeBackupExtendedWarranty({ id: 'ew-2', provider: 'Second', sortOrder: 1 }),
+          ],
+        }),
+      ])
+    );
+
+    await applyBackup(await loadBackupArchive(uri), t);
+
+    const [item] = await getAllItems();
+    expect(item.extendedWarranties.map((entry) => entry.id)).toEqual(['ew-1', 'ew-2']);
+    expect(item.extendedWarranties[0]).toMatchObject({
+      provider: 'ABC Protection',
+      durationValue: 2,
+      durationUnit: 'years',
+      startsOn: '2027-01-16',
+      endsOn: '2029-01-15',
+      cost: 4999,
+      notes: 'Bought online',
+    });
+  });
+
+  it('restores an extended warranty’s documents to that extended warranty', async () => {
+    const uri = await writeBackupZip(
+      makePayload([
+        makeBackupItem({
+          extendedWarranties: [
+            makeBackupExtendedWarranty({
+              documents: [
+                {
+                  id: 'ew-doc-1',
+                  kind: 'warranty',
+                  uri: 'invoices/ew-doc-1.jpg',
+                  sortOrder: 0,
+                  createdAt: '2026-01-15T00:00:00.000Z',
+                },
+              ],
+            }),
+          ],
+        }),
+      ]),
+      { 'invoices/ew-doc-1.jpg': IMAGE_BASE64 }
+    );
+
+    await applyBackup(await loadBackupArchive(uri), t);
+
+    const [item] = await getAllItems();
+    expect(item.invoiceDocuments).toEqual([]);
+    expect(item.warrantyDocuments).toEqual([]);
+    expect(item.extendedWarranties[0].warrantyDocuments).toHaveLength(1);
+    expect(item.extendedWarranties[0].warrantyDocuments[0].extendedWarrantyId).toBe('ew-1');
+  });
+
+  it('imports an archive whose items record no extended cover', async () => {
+    const uri = await writeBackupZip(makePayload([makeBackupItem({ extendedWarranties: [] })]));
+
+    const result = await applyBackup(await loadBackupArchive(uri), t);
+
+    expect(result.imported).toBe(1);
+    expect((await getAllItems())[0].extendedWarranties).toEqual([]);
+  });
+
+  it('accepts an archive written before extended cover existed', async () => {
+    // No extendedWarranties key at all, as an older build would have written it.
+    const uri = await writeBackupZip(makePayload([makeBackupItem()]));
+
+    const result = await applyBackup(await loadBackupArchive(uri), t);
+
+    expect(result.imported).toBe(1);
+    const [item] = await getAllItems();
+    expect(item.extendedWarranties).toEqual([]);
+    expect(item.coverageEndDate).toBe(item.expiryDate);
+  });
+
+  it('drops an extended warranty document missing from the archive without failing the item', async () => {
+    const uri = await writeBackupZip(
+      makePayload([
+        makeBackupItem({
+          extendedWarranties: [
+            makeBackupExtendedWarranty({
+              documents: [
+                {
+                  id: 'ew-doc-missing',
+                  kind: 'invoice',
+                  uri: 'invoices/ew-doc-missing.jpg',
+                  sortOrder: 0,
+                  createdAt: '2026-01-15T00:00:00.000Z',
+                },
+              ],
+            }),
+          ],
+        }),
+      ])
+      // The image entry is deliberately absent from the zip.
+    );
+
+    const result = await applyBackup(await loadBackupArchive(uri), t);
+
+    expect(result.imported).toBe(1);
+    const [item] = await getAllItems();
+    expect(item.extendedWarranties).toHaveLength(1);
+    expect(item.extendedWarranties[0].invoiceDocuments).toEqual([]);
+  });
+
+  it('schedules reminders for every imported period, not only the manufacturer one', async () => {
+    await setNotificationsEnabled(true);
+    (Notifications.scheduleNotificationAsync as jest.Mock).mockImplementation(async () => 'notif');
+    const uri = await writeBackupZip(
+      makePayload([
+        makeBackupItem({
+          expiryDate: '2099-01-15',
+          extendedWarranties: [
+            makeBackupExtendedWarranty({ startsOn: '2099-01-16', endsOn: '2101-01-15' }),
+          ],
+        }),
+      ])
+    );
+
+    await applyBackup(await loadBackupArchive(uri), t);
+
+    const schedules = await getAllSchedules();
+    expect(schedules.filter((entry) => entry.extendedWarrantyId === undefined)).toHaveLength(3);
+    expect(schedules.filter((entry) => entry.extendedWarrantyId === 'ew-1')).toHaveLength(3);
   });
 });
