@@ -1,6 +1,7 @@
 import { i18n } from '../i18n/i18n';
 import type { TranslateFn } from '../i18n/i18n';
 import {
+  addDays,
   addMonths,
   formatDaysRemaining,
   formatIsoDate,
@@ -29,6 +30,24 @@ describe('addMonths', () => {
   it('clamps end-of-month overflow the same way Date does', () => {
     // Jan 31 + 1 month -> JS Date rolls into March 3 (Feb has 28 days in 2026).
     expect(addMonths('2026-01-31', 1)).toBe('2026-03-03');
+  });
+});
+
+describe('addDays', () => {
+  it('adds days within the same month', () => {
+    expect(addDays('2026-05-09', 5)).toBe('2026-05-14');
+  });
+
+  it('subtracts days with a negative count', () => {
+    expect(addDays('2026-05-09', -1)).toBe('2026-05-08');
+  });
+
+  it('rolls backwards across a month boundary', () => {
+    expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
+  });
+
+  it('rolls forwards across a year boundary', () => {
+    expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
   });
 });
 

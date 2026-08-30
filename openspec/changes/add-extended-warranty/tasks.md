@@ -24,34 +24,34 @@ Decision 4 exists to prevent.
 
 ## 2. Coverage arithmetic
 
-- [ ] 2.1 Write failing tests for `src/utils/coverage.ts`: a duration value plus unit
+- [x] 2.1 Write failing tests for `src/utils/coverage.ts`: a duration value plus unit
       resolves to months, with years multiplying by twelve and months passing through.
-- [ ] 2.2 Write failing tests for end-date derivation: the derived end date is the start
+- [x] 2.2 Write failing tests for end-date derivation: the derived end date is the start
       date plus the duration minus one day, so a period starting the day after a previous
       one ends leaves no gap and no overlap. Pin the inherited `addMonths` month-overflow
       behaviour explicitly (design.md — Decision 3), the same way the existing expiry test
       pins it.
-- [ ] 2.3 Write failing tests for the coverage end date: it is the item's expiry date when
+- [x] 2.3 Write failing tests for the coverage end date: it is the item's expiry date when
       there are no extended warranties, and otherwise the latest of the expiry date and
       every extended warranty's end date — including when an extended warranty ends *before*
       the manufacturer warranty does.
-- [ ] 2.4 Write failing tests for the default start date of the next extended warranty: the
+- [x] 2.4 Write failing tests for the default start date of the next extended warranty: the
       day after the manufacturer valid-till date when there are none, and the day after the
       last one's end date when there are.
-- [ ] 2.5 Write failing tests for the coverage signature: it changes when a period is added,
+- [x] 2.5 Write failing tests for the coverage signature: it changes when a period is added,
       removed, or has its end date moved, and is unchanged when only the item's name or
       notes change.
-- [ ] 2.6 Write failing tests for a period's own state: a period whose start date is in the
+- [x] 2.6 Write failing tests for a period's own state: a period whose start date is in the
       future is upcoming, one whose end date has passed is expired, one ending inside the
       near-expiry window is expiring, and any other running period is active. Cover the
       boundaries — the start date itself and the end date itself.
-- [ ] 2.7 Write failing tests for the countdown: an upcoming period counts up to its start
+- [x] 2.7 Write failing tests for the countdown: an upcoming period counts up to its start
       date and every other state counts down to its end date, reusing the existing
       days-remaining arithmetic rather than reimplementing it.
-- [ ] 2.8 Write a failing test that a period's state does not change the item's own state:
+- [x] 2.8 Write a failing test that a period's state does not change the item's own state:
       an item whose only extended warranty is upcoming still reports the state its coverage
       end date gives it.
-- [ ] 2.9 Implement `src/utils/coverage.ts` as pure functions with no I/O.
+- [x] 2.9 Implement `src/utils/coverage.ts` as pure functions with no I/O.
 
 ## 3. Data model and migrations
 

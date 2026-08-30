@@ -5,6 +5,9 @@
  */
 export type ItemDocumentKind = 'invoice' | 'warranty';
 
+/** How an extended warranty's duration was entered, preserved so it displays as typed. */
+export type WarrantyDurationUnit = 'months' | 'years';
+
 export interface ItemDocument {
   id: string;
   itemId: string;

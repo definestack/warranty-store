@@ -187,6 +187,7 @@ const de: Messages = {
     expiresToday: 'Läuft heute ab',
     expiresIn: { one: 'Läuft in %{count} Tag ab', other: 'Läuft in %{count} Tagen ab' },
     expiredAgo: { one: 'Vor %{count} Tag abgelaufen', other: 'Vor %{count} Tagen abgelaufen' },
+    startsIn: { one: 'Beginnt in %{count} Tag', other: 'Beginnt in %{count} Tagen' },
   },
   notifications: {
     reminderTitle: 'Garantie-Erinnerung: %{name}',

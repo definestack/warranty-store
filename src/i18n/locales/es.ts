@@ -186,6 +186,7 @@ const es: Messages = {
     expiresToday: 'Vence hoy',
     expiresIn: { one: 'Vence en %{count} día', other: 'Vence en %{count} días' },
     expiredAgo: { one: 'Venció hace %{count} día', other: 'Venció hace %{count} días' },
+    startsIn: { one: 'Comienza en %{count} día', other: 'Comienza en %{count} días' },
   },
   notifications: {
     reminderTitle: 'Recordatorio de garantía: %{name}',

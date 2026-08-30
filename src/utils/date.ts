@@ -7,6 +7,16 @@ export function addMonths(isoDate: string, months: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Adds `days` to an ISO date string (YYYY-MM-DD). Negative values subtract. Unlike
+ * `addMonths` this works in local time, so it never shifts a day across a timezone.
+ */
+export function addDays(isoDate: string, days: number): string {
+  const date = fromIsoDate(isoDate);
+  date.setDate(date.getDate() + days);
+  return toIsoDate(date);
+}
+
 export function nowIso(): string {
   return new Date().toISOString();
 }
