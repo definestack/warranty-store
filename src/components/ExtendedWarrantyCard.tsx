@@ -23,8 +23,8 @@ export interface ExtendedWarrantyCardErrors {
 }
 
 interface ExtendedWarrantyCardProps {
-  /** 1-based, for the "Extended Warranty 2" heading. */
-  index: number;
+  /** Heading for this entry, e.g. "Extended Warranty" or "Extended Warranty 2". */
+  title: string;
   values: ExtendedWarrantyCardValues;
   errors?: ExtendedWarrantyCardErrors;
   /** Read-only, derived from the start date and duration. Formatted for display. */
@@ -37,8 +37,6 @@ interface ExtendedWarrantyCardProps {
   onPressStartDate: () => void;
   onPressDurationUnit: () => void;
   onRemove: () => void;
-  /** Only shown when the item holds more than one, matching the mockup's single card. */
-  showHeading: boolean;
   /**
    * The document strip for one of this entry's two sections. Supplied by the screen so
    * the tiles, their add control and their limit stay in one implementation rather than
@@ -49,7 +47,7 @@ interface ExtendedWarrantyCardProps {
 }
 
 export default function ExtendedWarrantyCard({
-  index,
+  title,
   values,
   errors,
   endsOnLabel,
@@ -58,7 +56,6 @@ export default function ExtendedWarrantyCard({
   onPressStartDate,
   onPressDurationUnit,
   onRemove,
-  showHeading,
   renderDocuments,
   renderAddAction,
 }: ExtendedWarrantyCardProps) {
@@ -71,20 +68,16 @@ export default function ExtendedWarrantyCard({
   return (
     <View style={styles.wrapper}>
       <Card style={styles.card}>
-        {showHeading ? (
-          <View style={styles.headingRow}>
-            <Text style={[styles.heading, { color: theme.text }]}>
-              {t('addEditItem.extendedWarrantyEntry', { index })}
-            </Text>
-            <Pressable
-              hitSlop={8}
-              onPress={onRemove}
-              accessibilityLabel={t('addEditItem.removeExtendedWarranty')}
-            >
-              <Ionicons name="trash-outline" size={18} color={theme.danger} />
-            </Pressable>
-          </View>
-        ) : null}
+        <View style={styles.headingRow}>
+          <Text style={[styles.heading, { color: theme.text }]}>{title}</Text>
+          <Pressable
+            hitSlop={8}
+            onPress={onRemove}
+            accessibilityLabel={t('addEditItem.removeExtendedWarranty')}
+          >
+            <Ionicons name="trash-outline" size={18} color={theme.danger} />
+          </Pressable>
+        </View>
 
         <View style={styles.field}>
           <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.provider')}</Text>

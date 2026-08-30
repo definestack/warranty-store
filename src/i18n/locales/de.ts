@@ -184,9 +184,10 @@ const de: Messages = {
     addExtendedWarranty: 'Garantieverlängerung hinzufügen',
     addAnotherExtendedWarranty: 'Weitere Garantieverlängerung hinzufügen',
     removeExtendedWarranty: 'Garantieverlängerung entfernen',
-    discardExtendedWarrantyTitle: 'Garantieverlängerung verwerfen?',
-    discardExtendedWarrantyMessage:
-      'Beim Ausschalten wird die hinzugefügte Garantieverlängerung samt ihren Dokumenten entfernt.',
+    extendedWarrantyHeading: 'Garantieverlängerung',
+    removeExtendedWarrantyTitle: 'Garantieverlängerung entfernen?',
+    removeExtendedWarrantyMessage:
+      'Garantieverlängerung %{index} und ihre Dokumente werden beim Speichern entfernt.',
     durationInvalid: 'Geben Sie die Laufzeit als ganze Zahl ein (z. B. 24)',
     costInvalid: 'Geben Sie Kosten von null oder mehr ein',
     extendedWarrantyFieldInvalid: 'Prüfen Sie Garantieverlängerung %{index}: %{message}',

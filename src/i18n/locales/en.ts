@@ -182,9 +182,10 @@ const en = {
     addExtendedWarranty: 'Add Extended Warranty',
     addAnotherExtendedWarranty: 'Add another extended warranty',
     removeExtendedWarranty: 'Remove extended warranty',
-    discardExtendedWarrantyTitle: 'Discard extended warranty?',
-    discardExtendedWarrantyMessage:
-      'Turning this off removes the extended warranty you have added, along with its documents.',
+    extendedWarrantyHeading: 'Extended Warranty',
+    removeExtendedWarrantyTitle: 'Remove extended warranty?',
+    removeExtendedWarrantyMessage:
+      'Extended warranty %{index} and its documents will be removed when you save.',
     durationInvalid: 'Enter the duration as a whole number (e.g. 24)',
     costInvalid: 'Enter a cost of zero or more',
     extendedWarrantyFieldInvalid: 'Check extended warranty %{index}: %{message}',

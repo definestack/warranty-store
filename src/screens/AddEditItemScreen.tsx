@@ -162,7 +162,6 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const [extendedEnabled, setExtendedEnabled] = useState(false);
   const [extendedDrafts, setExtendedDrafts] = useState<ExtendedWarrantyFormDraft[]>([]);
   const [extendedErrors, setExtendedErrors] = useState<
     Record<string, { duration?: string | null; cost?: string | null }>
@@ -185,14 +184,34 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const sectionOffsets = useRef<Record<string, number>>({});
   const focusHandled = useRef(false);
+  /** A section we want to scroll to that has not reported its position yet. */
+  const pendingScrollKey = useRef<string | null>(null);
 
   const focusKey = (focus: AddEditSection): string =>
     focus.section === 'extendedWarrantyInvoice' || focus.section === 'extendedWarrantyDocuments'
       ? `${focus.section}:${focus.extendedWarrantyId}`
       : focus.section;
 
+  const scrollToSection = (key: string) => {
+    const offset = sectionOffsets.current[key];
+    if (offset === undefined) {
+      // Not laid out yet — a card added moments ago, typically. Scroll when it reports in.
+      pendingScrollKey.current = key;
+      return;
+    }
+    scrollRef.current?.scrollTo({ y: Math.max(offset - 16, 0), animated: true });
+  };
+
+  const noteSectionOffset = (key: string, y: number) => {
+    sectionOffsets.current[key] = y;
+    if (pendingScrollKey.current === key) {
+      pendingScrollKey.current = null;
+      scrollRef.current?.scrollTo({ y: Math.max(y - 16, 0), animated: true });
+    }
+  };
+
   const rememberOffset = (key: string) => (event: LayoutChangeEvent) => {
-    sectionOffsets.current[key] = event.nativeEvent.layout.y;
+    noteSectionOffset(key, event.nativeEvent.layout.y);
   };
 
   useEffect(() => {
@@ -228,7 +247,6 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         }
         setDocumentDrafts(loadedDrafts);
         setExtendedDrafts(item.extendedWarranties.map(toExtendedDraft));
-        setExtendedEnabled(item.extendedWarranties.length > 0);
         setNotes(item.notes ?? '');
       } catch (err) {
         console.error('Failed to load warranty item for editing', err);
@@ -245,18 +263,20 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     if (!focusRequest || focusHandled.current || loadingExisting) return;
+    focusHandled.current = true;
 
-    // Asking for an extended section implies opening the section it lives in.
-    if (focusRequest.section !== 'invoiceDocuments' && focusRequest.section !== 'warrantyDocuments') {
-      setExtendedEnabled(true);
+    if (focusRequest.section === 'extendedWarranties') {
+      // The control that sent the user here is "Add Extended Warranty", so they have
+      // already asked for one. Start the entry for them rather than making them ask
+      // again with a second tap.
+      const draft = createExtendedDraftRef.current();
+      setExtendedDrafts((drafts) => [...drafts, draft]);
+      scrollToSection(`extendedWarrantyInvoice:${draft.id}`);
+      return;
     }
 
-    const offset = sectionOffsets.current[focusKey(focusRequest)];
-    if (offset === undefined) return;
-
-    focusHandled.current = true;
-    scrollRef.current?.scrollTo({ y: Math.max(offset - 16, 0), animated: true });
-  }, [focusRequest, loadingExisting, extendedDrafts.length]);
+    scrollToSection(focusKey(focusRequest));
+  }, [focusRequest, loadingExisting]);
 
   const categoryOptions = CATEGORIES.map((c) => ({ value: c, label: getCategoryLabel(c, t) }));
 
@@ -633,22 +653,32 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     return deriveCoverageEndDate(toIsoDate(draft.startsOn), value, draft.durationUnit);
   }
 
+  /**
+   * A blank entry, its id minted now rather than at save time so documents can be
+   * attached to it before it has ever been written. See design.md - Decision 6.
+   */
+  const createExtendedDraft = (): ExtendedWarrantyFormDraft => ({
+    id: Crypto.randomUUID(),
+    isPersisted: false,
+    provider: '',
+    durationValue: '',
+    durationUnit: 'months',
+    startsOn: nextExtendedStartDate(),
+    cost: '',
+    notes: '',
+  });
+
+  /**
+   * Held in a ref so the one-shot focus effect can start an entry without taking a
+   * dependency on a function that is rebuilt every render.
+   */
+  const createExtendedDraftRef = useRef(createExtendedDraft);
+  createExtendedDraftRef.current = createExtendedDraft;
+
   const handleAddExtendedWarranty = () => {
-    // The id is minted now, not at save time, so documents can be attached to this entry
-    // before it has ever been written. See design.md - Decision 6.
-    setExtendedDrafts((drafts) => [
-      ...drafts,
-      {
-        id: Crypto.randomUUID(),
-        isPersisted: false,
-        provider: '',
-        durationValue: '',
-        durationUnit: 'months',
-        startsOn: nextExtendedStartDate(),
-        cost: '',
-        notes: '',
-      },
-    ]);
+    const draft = createExtendedDraft();
+    setExtendedDrafts((drafts) => [...drafts, draft]);
+    scrollToSection(`extendedWarrantyInvoice:${draft.id}`);
   };
 
   const discardExtendedDrafts = async (ids: string[]) => {
@@ -688,35 +718,16 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     ];
   };
 
-  const handleRemoveExtendedWarranty = (id: string) => {
-    void discardExtendedDrafts([id]);
-  };
-
-  const handleToggleExtendedSection = (next: boolean) => {
-    if (next) {
-      setExtendedEnabled(true);
-      if (extendedDrafts.length === 0) handleAddExtendedWarranty();
-      return;
-    }
-
-    if (extendedDrafts.length === 0) {
-      setExtendedEnabled(false);
-      return;
-    }
-
+  const handleRemoveExtendedWarranty = (id: string, position: number) => {
     Alert.alert(
-      t('addEditItem.discardExtendedWarrantyTitle'),
-      t('addEditItem.discardExtendedWarrantyMessage'),
+      t('addEditItem.removeExtendedWarrantyTitle'),
+      t('addEditItem.removeExtendedWarrantyMessage', { index: position }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('common.delete'),
           style: 'destructive',
-          onPress: () => {
-            void discardExtendedDrafts(extendedDrafts.map((draft) => draft.id)).then(() =>
-              setExtendedEnabled(false)
-            );
-          },
+          onPress: () => void discardExtendedDrafts([id]),
         },
       ]
     );
@@ -1155,114 +1166,86 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         </Card>
 
         <Card style={styles.sectionCard} onLayout={rememberOffset('extendedWarranties')}>
-          <Pressable
-            style={styles.extendedToggleRow}
-            onPress={() => handleToggleExtendedSection(!extendedEnabled)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: extendedEnabled }}
-          >
-            <View
-              style={[
-                styles.extendedCheckbox,
-                {
-                  backgroundColor: extendedEnabled ? theme.primary : 'transparent',
-                  borderColor: extendedEnabled ? theme.primary : theme.border,
-                },
-              ]}
-            >
-              {extendedEnabled ? (
-                <Ionicons name="checkmark" size={14} color={theme.primaryText} />
-              ) : null}
-            </View>
-            <View style={styles.sectionHeaderText}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                {t('addEditItem.extendedWarrantySection')}{' '}
-                <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
-                  {t('addEditItem.extendedWarrantyOptional')}
-                </Text>
-              </Text>
+          <View style={styles.sectionHeaderText}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              {t('addEditItem.extendedWarrantySection')}{' '}
               <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
-                {t('addEditItem.extendedWarrantySubtitle')}
+                {t('addEditItem.extendedWarrantyOptional')}
               </Text>
-            </View>
-            <Ionicons
-              name={extendedEnabled ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={theme.subtleText}
-            />
-          </Pressable>
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: theme.subtleText }]}>
+              {t('addEditItem.extendedWarrantySubtitle')}
+            </Text>
+          </View>
         </Card>
 
-        {extendedEnabled ? (
-          <>
-            {extendedDrafts.map((draft, index) => (
-              <View
-                key={draft.id}
-                onLayout={(event) => {
-                  const y = event.nativeEvent.layout.y;
-                  sectionOffsets.current[`extendedWarrantyInvoice:${draft.id}`] = y;
-                  sectionOffsets.current[`extendedWarrantyDocuments:${draft.id}`] = y;
-                }}
-              >
-              <ExtendedWarrantyCard
-                index={index + 1}
-                showHeading={extendedDrafts.length > 1}
-                values={{
-                  provider: draft.provider,
-                  durationValue: draft.durationValue,
-                  durationUnit: draft.durationUnit,
-                  startsOn: draft.startsOn,
-                  cost: draft.cost,
-                  notes: draft.notes,
-                }}
-                errors={extendedErrors[draft.id]}
-                startsOnLabel={formatDate(draft.startsOn, locale)}
-                endsOnLabel={(() => {
-                  const endsOn = extendedEndsOn(draft);
-                  return endsOn ? formatIsoDate(endsOn, locale) : '';
-                })()}
-                onChange={(field, value) => handleChangeExtended(draft.id, field, value)}
-                onPressStartDate={() => setExtendedDateTarget(draft.id)}
-                onPressDurationUnit={() => setExtendedUnitTarget(draft.id)}
-                onRemove={() => handleRemoveExtendedWarranty(draft.id)}
-                renderAddAction={(kind) =>
-                  renderAddAction(
-                    { kind, extendedWarrantyId: draft.id },
-                    kind === 'invoice' ? t('addEditItem.addInvoice') : t('addEditItem.addDocument')
-                  )
-                }
-                renderDocuments={(kind) =>
-                  renderDocumentStrip({ kind, extendedWarrantyId: draft.id })
-                }
-              />
-              </View>
-            ))}
+        {extendedDrafts.map((draft, index) => (
+          <View
+            key={draft.id}
+            onLayout={(event) => {
+              const y = event.nativeEvent.layout.y;
+              noteSectionOffset(`extendedWarrantyInvoice:${draft.id}`, y);
+              noteSectionOffset(`extendedWarrantyDocuments:${draft.id}`, y);
+            }}
+          >
+            <ExtendedWarrantyCard
+              title={
+                extendedDrafts.length > 1
+                  ? t('addEditItem.extendedWarrantyEntry', { index: index + 1 })
+                  : t('addEditItem.extendedWarrantyHeading')
+              }
+              values={{
+                provider: draft.provider,
+                durationValue: draft.durationValue,
+                durationUnit: draft.durationUnit,
+                startsOn: draft.startsOn,
+                cost: draft.cost,
+                notes: draft.notes,
+              }}
+              errors={extendedErrors[draft.id]}
+              startsOnLabel={formatDate(draft.startsOn, locale)}
+              endsOnLabel={(() => {
+                const endsOn = extendedEndsOn(draft);
+                return endsOn ? formatIsoDate(endsOn, locale) : '';
+              })()}
+              onChange={(field, value) => handleChangeExtended(draft.id, field, value)}
+              onPressStartDate={() => setExtendedDateTarget(draft.id)}
+              onPressDurationUnit={() => setExtendedUnitTarget(draft.id)}
+              onRemove={() => handleRemoveExtendedWarranty(draft.id, index + 1)}
+              renderAddAction={(kind) =>
+                renderAddAction(
+                  { kind, extendedWarrantyId: draft.id },
+                  kind === 'invoice' ? t('addEditItem.addInvoice') : t('addEditItem.addDocument')
+                )
+              }
+              renderDocuments={(kind) => renderDocumentStrip({ kind, extendedWarrantyId: draft.id })}
+            />
+          </View>
+        ))}
 
-            <Pressable
-              onPress={handleAddExtendedWarranty}
-              style={[styles.addAnotherButton, { borderColor: theme.primary }]}
-            >
-              <Ionicons name="add" size={16} color={theme.primary} />
-              <Text style={[styles.sectionActionText, { color: theme.primary }]}>
-                {extendedDrafts.length === 0
-                  ? t('addEditItem.addExtendedWarranty')
-                  : t('addEditItem.addAnotherExtendedWarranty')}
-              </Text>
-            </Pressable>
+        <Pressable
+          onPress={handleAddExtendedWarranty}
+          style={[styles.addAnotherButton, { borderColor: theme.primary }]}
+        >
+          <Ionicons name="add" size={16} color={theme.primary} />
+          <Text style={[styles.sectionActionText, { color: theme.primary }]}>
+            {extendedDrafts.length === 0
+              ? t('addEditItem.addExtendedWarranty')
+              : t('addEditItem.addAnotherExtendedWarranty')}
+          </Text>
+        </Pressable>
 
-            <Card style={[styles.howItWorksCard, { backgroundColor: theme.primaryContainer }]}>
-              <Ionicons name="shield-checkmark" size={18} color={theme.onPrimaryContainer} />
-              <View style={styles.sectionHeaderText}>
-                <Text style={[styles.howItWorksTitle, { color: theme.onPrimaryContainer }]}>
-                  {t('addEditItem.howItWorksTitle')}
-                </Text>
-                <Text style={[styles.howItWorksBody, { color: theme.onPrimaryContainer }]}>
-                  {t('addEditItem.howItWorksBody')}
-                </Text>
-              </View>
-            </Card>
-          </>
-        ) : null}
+        <Card style={[styles.howItWorksCard, { backgroundColor: theme.primaryContainer }]}>
+          <Ionicons name="shield-checkmark" size={18} color={theme.onPrimaryContainer} />
+          <View style={styles.sectionHeaderText}>
+            <Text style={[styles.howItWorksTitle, { color: theme.onPrimaryContainer }]}>
+              {t('addEditItem.howItWorksTitle')}
+            </Text>
+            <Text style={[styles.howItWorksBody, { color: theme.onPrimaryContainer }]}>
+              {t('addEditItem.howItWorksBody')}
+            </Text>
+          </View>
+        </Card>
 
         <View style={styles.field}>
           <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.notes')}</Text>
@@ -1526,20 +1509,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     textAlign: 'right',
-  },
-  extendedToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  extendedCheckbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
   },
   addAnotherButton: {
     flexDirection: 'row',

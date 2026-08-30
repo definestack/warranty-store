@@ -158,13 +158,27 @@ an existing one, and remove one entirely. Removing an extended warranty SHALL re
 recorded fields and its documents together, and SHALL leave the item's other extended
 warranties in place and still in order.
 
-The extended warranty section SHALL be optional and SHALL be presented as such: the user
-SHALL be able to work on an item without engaging with it at all. If the user turns the
-section off while extended warranties are recorded, the app SHALL confirm before discarding
-them and SHALL leave them intact if the user declines.
+Adding SHALL be a single action: activating the add control SHALL start a new entry ready
+to fill in, without any further step to reveal or enable it.
+
+Every extended warranty SHALL offer its own remove control, whether the item holds one or
+several, so extended cover is taken off an item entry by entry. Removing one SHALL be
+confirmed first, SHALL identify which entry is going, and SHALL leave it and its documents
+intact if the user declines. There SHALL NOT be a separate control that switches the whole
+section on or off.
+
+The section SHALL remain optional: an item with no extended warranty SHALL be complete and
+savable, and the user SHALL be able to work on an item without engaging with the section at
+all.
 
 All of these edits SHALL take effect only when the item is saved. Leaving the edit screen
 without saving SHALL leave the item's stored extended warranties exactly as they were.
+
+#### Scenario: Adding takes one action
+
+- **WHEN** the user activates the control for adding an extended warranty
+- **THEN** a new entry is started and ready to fill in
+- **AND** no further step is needed to reveal or enable it
 
 #### Scenario: An extended warranty is removed
 
@@ -172,12 +186,16 @@ without saving SHALL leave the item's stored extended warranties exactly as they
 - **THEN** the item holds only the remaining one
 - **AND** the removed one's documents are no longer attached to the item
 
-#### Scenario: Turning the section off is confirmed
+#### Scenario: A sole extended warranty can still be removed
 
-- **WHEN** the user turns the extended warranty section off while an extended warranty is
-  recorded
-- **THEN** the app asks the user to confirm before discarding it
-- **AND** declining leaves the extended warranty and its documents unchanged
+- **WHEN** the item holds exactly one extended warranty
+- **THEN** that entry still offers its own remove control
+
+#### Scenario: Removing an entry is confirmed
+
+- **WHEN** the user removes an extended warranty
+- **THEN** the app asks the user to confirm and says which entry it is
+- **AND** declining leaves that extended warranty and its documents unchanged
 
 #### Scenario: Leaving without saving changes nothing
 
@@ -469,6 +487,15 @@ user having to reopen the item.
 - **THEN** the item's edit screen opens positioned at that extended warranty's document
   section
 - **AND** nothing has been attached or changed yet
+
+#### Scenario: Adding extended cover from the detail screen takes one action
+
+- **WHEN** the user activates the control for adding an extended warranty on the detail
+  screen
+- **THEN** the edit screen opens with a new extended warranty entry already started and in
+  view
+- **AND** the user is not asked to add one a second time
+- **AND** nothing is stored unless the user saves
 
 #### Scenario: The detail screen reflects what was saved
 

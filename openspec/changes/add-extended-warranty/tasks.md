@@ -213,9 +213,9 @@ Land 6.3–6.8 together — see the note at the top of this file.
 - [x] 11.1 Add extended warranty drafts to `AddEditItemScreen`, minting each one's id when it
       is added so its documents can reference it before it is saved, per design.md —
       Decision 6.
-- [x] 11.2 Render the optional section: the toggle, one card per extended warranty, the
-      add-another control, and the confirmation before discarding recorded extended
-      warranties when the section is turned off.
+- [x] 11.2 Render the section: a heading, one card per extended warranty each with its own
+      remove control and confirmation, and a single add control that starts an entry
+      outright. No on/off toggle — extended cover comes off an item entry by entry.
 - [x] 11.3 Default each new extended warranty's start date from the current cover end, and
       recompute the displayed end date live as the start date or duration changes.
 - [x] 11.4 Route the per-card document add, replace, remove and reorder actions through the

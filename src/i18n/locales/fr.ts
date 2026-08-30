@@ -185,9 +185,10 @@ const fr: Messages = {
     addExtendedWarranty: 'Ajouter une garantie prolongée',
     addAnotherExtendedWarranty: 'Ajouter une autre garantie prolongée',
     removeExtendedWarranty: 'Supprimer la garantie prolongée',
-    discardExtendedWarrantyTitle: 'Abandonner la garantie prolongée ?',
-    discardExtendedWarrantyMessage:
-      'La désactiver supprime la garantie prolongée que vous avez ajoutée, ainsi que ses documents.',
+    extendedWarrantyHeading: 'Garantie prolongée',
+    removeExtendedWarrantyTitle: 'Supprimer la garantie prolongée ?',
+    removeExtendedWarrantyMessage:
+      'La garantie prolongée %{index} et ses documents seront supprimés à l’enregistrement.',
     durationInvalid: 'Saisissez la durée en nombre entier (p. ex. 24)',
     costInvalid: 'Saisissez un coût égal ou supérieur à zéro',
     extendedWarrantyFieldInvalid: 'Vérifiez la garantie prolongée %{index} : %{message}',
