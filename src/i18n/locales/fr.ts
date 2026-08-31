@@ -49,6 +49,32 @@ const fr: Messages = {
     expiredOn: 'Expiré le %{date}',
     expiresOn: 'Expire le %{date}',
   },
+  warrantyStatus: {
+    title: 'État des garanties',
+    expiredHeadline: {
+      one: '%{count} garantie a expiré',
+      other: '%{count} garanties ont expiré',
+    },
+    expiringHeadline: {
+      one: '%{count} garantie expire bientôt',
+      other: '%{count} garanties expirent bientôt',
+    },
+    expiredSegment: { one: '%{count} expirée', other: '%{count} expirées' },
+    expiringSegment: { one: '%{count} expire bientôt', other: '%{count} expirent bientôt' },
+    expiredSubtitle: 'Certaines garanties nécessitent peut-être votre attention.',
+    attentionSubtitle: 'Vous avez des garanties qui nécessitent peut-être votre attention.',
+    caughtUpTitle: 'Tout est à jour !',
+    caughtUpSubtitle: "Aucune garantie expirée ou sur le point d'expirer.",
+    viewAllExpired: {
+      one: 'Voir %{count} garantie expirée',
+      other: 'Voir les %{count} expirées',
+    },
+    viewAllExpiring: {
+      one: 'Voir %{count} garantie qui expire bientôt',
+      other: 'Voir les %{count} qui expirent bientôt',
+    },
+    reviewAll: { one: 'Examiner %{count} garantie', other: 'Examiner les %{count} garanties' },
+  },
   products: {
     title: 'Mes produits',
     subtitle: 'Tous vos produits au même endroit',

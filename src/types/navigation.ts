@@ -1,3 +1,5 @@
+import type { StatusFilter } from '../utils/itemFilters';
+
 /**
  * A section of the Add/Edit screen that a caller can ask it to open at.
  *
@@ -17,7 +19,12 @@ export type AddEditSection =
 
 export type MainTabParamList = {
   Home: undefined;
-  Products: undefined;
+  /**
+   * `status` seeds the product list's status chip, so Home's warranty-status card can open
+   * it already filtered. The screen clears the param once it has read it, leaving the tab
+   * to behave as it always has when reached from the tab bar.
+   */
+  Products: { status?: StatusFilter } | undefined;
   Settings: undefined;
 };
 

@@ -49,6 +49,32 @@ const de: Messages = {
     expiredOn: 'Abgelaufen am %{date}',
     expiresOn: 'Läuft ab am %{date}',
   },
+  warrantyStatus: {
+    title: 'Garantiestatus',
+    expiredHeadline: {
+      one: '%{count} Garantie ist abgelaufen',
+      other: '%{count} Garantien sind abgelaufen',
+    },
+    expiringHeadline: {
+      one: '%{count} Garantie läuft bald ab',
+      other: '%{count} Garantien laufen bald ab',
+    },
+    expiredSegment: { one: '%{count} abgelaufen', other: '%{count} abgelaufen' },
+    expiringSegment: { one: '%{count} läuft bald ab', other: '%{count} laufen bald ab' },
+    expiredSubtitle: 'Einige Garantien brauchen möglicherweise deine Aufmerksamkeit.',
+    attentionSubtitle: 'Du hast Garantien, die möglicherweise deine Aufmerksamkeit brauchen.',
+    caughtUpTitle: 'Alles erledigt!',
+    caughtUpSubtitle: 'Derzeit ist keine Garantie abgelaufen oder läuft bald ab.',
+    viewAllExpired: {
+      one: '%{count} abgelaufene Garantie ansehen',
+      other: 'Alle %{count} abgelaufenen ansehen',
+    },
+    viewAllExpiring: {
+      one: '%{count} bald ablaufende Garantie ansehen',
+      other: 'Alle %{count} bald ablaufenden ansehen',
+    },
+    reviewAll: { one: '%{count} Garantie prüfen', other: 'Alle %{count} Garantien prüfen' },
+  },
   products: {
     title: 'Meine Produkte',
     subtitle: 'Alle deine Produkte an einem Ort',

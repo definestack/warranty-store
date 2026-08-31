@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -34,7 +34,7 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-export default function ProductListScreen({ navigation }: Props) {
+export default function ProductListScreen({ navigation, route }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const { t, locale } = useTranslation();
@@ -42,7 +42,7 @@ export default function ProductListScreen({ navigation }: Props) {
   const loadItems = useItemsStore((state) => state.loadItems);
   const [search, setSearch] = useState('');
   const [searchVisible, setSearchVisible] = useState(false);
-  const [status, setStatus] = useState<StatusFilter>(ALL_STATUSES);
+  const [status, setStatus] = useState<StatusFilter>(route.params?.status ?? ALL_STATUSES);
   const [category, setCategory] = useState(ALL_CATEGORIES);
   const [sort, setSort] = useState<ProductSort>(DEFAULT_PRODUCT_SORT);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
@@ -53,6 +53,15 @@ export default function ProductListScreen({ navigation }: Props) {
       loadItems();
     }, [loadItems])
   );
+
+  // A caller (Home's warranty-status card) can ask for a status filter. Consume it and
+  // clear it, so returning to the tab later does not silently re-apply an old request.
+  const requestedStatus = route.params?.status;
+  useEffect(() => {
+    if (!requestedStatus) return;
+    setStatus(requestedStatus);
+    navigation.setParams({ status: undefined });
+  }, [requestedStatus, navigation]);
 
   const items = useMemo(
     () => filterAndSortItems(allItems, { search, category, status, sort }),
