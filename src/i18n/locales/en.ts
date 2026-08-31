@@ -70,6 +70,11 @@ const en = {
     },
     reviewAll: { one: 'Review all %{count} warranty', other: 'Review all %{count} warranties' },
   },
+  recentProducts: {
+    title: 'Recent Products',
+    seeAll: 'See all',
+    seeAllHint: 'See all products',
+  },
   products: {
     title: 'My Products',
     subtitle: 'All your products in one place',
@@ -277,6 +282,12 @@ const en = {
     version: 'Version %{version}',
   },
   date: {
+    addedToday: 'Added today',
+    addedYesterday: 'Added yesterday',
+    addedDaysAgo: { one: 'Added %{count} day ago', other: 'Added %{count} days ago' },
+    addedWeeksAgo: { one: 'Added %{count} week ago', other: 'Added %{count} weeks ago' },
+    addedMonthsAgo: { one: 'Added %{count} month ago', other: 'Added %{count} months ago' },
+    addedYearsAgo: { one: 'Added %{count} year ago', other: 'Added %{count} years ago' },
     expiresToday: 'Expires today',
     expiresIn: { one: 'Expires in %{count} day', other: 'Expires in %{count} days' },
     expiredAgo: { one: 'Expired %{count} day ago', other: 'Expired %{count} days ago' },

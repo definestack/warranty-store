@@ -83,6 +83,43 @@ export function formatDaysRemaining(expiryDate: string, t: TranslateFn, referenc
   return t('date.expiredAgo', { count: Math.abs(days) });
 }
 
+/**
+ * Whole calendar months between two dates — the count a person would give, so 15 May to
+ * 15 Jun is one month and 16 May to 15 Jun is still none.
+ */
+function getMonthsBetween(from: Date, to: Date): number {
+  const months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+  return to.getDate() < from.getDate() ? months - 1 : months;
+}
+
+/**
+ * How long ago an item was added, in the coarsest unit that still reads precisely:
+ * "Added today", "Added 5 days ago", "Added 2 weeks ago", "Added 3 months ago".
+ *
+ * `createdAt` is a full ISO timestamp, so it is compared by local calendar day. Months and
+ * years come from the calendar rather than from a day count, which keeps the wording
+ * honest across months of unequal length; the weeks bucket runs until a whole calendar
+ * month has actually passed, so there is no gap between the two.
+ */
+export function formatAddedAgo(createdAt: string, t: TranslateFn, referenceDate: Date = new Date()): string {
+  const created = new Date(createdAt);
+  const createdDay = new Date(created.getFullYear(), created.getMonth(), created.getDate());
+  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+
+  const months = getMonthsBetween(createdDay, today);
+  if (months >= 12) return t('date.addedYearsAgo', { count: Math.floor(months / 12) });
+  if (months >= 1) return t('date.addedMonthsAgo', { count: months });
+
+  // A timestamp ahead of the reference day (clock skew, or a device crossing a timezone)
+  // reads as today rather than as a negative count.
+  const days = Math.max(0, Math.round((today.getTime() - createdDay.getTime()) / MS_PER_DAY));
+  if (days === 0) return t('date.addedToday');
+  if (days === 1) return t('date.addedYesterday');
+  if (days < 7) return t('date.addedDaysAgo', { count: days });
+
+  return t('date.addedWeeksAgo', { count: Math.floor(days / 7) });
+}
+
 /** Formats a warranty duration in months as e.g. "6 months" or "2 years" for whole-year durations. */
 export function formatWarrantyDuration(months: number, t: TranslateFn): string {
   if (months >= 12 && months % 12 === 0) {

@@ -7,12 +7,14 @@ import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import RecentProductsCard from '../components/RecentProductsCard';
 import WarrantyStatusCard from '../components/WarrantyStatusCard';
 import { useTranslation } from '../i18n/LocaleContext';
 import { useItemsStore } from '../store/itemsStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
 import { getWarrantyStatus } from '../utils/date';
+import { ALL_STATUSES } from '../utils/itemFilters';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
@@ -85,6 +87,14 @@ export default function HomeScreen({ navigation }: Props) {
           items={allItems}
           onSelectItem={(itemId) => navigation.navigate('ItemDetail', { itemId })}
           onViewAll={(status) => navigation.navigate('Products', { status })}
+        />
+
+        <RecentProductsCard
+          items={allItems}
+          onSelectItem={(itemId) => navigation.navigate('ItemDetail', { itemId })}
+          // The product list keeps whatever status chip it was last left on, so "See all"
+          // asks for the unfiltered list rather than trusting that state.
+          onSeeAll={() => navigation.navigate('Products', { status: ALL_STATUSES })}
         />
 
         {allItems.length === 0 ? (
