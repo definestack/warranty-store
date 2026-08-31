@@ -120,8 +120,9 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
   const [leadSegment] = segments;
   const leadIcon = leadSegment.key === 'expired' ? 'alert-circle-outline' : 'time-outline';
 
-  // Expiring-soon items are the softer warning, so their colour leads the footer whenever
-  // any of them is counted; a purely expired card stays on the danger colour.
+  // The footer's colour alone: expiring-soon items are the softer warning, so their colour
+  // leads it whenever any of them is counted. The headline icon and the calendar badge
+  // both follow severity instead, and so stay on danger while anything has expired.
   const accent = expiringCount > 0 ? theme.warning : theme.danger;
   const footerLabel = mixed
     ? t('warrantyStatus.reviewAll', { count: attentionCount })
@@ -150,7 +151,7 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
             {t(expiringCount > 0 ? 'warrantyStatus.attentionSubtitle' : 'warrantyStatus.expiredSubtitle')}
           </Text>
         </View>
-        <CalendarBadge theme={theme} badge="warning" badgeColor={accent} />
+        <CalendarBadge theme={theme} badge="warning" badgeColor={leadSegment.color} />
       </View>
 
       <View style={[styles.list, { borderColor: theme.border }]}>
