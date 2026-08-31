@@ -3,6 +3,7 @@ import type { TranslateFn } from '../i18n/i18n';
 import {
   addDays,
   addMonths,
+  formatAddedAgo,
   formatDaysRemaining,
   formatIsoDate,
   formatWarrantyDuration,
@@ -175,5 +176,48 @@ describe('formatWarrantyDuration', () => {
 
   it('formats a non-whole-year month count as months even past a year', () => {
     expect(formatWarrantyDuration(18, t)).toBe('18 months');
+  });
+});
+
+describe('formatAddedAgo', () => {
+  const today = new Date(2025, 5, 15); // 15 Jun 2025
+  const added = (isoTimestamp: string) => formatAddedAgo(isoTimestamp, t, today);
+
+  it('reads as today for something added earlier the same day', () => {
+    expect(added('2025-06-15T08:30:00.000Z')).toBe('Added today');
+  });
+
+  it('treats a timestamp ahead of the reference day as today', () => {
+    expect(added('2025-06-16T08:30:00.000Z')).toBe('Added today');
+  });
+
+  it('names yesterday rather than counting it', () => {
+    expect(added('2025-06-14T08:30:00.000Z')).toBe('Added yesterday');
+  });
+
+  it('counts days within the first week', () => {
+    expect(added('2025-06-13T08:30:00.000Z')).toBe('Added 2 days ago');
+    expect(added('2025-06-10T08:30:00.000Z')).toBe('Added 5 days ago');
+  });
+
+  it('switches to weeks from seven days on', () => {
+    expect(added('2025-06-08T08:30:00.000Z')).toBe('Added 1 week ago');
+    expect(added('2025-06-01T08:30:00.000Z')).toBe('Added 2 weeks ago');
+  });
+
+  it('stays on weeks until a whole calendar month has passed', () => {
+    // 30 days back, but not yet a month by the calendar.
+    expect(added('2025-05-16T08:30:00.000Z')).toBe('Added 4 weeks ago');
+  });
+
+  it('switches to months on the calendar month boundary', () => {
+    expect(added('2025-05-15T08:30:00.000Z')).toBe('Added 1 month ago');
+    expect(added('2025-03-15T08:30:00.000Z')).toBe('Added 3 months ago');
+    expect(added('2024-06-16T08:30:00.000Z')).toBe('Added 11 months ago');
+  });
+
+  it('switches to years at twelve months', () => {
+    expect(added('2024-06-15T08:30:00.000Z')).toBe('Added 1 year ago');
+    expect(added('2023-01-05T08:30:00.000Z')).toBe('Added 2 years ago');
   });
 });

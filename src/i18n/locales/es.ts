@@ -72,6 +72,11 @@ const es: Messages = {
     },
     reviewAll: { one: 'Revisar %{count} garantía', other: 'Revisar las %{count} garantías' },
   },
+  recentProducts: {
+    title: 'Productos recientes',
+    seeAll: 'Ver todo',
+    seeAllHint: 'Ver todos los productos',
+  },
   products: {
     title: 'Mis productos',
     subtitle: 'Todos tus productos en un solo lugar',
@@ -279,6 +284,12 @@ const es: Messages = {
     version: 'Versión %{version}',
   },
   date: {
+    addedToday: 'Añadido hoy',
+    addedYesterday: 'Añadido ayer',
+    addedDaysAgo: { one: 'Añadido hace %{count} día', other: 'Añadido hace %{count} días' },
+    addedWeeksAgo: { one: 'Añadido hace %{count} semana', other: 'Añadido hace %{count} semanas' },
+    addedMonthsAgo: { one: 'Añadido hace %{count} mes', other: 'Añadido hace %{count} meses' },
+    addedYearsAgo: { one: 'Añadido hace %{count} año', other: 'Añadido hace %{count} años' },
     expiresToday: 'Vence hoy',
     expiresIn: { one: 'Vence en %{count} día', other: 'Vence en %{count} días' },
     expiredAgo: { one: 'Venció hace %{count} día', other: 'Venció hace %{count} días' },

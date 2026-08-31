@@ -75,6 +75,11 @@ const fr: Messages = {
     },
     reviewAll: { one: 'Examiner %{count} garantie', other: 'Examiner les %{count} garanties' },
   },
+  recentProducts: {
+    title: 'Produits récents',
+    seeAll: 'Tout voir',
+    seeAllHint: 'Voir tous les produits',
+  },
   products: {
     title: 'Mes produits',
     subtitle: 'Tous vos produits au même endroit',
@@ -283,6 +288,12 @@ const fr: Messages = {
     version: 'Version %{version}',
   },
   date: {
+    addedToday: 'Ajouté aujourd’hui',
+    addedYesterday: 'Ajouté hier',
+    addedDaysAgo: { one: 'Ajouté il y a %{count} jour', other: 'Ajouté il y a %{count} jours' },
+    addedWeeksAgo: { one: 'Ajouté il y a %{count} semaine', other: 'Ajouté il y a %{count} semaines' },
+    addedMonthsAgo: { one: 'Ajouté il y a %{count} mois', other: 'Ajouté il y a %{count} mois' },
+    addedYearsAgo: { one: 'Ajouté il y a %{count} an', other: 'Ajouté il y a %{count} ans' },
     expiresToday: "Expire aujourd'hui",
     expiresIn: { one: 'Expire dans %{count} jour', other: 'Expire dans %{count} jours' },
     expiredAgo: { one: 'Expiré il y a %{count} jour', other: 'Expiré il y a %{count} jours' },
