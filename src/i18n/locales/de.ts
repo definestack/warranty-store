@@ -36,7 +36,6 @@ const de: Messages = {
     active: 'Aktiv',
     expiringSoon: 'Läuft bald ab',
     expired: 'Abgelaufen',
-    allItems: 'Alle Artikel',
     upcoming: 'Bevorstehend',
   },
   home: {

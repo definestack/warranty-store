@@ -34,7 +34,6 @@ const en = {
     active: 'Active',
     expiringSoon: 'Expiring Soon',
     expired: 'Expired',
-    allItems: 'All Items',
     upcoming: 'Upcoming',
   },
   home: {

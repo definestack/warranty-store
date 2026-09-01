@@ -36,7 +36,6 @@ const es: Messages = {
     active: 'Activa',
     expiringSoon: 'Por vencer',
     expired: 'Vencida',
-    allItems: 'Todos los artículos',
     upcoming: 'Próxima',
   },
   home: {
