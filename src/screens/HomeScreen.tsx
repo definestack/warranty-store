@@ -15,6 +15,7 @@ import { useAppTheme } from '../theme/ThemeContext';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
 import { getWarrantyStatus } from '../utils/date';
 import { ALL_STATUSES } from '../utils/itemFilters';
+import type { StatusFilter } from '../utils/itemFilters';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
@@ -34,7 +35,10 @@ export default function HomeScreen({ navigation }: Props) {
     }, [loadItems])
   );
 
-  const overview = useMemo(() => {
+  // Each tile's key doubles as the status filter it opens the product list on.
+  const overview = useMemo<
+    { key: StatusFilter; label: string; value: number; color: string; bg: string }[]
+  >(() => {
     let active = 0;
     let expiring = 0;
     let expired = 0;
@@ -55,8 +59,8 @@ export default function HomeScreen({ navigation }: Props) {
       },
       { key: 'expired', label: t('status.expired'), value: expired, color: theme.danger, bg: theme.dangerBg },
       {
-        key: 'all',
-        label: t('status.allItems'),
+        key: ALL_STATUSES,
+        label: t('status.all'),
         value: allItems.length,
         color: theme.primary,
         bg: theme.primaryContainer,
@@ -74,12 +78,18 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('home.overview')}</Text>
         <View style={styles.overviewRow}>
           {overview.map((stat) => (
-            <View key={stat.key} style={[styles.statCard, { backgroundColor: stat.bg }]}>
+            <Pressable
+              key={stat.key}
+              style={[styles.statCard, { backgroundColor: stat.bg }]}
+              onPress={() => navigation.navigate('Products', { status: stat.key })}
+              accessibilityRole="button"
+              accessibilityLabel={`${stat.label}: ${stat.value}`}
+            >
               <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
               <Text style={[styles.statLabel, { color: stat.color }]} numberOfLines={1}>
                 {stat.label}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </View>
 

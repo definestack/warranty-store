@@ -20,9 +20,10 @@ export type AddEditSection =
 export type MainTabParamList = {
   Home: undefined;
   /**
-   * `status` seeds the product list's status chip, so Home's warranty-status card can open
-   * it already filtered. The screen clears the param once it has read it, leaving the tab
-   * to behave as it always has when reached from the tab bar.
+   * `status` seeds the product list's status chip, so Home can open it already filtered.
+   * Reading it also resets the category and sort controls, so the list shows that whole
+   * slice rather than an older filter narrowed further. The screen clears the param once it
+   * has read it, leaving the tab to behave as it always has when reached from the tab bar.
    */
   Products: { status?: StatusFilter } | undefined;
   Settings: undefined;

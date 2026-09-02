@@ -54,12 +54,16 @@ export default function ProductListScreen({ navigation, route }: Props) {
     }, [loadItems])
   );
 
-  // A caller (Home's warranty-status card) can ask for a status filter. Consume it and
-  // clear it, so returning to the tab later does not silently re-apply an old request.
+  // A caller on Home (an overview tile, or one of the cards) can ask for a status filter.
+  // Consume it and clear it, so returning to the tab later does not silently re-apply an old
+  // request. Category and sort reset with it: the caller is asking for the whole of that
+  // slice, not for it narrowed further by a filter left behind from an earlier visit.
   const requestedStatus = route.params?.status;
   useEffect(() => {
     if (!requestedStatus) return;
     setStatus(requestedStatus);
+    setCategory(ALL_CATEGORIES);
+    setSort(DEFAULT_PRODUCT_SORT);
     navigation.setParams({ status: undefined });
   }, [requestedStatus, navigation]);
 
