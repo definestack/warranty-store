@@ -24,11 +24,12 @@ import { useToastStore } from '../store/toastStore';
 import { useAppTheme, useThemePreference } from '../theme/ThemeContext';
 import type { ThemePreference } from '../theme/ThemeContext';
 import type { MainTabParamList } from '../types/navigation';
+import { getAppVersionInfo } from '../utils/appVersion';
 import { formatDate, nowIso } from '../utils/date';
 
 type Props = BottomTabScreenProps<MainTabParamList, 'Settings'>;
 
-const APP_VERSION = '0.5.2';
+const { versionName, buildNumber } = getAppVersionInfo();
 
 export default function SettingsScreen(_props: Props) {
   const theme = useAppTheme();
@@ -246,11 +247,11 @@ export default function SettingsScreen(_props: Props) {
 
         <SectionHeader title={t('settings.about')} />
         <Card style={styles.card}>
-          <SettingsRow
-            icon="information-circle-outline"
-            label={t('settings.aboutApp')}
-            subtitle={t('settings.version', { version: APP_VERSION })}
-          />
+          <SettingsRow icon="information-circle-outline" label={t('settings.aboutApp')} />
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <SettingsRow icon="pricetag-outline" label={t('settings.version')} trailingText={versionName} />
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <SettingsRow icon="construct-outline" label={t('settings.build')} trailingText={buildNumber} />
         </Card>
       </ScrollView>
 

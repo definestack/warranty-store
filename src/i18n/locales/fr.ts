@@ -286,7 +286,8 @@ const fr: Messages = {
     notificationsEnabled: 'Notifications activées',
     about: 'À propos',
     aboutApp: 'À propos de Warranty Store',
-    version: 'Version %{version}',
+    version: 'Version',
+    build: 'Build',
   },
   date: {
     addedToday: 'Ajouté aujourd’hui',
