@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import type { ExtendedWarrantyCardValues } from '../components/ExtendedWarrantyCard';
 import ExtendedWarrantyCard from '../components/ExtendedWarrantyCard';
+import FieldLabel from '../components/FieldLabel';
 import FormRow from '../components/FormRow';
 import ScreenHeader from '../components/ScreenHeader';
 import SelectModal from '../components/SelectModal';
@@ -1016,6 +1017,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         backIcon="close"
       />
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+        <Text style={[styles.requiredLegend, { color: theme.subtleText }]}>
+          {t('addEditItem.requiredLegend')}
+        </Text>
         <Pressable onPress={handleOpenPhotoSource}>
           <Card style={styles.photoCard}>
             {photoDraft ? (
@@ -1037,7 +1041,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         </Pressable>
 
         <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.itemName')}</Text>
+          <FieldLabel label={t('addEditItem.itemName')} required style={styles.fieldLabel} />
           <TextInput
             style={[
               styles.textBox,
@@ -1121,9 +1125,11 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           </View>
 
           <View style={styles.warrantyRow}>
-            <Text style={[styles.fieldLabel, styles.warrantyRowLabel, { color: theme.text }]}>
-              {t('addEditItem.warrantyMonths')}
-            </Text>
+            <FieldLabel
+              label={t('addEditItem.warrantyMonths')}
+              required
+              style={[styles.fieldLabel, styles.warrantyRowLabel]}
+            />
             <TextInput
               style={[
                 styles.warrantyMonthsInput,
@@ -1418,6 +1424,10 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  requiredLegend: {
+    fontSize: 12,
+    marginBottom: 4,
   },
   fieldCaption: {
     fontSize: 13,
