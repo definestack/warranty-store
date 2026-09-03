@@ -5,7 +5,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { TranslateFn } from '../i18n/i18n';
 import { useTranslation } from '../i18n/LocaleContext';
 import { useAppTheme } from '../theme/ThemeContext';
-import type { AppTheme } from '../theme/palette';
 import type { WarrantyItem } from '../types/warranty';
 import { DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
 import { formatDaysRemaining, getDaysRemaining } from '../utils/date';
@@ -32,26 +31,6 @@ interface HeadlineSegment {
  */
 function formatRowStatus(item: WarrantyItem, days: number, t: TranslateFn): string {
   return days > 0 ? t('itemDetail.daysLeft', { count: days }) : formatDaysRemaining(item.coverageEndDate, t);
-}
-
-/** The calendar illustration, badged with the state it is reporting on. */
-function CalendarBadge({
-  theme,
-  badge,
-  badgeColor,
-}: {
-  theme: AppTheme;
-  badge: keyof typeof Ionicons.glyphMap;
-  badgeColor: string;
-}) {
-  return (
-    <View style={styles.illustration}>
-      <Ionicons name="calendar" size={44} color={theme.primary} />
-      <View style={[styles.illustrationBadge, { backgroundColor: theme.card }]}>
-        <Ionicons name={badge} size={18} color={badgeColor} />
-      </View>
-    </View>
-  );
 }
 
 /**
@@ -84,7 +63,6 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
               {t('warrantyStatus.caughtUpSubtitle')}
             </Text>
           </View>
-          <CalendarBadge theme={theme} badge="checkmark-circle" badgeColor={theme.success} />
         </View>
       </Surface>
     );
@@ -121,8 +99,8 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
   const leadIcon = leadSegment.key === 'expired' ? 'alert-circle-outline' : 'time-outline';
 
   // The footer's colour alone: expiring-soon items are the softer warning, so their colour
-  // leads it whenever any of them is counted. The headline icon and the calendar badge
-  // both follow severity instead, and so stay on danger while anything has expired.
+  // leads it whenever any of them is counted. The headline icon follows severity instead,
+  // and so stays on danger while anything has expired.
   const accent = expiringCount > 0 ? theme.warning : theme.danger;
   const footerLabel = mixed
     ? t('warrantyStatus.reviewAll', { count: attentionCount })
@@ -151,7 +129,6 @@ export default function WarrantyStatusCard({ items, onSelectItem, onViewAll }: W
             {t(expiringCount > 0 ? 'warrantyStatus.attentionSubtitle' : 'warrantyStatus.expiredSubtitle')}
           </Text>
         </View>
-        <CalendarBadge theme={theme} badge="warning" badgeColor={leadSegment.color} />
       </View>
 
       <View style={[styles.list, { borderColor: theme.border }]}>
@@ -243,20 +220,6 @@ const styles = StyleSheet.create({
   },
   subline: {
     fontSize: 13,
-  },
-  // A calendar with a small state badge tucked into its lower-right corner.
-  illustration: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  illustrationBadge: {
-    position: 'absolute',
-    right: 0,
-    bottom: 2,
-    borderRadius: 999,
-    padding: 1,
   },
   list: {
     marginTop: 14,

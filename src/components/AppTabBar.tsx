@@ -6,8 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Surface from './Surface';
 import { useTranslation } from '../i18n/LocaleContext';
+import { useItemsStore } from '../store/itemsStore';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { RootStackParamList } from '../types/navigation';
+import { shouldShowAddFab } from '../utils/addFab';
 
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Home: { active: 'home', inactive: 'home-outline' },
@@ -19,6 +21,8 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const itemCount = useItemsStore((store) => store.items.length);
+  const showAddFab = shouldShowAddFab(state.routes[state.index].name, itemCount);
 
   const handleAddPress = () => {
     // navigation here is the bottom-tab navigator; AddEditItem lives one level up
@@ -70,14 +74,16 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
         );
       })}
 
-      <Pressable
-        onPress={handleAddPress}
-        accessibilityRole="button"
-        accessibilityLabel={t('nav.addItem')}
-        style={[styles.fab, { backgroundColor: theme.primary }]}
-      >
-        <Ionicons name="add" size={28} color={theme.primaryText} />
-      </Pressable>
+      {showAddFab ? (
+        <Pressable
+          onPress={handleAddPress}
+          accessibilityRole="button"
+          accessibilityLabel={t('nav.addItem')}
+          style={[styles.fab, { backgroundColor: theme.primary }]}
+        >
+          <Ionicons name="add" size={28} color={theme.primaryText} />
+        </Pressable>
+      ) : null}
     </Surface>
   );
 }

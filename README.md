@@ -1,8 +1,8 @@
-# Warranty Tracker
+# Warranty Store
 
 A privacy-first Android app for tracking product warranties and invoice receipts.
 
-Warranty Tracker helps users remember warranty expiry dates, store invoice images securely on the device, and receive reminders before warranties expire. The initial release is fully offline. Cloud backup to the user’s Google Drive is planned as a premium feature in a later phase.
+Warranty Store helps users remember warranty expiry dates, store invoice images securely on the device, and receive reminders before warranties expire. The initial release is fully offline. Cloud backup to the user’s Google Drive is planned as a premium feature in a later phase.
 
 ---
 

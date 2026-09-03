@@ -6,6 +6,7 @@ import { useTranslation } from '../i18n/LocaleContext';
 import { useAppTheme } from '../theme/ThemeContext';
 import type { ItemDocumentKind, WarrantyDurationUnit } from '../types/warranty';
 import Card from './Card';
+import FieldLabel from './FieldLabel';
 
 /** The editable fields of one extended warranty, as the edit screen holds them. */
 export interface ExtendedWarrantyCardValues {
@@ -98,7 +99,7 @@ export default function ExtendedWarrantyCard({
       </View>
 
       <View style={styles.field}>
-        <Text style={[styles.fieldLabel, { color: theme.text }]}>{t('addEditItem.duration')}</Text>
+        <FieldLabel label={t('addEditItem.duration')} required style={styles.fieldLabel} />
         <View style={styles.splitRow}>
           <TextInput
             style={[
@@ -175,9 +176,11 @@ export default function ExtendedWarrantyCard({
       </Text>
 
       <View style={styles.field}>
-        <Text style={[styles.fieldLabel, { color: theme.text }]}>
-          {t('addEditItem.cost')} <Text style={{ color: theme.subtleText }}>{t('addEditItem.extendedWarrantyOptional')}</Text>
-        </Text>
+        <FieldLabel
+          label={t('addEditItem.cost')}
+          suffix={t('addEditItem.extendedWarrantyOptional')}
+          style={styles.fieldLabel}
+        />
         <View
           style={[
             styles.textBoxRow,
@@ -203,9 +206,11 @@ export default function ExtendedWarrantyCard({
       </View>
 
       <View style={styles.field}>
-        <Text style={[styles.fieldLabel, { color: theme.text }]}>
-          {t('addEditItem.notes')} <Text style={{ color: theme.subtleText }}>{t('addEditItem.extendedWarrantyOptional')}</Text>
-        </Text>
+        <FieldLabel
+          label={t('addEditItem.notes')}
+          suffix={t('addEditItem.extendedWarrantyOptional')}
+          style={styles.fieldLabel}
+        />
         <TextInput
           style={[
             styles.textBox,

@@ -117,7 +117,7 @@ export default function HomeScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('AddEditItem', {})}
             >
               <Ionicons name="add" size={18} color={theme.primaryText} />
-              <Text style={[styles.emptyCtaText, { color: theme.primaryText }]}>{t('home.addItem')}</Text>
+              <Text style={[styles.emptyCtaText, { color: theme.primaryText }]}>{t('home.addProduct')}</Text>
             </Pressable>
           </View>
         ) : null}
