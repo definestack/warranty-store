@@ -55,7 +55,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "version:bump": "node scripts/update-version.js"
   },
   "private": true
 }

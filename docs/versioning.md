@@ -37,4 +37,40 @@ It is updated by `scripts/update-version.js` (see `npm run version:bump`), which
 2. Computes the `YYDOYBOD` value for today.
 3. If today's computed value is not greater than the stored value (e.g. a second build
    on the same day), increments the `BOD` segment instead.
-4. Writes the new value back to `version-code.txt` and syncs it into `app.json`.
+4. Writes the new value back to `version-code.txt` and updates `android/app/build.gradle`
+   with the new `versionCode` and `versionName`.
+
+## Usage
+
+Before a release build, run:
+
+```bash
+npm run version:bump
+```
+
+This will:
+- Calculate today's version code using YYDOYBOD format
+- Ensure strict monotonic increase (never goes backward)
+- Increment `BOD` for multiple builds on the same day
+- Update `version-code.txt` with the new code
+- Update `android/app/build.gradle` to match
+
+Example workflow:
+
+```bash
+# Before first build of the day
+npm run version:bump
+
+# Creates new build with auto-incremented version code
+npm run android
+```
+
+For multiple builds on the same day, run `npm run version:bump` before each one — it will increment `BOD` automatically.
+
+## Testing
+
+The version code calculation is tested in `scripts/update-version.test.js`:
+
+```bash
+npm test -- scripts/update-version.test.js
+```
