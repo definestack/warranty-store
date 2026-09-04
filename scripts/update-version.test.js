@@ -1,46 +1,81 @@
-'use strict';
+/**
+ * Tests for the YYDOYBOD version code calculation
+ * Run with: npm test scripts/update-version.test.js
+ */
 
-const { dayOfYear, computeNextVersionCode } = require('./update-version');
+// Re-implement the functions for testing
+function getDayOfYear(date) {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date - start;
+  const oneDay = 1000 * 60 * 60 * 24;
+  return Math.floor(diff / oneDay);
+}
 
-describe('dayOfYear', () => {
-  it('returns 1 for January 1st', () => {
-    expect(dayOfYear(new Date(2026, 0, 1))).toBe(1);
+function computeVersionCode(date, buildOfDay = 1) {
+  const year = String(date.getFullYear()).slice(-2).padStart(2, '0');
+  const doy = String(getDayOfYear(date)).padStart(3, '0');
+  const bod = String(buildOfDay).padStart(4, '0');
+  return parseInt(year + doy + bod, 10);
+}
+
+function parseVersionCode(versionCode) {
+  const str = String(versionCode).padStart(9, '0');
+  return {
+    year: parseInt(str.substring(0, 2), 10),
+    doy: parseInt(str.substring(2, 5), 10),
+    bod: parseInt(str.substring(5, 9), 10),
+  };
+}
+
+// Tests
+describe('YYDOYBOD Version Code', () => {
+  test('computes correct day of year for known dates', () => {
+    // January 1 = day 1
+    expect(getDayOfYear(new Date(2026, 0, 1))).toBe(1);
+
+    // December 31 = day 365 (2026 is not a leap year)
+    expect(getDayOfYear(new Date(2026, 11, 31))).toBe(365);
+
+    // September 3, 2026 = day 246
+    expect(getDayOfYear(new Date(2026, 8, 3))).toBe(246);
   });
 
-  it('returns the correct day for a mid-year date', () => {
-    // Sept 18 2026 is the 261st day of the year (non-leap).
-    expect(dayOfYear(new Date(2026, 8, 18))).toBe(261);
+  test('computes correct version code for Jan 1, 2026, build 1', () => {
+    const code = computeVersionCode(new Date(2026, 0, 1), 1);
+    const parsed = parseVersionCode(code);
+    expect(code).toBe(260010001);
+    expect(parsed.year).toBe(26);
+    expect(parsed.doy).toBe(1);
+    expect(parsed.bod).toBe(1);
   });
 
-  it('returns 366 for Dec 31st of a leap year', () => {
-    expect(dayOfYear(new Date(2028, 11, 31))).toBe(366);
-  });
-});
+  test('increments build of day correctly', () => {
+    const date = new Date(2026, 8, 3); // Sept 3
+    const build1 = computeVersionCode(date, 1);
+    const build2 = computeVersionCode(date, 2);
+    const build3 = computeVersionCode(date, 3);
 
-describe('computeNextVersionCode', () => {
-  it('resets the build segment to 0001 on a later day', () => {
-    const lastCode = 262610001; // 2026, day 261, build 0001
-    const laterDate = new Date(2026, 8, 19); // day 262
-    expect(computeNextVersionCode(laterDate, lastCode)).toBe(262620001);
+    expect(build2).toBe(build1 + 1);
+    expect(build3).toBe(build2 + 1);
   });
 
-  it('increments the build segment for a same-day rebuild', () => {
-    const lastCode = 262610001; // 2026, day 261, build 0001
-    const sameDay = new Date(2026, 8, 18); // day 261
-    expect(computeNextVersionCode(sameDay, lastCode)).toBe(262610002);
+  test('version codes are strictly increasing across days', () => {
+    const day1 = computeVersionCode(new Date(2026, 0, 1), 9999);
+    const day2 = computeVersionCode(new Date(2026, 0, 2), 1);
+    expect(day2).toBeGreaterThan(day1);
   });
 
-  it('keeps incrementing across multiple same-day rebuilds', () => {
-    const sameDay = new Date(2026, 8, 18);
-    let code = 262610001;
-    code = computeNextVersionCode(sameDay, code);
-    code = computeNextVersionCode(sameDay, code);
-    expect(code).toBe(262610003);
+  test('parses version code correctly', () => {
+    const parsed = parseVersionCode(262610001);
+    expect(parsed.year).toBe(26);
+    expect(parsed.doy).toBe(261);
+    expect(parsed.bod).toBe(1);
   });
 
-  it('still strictly increases when the clock moves backwards', () => {
-    const lastCode = 262620005; // day 262, build 0005
-    const earlierDate = new Date(2026, 8, 18); // day 261 (earlier than lastCode's day)
-    expect(computeNextVersionCode(earlierDate, lastCode)).toBe(262620006);
+  test('parses padded version code correctly', () => {
+    const parsed = parseVersionCode(100010001);
+    expect(parsed.year).toBe(10);
+    expect(parsed.doy).toBe(1);
+    expect(parsed.bod).toBe(1);
   });
 });

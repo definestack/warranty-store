@@ -280,7 +280,8 @@ const en = {
     notificationsEnabled: 'Notifications enabled',
     about: 'About',
     aboutApp: 'About Warranty Store',
-    version: 'Version %{version}',
+    version: 'Version',
+    build: 'Build',
   },
   date: {
     addedToday: 'Added today',
