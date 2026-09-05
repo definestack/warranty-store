@@ -1274,7 +1274,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         </View>
       </ScrollView>
 
-      <Surface style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <Surface style={[styles.saveBar, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <Pressable
           onPress={handleSave}
           disabled={!isFormValid || saving}

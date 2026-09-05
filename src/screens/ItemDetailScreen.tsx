@@ -379,7 +379,7 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
         ) : null}
       </ScrollView>
 
-      <Surface style={[styles.actionBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <Surface style={[styles.actionBar, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <Pressable
           style={[styles.actionButton, { backgroundColor: theme.primaryContainer }]}
           onPress={() => openEditor()}
