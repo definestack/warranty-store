@@ -60,7 +60,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
           >
-            <View style={[styles.pill, isFocused && { backgroundColor: theme.tabActiveBg }]}>
+            <View style={[styles.pill, isFocused && { backgroundColor: theme.tabActiveBg, borderRadius: 16 }]}>
               <Ionicons name={isFocused ? icons.active : icons.inactive} size={22} color={color} />
             </View>
             <Text
