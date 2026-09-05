@@ -268,9 +268,6 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
       <ScreenHeader
         title={t('itemDetail.title')}
         onBack={() => navigation.goBack()}
-        rightIcon="ellipsis-vertical"
-        rightFilled={false}
-        onRightPress={() => openEditor()}
       />
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.summaryCard}>
