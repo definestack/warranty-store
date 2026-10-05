@@ -11,10 +11,13 @@ describe('shouldShowAddFab', () => {
     expect(shouldShowAddFab('Home', 1)).toBe(true);
   });
 
-  it('keeps the FAB on other tabs even with nothing tracked', () => {
-    // Products and Settings have no add button of their own, so the FAB is the only
-    // way in from there.
+  it('keeps the FAB on Products even with nothing tracked', () => {
+    // Products has no add button of its own, so the FAB is the only way in from there.
     expect(shouldShowAddFab('Products', 0)).toBe(true);
-    expect(shouldShowAddFab('Settings', 0)).toBe(true);
+  });
+
+  it('hides the FAB on Settings', () => {
+    expect(shouldShowAddFab('Settings', 0)).toBe(false);
+    expect(shouldShowAddFab('Settings', 5)).toBe(false);
   });
 });

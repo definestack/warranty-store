@@ -30,6 +30,7 @@ import { formatDate, nowIso } from '../utils/date';
 type Props = BottomTabScreenProps<MainTabParamList, 'Settings'>;
 
 const { versionName, buildNumber } = getAppVersionInfo();
+const versionDisplay = `${versionName} (Build ${buildNumber})`;
 
 export default function SettingsScreen(_props: Props) {
   const theme = useAppTheme();
@@ -249,9 +250,7 @@ export default function SettingsScreen(_props: Props) {
         <Card style={styles.card}>
           <SettingsRow icon="information-circle-outline" label={t('settings.aboutApp')} />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <SettingsRow icon="pricetag-outline" label={t('settings.version')} trailingText={versionName} />
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <SettingsRow icon="construct-outline" label={t('settings.build')} trailingText={buildNumber} />
+          <SettingsRow icon="pricetag-outline" label={t('settings.version')} trailingText={versionDisplay} />
         </Card>
       </ScrollView>
 
