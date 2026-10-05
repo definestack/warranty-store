@@ -57,7 +57,7 @@ export interface BackupPayload {
 export interface BackupArchiveResult {
   uri: string;
   itemCount: number;
-  /** How many image files were left out because they could not be read. */
+  /** How many files were left out because they could not be read. */
   skippedFileCount: number;
 }
 
@@ -66,7 +66,7 @@ export interface CreateBackupOptions {
   skipMissingFiles?: boolean;
 }
 
-/** An image referenced by an item whose file could not be read at export time. */
+/** A file referenced by an item whose file could not be read at export time. */
 export interface MissingBackupFile {
   itemId: string;
   itemName: string;
@@ -75,7 +75,7 @@ export interface MissingBackupFile {
 }
 
 /**
- * Raised when an item references an image file that is gone or unreadable. Thrown
+ * Raised when an item references a file that is gone or unreadable. Thrown
  * before any archive is written, so the user can decide whether to export without
  * those files rather than silently losing them or losing the whole backup.
  */
@@ -83,7 +83,7 @@ export class BackupMissingFilesError extends Error {
   readonly missingFiles: MissingBackupFile[];
 
   constructor(missingFiles: MissingBackupFile[]) {
-    super(`${missingFiles.length} referenced image file(s) could not be read`);
+    super(`${missingFiles.length} referenced file(s) could not be read`);
     this.name = 'BackupMissingFilesError';
     this.missingFiles = missingFiles;
     // Restores the prototype chain so `instanceof` still works after transpilation.

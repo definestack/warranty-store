@@ -177,6 +177,19 @@ describe('getDocumentsForExtendedWarranties', () => {
 });
 
 describe('saveDocumentsForScope', () => {
+  it('persists the original file name of a document and reads it back', async () => {
+    const item = await makeItem();
+
+    await saveDocumentsForScope({ itemId: item.id, kind: 'invoice' }, [
+      { id: 'temp-pdf', uri: 'file:///invoice-pdf.pdf', fileName: 'Receipt-2026.pdf', isPersisted: false },
+      { id: 'temp-img', uri: 'file:///invoice-img.jpg', isPersisted: false },
+    ]);
+
+    const { invoice } = await getDocumentsForItem(item.id);
+    expect(invoice[0]).toMatchObject({ uri: 'file:///invoice-pdf.pdf', fileName: 'Receipt-2026.pdf' });
+    expect(invoice[1].fileName).toBeUndefined();
+  });
+
   it('inserts new documents of the given kind with sequential sort order', async () => {
     const item = await makeItem();
 

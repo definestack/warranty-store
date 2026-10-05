@@ -629,3 +629,93 @@ describe('extended cover on import', () => {
     expect(schedules.filter((entry) => entry.extendedWarrantyId === 'ew-1')).toHaveLength(3);
   });
 });
+
+describe('PDF documents on import', () => {
+  const PDF_BYTES = Buffer.from('%PDF-1.4 fake pdf bytes').toString('base64');
+
+  function pdfDocument(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'pdf-1',
+      itemId: 'item-1',
+      uri: 'invoices/pdf-1.pdf',
+      kind: 'invoice',
+      fileName: 'Bill.pdf',
+      sortOrder: 0,
+      createdAt: '2026-01-15T00:00:00.000Z',
+      ...overrides,
+    };
+  }
+
+  it('restores a PDF byte-for-byte with its .pdf extension and original file name', async () => {
+    await writeBackupZip(makePayload([makeBackupItem({ invoiceImages: [pdfDocument()] })]), {
+      'invoices/pdf-1.pdf': PDF_BYTES,
+    });
+    const loaded = await loadBackupArchive(BACKUP_URI);
+
+    await applyBackup(loaded, t);
+
+    const [item] = await getAllItems();
+    const [restored] = item.invoiceDocuments;
+    expect(restored.uri).toBe('file:///mock-documents/invoices/invoice-pdf-1.pdf');
+    expect(restored.fileName).toBe('Bill.pdf');
+    expect(await readAsStringAsync(restored.uri, { encoding: 'base64' })).toBe(PDF_BYTES);
+  });
+
+  it('keeps mixed image and PDF documents in their exported order within a section', async () => {
+    const documents = [
+      { id: 'img-1', uri: 'invoices/img-1.jpg', kind: 'warranty', sortOrder: 0, createdAt: '2026-01-15T00:00:00.000Z' },
+      pdfDocument({ id: 'pdf-2', uri: 'invoices/pdf-2.pdf', kind: 'warranty', sortOrder: 1 }),
+    ];
+    await writeBackupZip(makePayload([makeBackupItem({ invoiceImages: documents })]), {
+      'invoices/img-1.jpg': IMAGE_BASE64,
+      'invoices/pdf-2.pdf': PDF_BYTES,
+    });
+    const loaded = await loadBackupArchive(BACKUP_URI);
+
+    await applyBackup(loaded, t);
+
+    const [item] = await getAllItems();
+    expect(item.warrantyDocuments.map((document) => document.uri)).toEqual([
+      'file:///mock-documents/invoices/invoice-img-1.jpg',
+      'file:///mock-documents/invoices/invoice-pdf-2.pdf',
+    ]);
+  });
+
+  it('restores a PDF to the extended warranty it was exported from', async () => {
+    const extended = {
+      id: 'ew-1',
+      itemId: 'item-1',
+      durationValue: 2,
+      durationUnit: 'years',
+      startsOn: '2027-01-16',
+      endsOn: '2029-01-15',
+      sortOrder: 0,
+      documents: [pdfDocument({ id: 'pdf-ew', uri: 'invoices/pdf-ew.pdf', kind: 'warranty' })],
+      createdAt: '2026-01-15T00:00:00.000Z',
+      updatedAt: '2026-01-15T00:00:00.000Z',
+    };
+    await writeBackupZip(makePayload([makeBackupItem({ extendedWarranties: [extended] })]), {
+      'invoices/pdf-ew.pdf': PDF_BYTES,
+    });
+    const loaded = await loadBackupArchive(BACKUP_URI);
+
+    await applyBackup(loaded, t);
+
+    const [item] = await getAllItems();
+    expect(item.invoiceDocuments).toHaveLength(0);
+    expect(item.warrantyDocuments).toHaveLength(0);
+    const [restoredExtended] = item.extendedWarranties;
+    expect(restoredExtended.warrantyDocuments[0].uri).toBe(
+      'file:///mock-documents/invoices/invoice-pdf-ew.pdf'
+    );
+  });
+
+  it('reads an archived file name, and leaves it absent for an image-only archive', () => {
+    const payload = parseBackupPayload(
+      JSON.stringify(makePayload([makeBackupItem({ invoiceImages: [pdfDocument(), { ...pdfDocument({ id: 'img' }), uri: 'invoices/img.jpg', fileName: undefined }] })]))
+    );
+
+    expect(payload.items[0].invoiceDocuments[0].fileName).toBe('Bill.pdf');
+    expect(payload.items[0].invoiceDocuments[1].fileName).toBeUndefined();
+  });
+});

@@ -350,3 +350,90 @@ describe('extended cover in the archive', () => {
     expect(payload.items[0].extendedWarranties).toEqual([]);
   });
 });
+
+describe('PDF documents in the archive', () => {
+  const PDF_URI = 'file:///mock-documents/invoices/invoice-pdf-1.pdf';
+  const PDF_BYTES = Buffer.from('%PDF-1.4 fake pdf bytes').toString('base64');
+
+  async function readArchive(uri: string) {
+    const zip = await JSZip.loadAsync(await readAsStringAsync(uri, { encoding: 'base64' }), {
+      base64: true,
+    });
+    const data = JSON.parse(await zip.file('data.json')!.async('string'));
+    return { zip, data };
+  }
+
+  it('bundles a PDF byte-for-byte under a .pdf path, carrying its kind and original name', async () => {
+    const item = await createItem(baseItem);
+    __setFileContent(PDF_URI, PDF_BYTES);
+    await saveDocumentsForScope({ itemId: item.id, kind: 'warranty' }, [
+      { id: 'draft-pdf', uri: PDF_URI, fileName: 'Warranty card.pdf', isPersisted: false },
+    ]);
+
+    const { uri } = await createBackupArchive();
+    const { zip, data } = await readArchive(uri);
+
+    const [entry] = data.items[0].invoiceImages;
+    expect(entry).toMatchObject({ kind: 'warranty', fileName: 'Warranty card.pdf' });
+    expect(entry.uri).toMatch(/^invoices\/.+\.pdf$/);
+    expect(await zip.file(entry.uri)!.async('base64')).toBe(PDF_BYTES);
+  });
+
+  it('bundles a PDF attached to an extended warranty under that extended warranty', async () => {
+    const item = await createItem(baseItem);
+    await saveExtendedWarrantiesForItem(item.id, [
+      {
+        id: 'ew-pdf',
+        provider: 'ABC Protection',
+        durationValue: 2,
+        durationUnit: 'years',
+        startsOn: '2027-01-16',
+        isPersisted: false,
+      },
+    ]);
+    __setFileContent(PDF_URI, PDF_BYTES);
+    await saveDocumentsForScope({ itemId: item.id, extendedWarrantyId: 'ew-pdf', kind: 'invoice' }, [
+      { id: 'draft-ew-pdf', uri: PDF_URI, fileName: 'Extended bill.pdf', isPersisted: false },
+    ]);
+
+    const { uri } = await createBackupArchive();
+    const { zip, data } = await readArchive(uri);
+
+    const [entry] = data.items[0].extendedWarranties[0].documents;
+    expect(entry).toMatchObject({ kind: 'invoice', fileName: 'Extended bill.pdf' });
+    expect(await zip.file(entry.uri)!.async('base64')).toBe(PDF_BYTES);
+  });
+
+  it('reports a PDF that can no longer be read, as a document', async () => {
+    const item = await createItem(baseItem);
+    await saveDocumentsForScope({ itemId: item.id, kind: 'invoice' }, [
+      { id: 'draft-gone', uri: PDF_URI, isPersisted: false },
+    ]);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      await expect(createBackupArchive()).rejects.toMatchObject({
+        missingFiles: [expect.objectContaining({ kind: 'document', uri: PDF_URI })],
+      });
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('exports without an unreadable PDF once the user opts to continue', async () => {
+    const item = await createItem(baseItem);
+    await saveDocumentsForScope({ itemId: item.id, kind: 'invoice' }, [
+      { id: 'draft-gone-2', uri: PDF_URI, isPersisted: false },
+    ]);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await createBackupArchive({ skipMissingFiles: true });
+      expect(result.skippedFileCount).toBe(1);
+      const { data } = await readArchive(result.uri);
+      expect(data.items[0].invoiceImages).toHaveLength(1);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+});

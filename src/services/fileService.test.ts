@@ -16,8 +16,9 @@ import {
   deleteDocumentFile,
   deleteItemPhotoFile,
   saveDocumentImage,
+  saveDocumentPdf,
   saveItemPhoto,
-  writeDocumentImageFile,
+  writeDocumentFile,
   writeItemPhotoFile,
 } from './fileService';
 
@@ -133,21 +134,59 @@ describe('saveDocumentImage', () => {
   });
 });
 
-describe('writeDocumentImageFile', () => {
-  it('writes the decoded image into app-private invoice storage', async () => {
+describe('saveDocumentPdf', () => {
+  it('copies the PDF byte-for-byte into the invoices directory with a .pdf extension', async () => {
+    const copySpy = jest.spyOn(legacyFileSystem, 'copyAsync');
+
+    const savedUri = await saveDocumentPdf('file:///picker-tmp/bill.pdf');
+
+    expect(savedUri).toMatch(/^file:\/\/\/mock-documents\/invoices\/invoice-[0-9a-f-]+\.pdf$/);
+    expect(copySpy).toHaveBeenCalledWith({ from: 'file:///picker-tmp/bill.pdf', to: savedUri });
+    expect((await getInfoAsync(savedUri)).exists).toBe(true);
+
+    copySpy.mockRestore();
+  });
+
+  it('never runs a PDF through the image compressor', async () => {
+    const manipulate = ImageManipulator.manipulate as jest.Mock;
+    manipulate.mockClear();
+
+    await saveDocumentPdf('file:///picker-tmp/bill.pdf');
+
+    expect(manipulate).not.toHaveBeenCalled();
+  });
+
+  it('still compresses an image saved alongside it', async () => {
+    const manipulate = ImageManipulator.manipulate as jest.Mock;
+    manipulate.mockClear();
+
+    await saveDocumentImage('file:///camera-tmp/large.jpg');
+
+    expect(manipulate).toHaveBeenCalled();
+  });
+});
+
+describe('writeDocumentFile', () => {
+  it('writes the decoded file into app-private invoice storage', async () => {
     const base64 = Buffer.from('restored-image-bytes').toString('base64');
 
-    const uri = await writeDocumentImageFile('invoice-img-1.jpg', base64);
+    const uri = await writeDocumentFile('invoice-img-1.jpg', base64);
 
     expect(uri).toBe('file:///mock-documents/invoices/invoice-img-1.jpg');
     expect((await getInfoAsync(uri)).exists).toBe(true);
     expect(await readAsStringAsync(uri, { encoding: 'base64' })).toBe(base64);
   });
 
+  it('keeps a restored PDF with its .pdf extension', async () => {
+    const uri = await writeDocumentFile('invoice-doc-9.pdf', 'AAAA');
+
+    expect(uri).toBe('file:///mock-documents/invoices/invoice-doc-9.pdf');
+  });
+
   it('creates the invoices directory when it does not exist yet', async () => {
     const makeDirSpy = jest.spyOn(legacyFileSystem, 'makeDirectoryAsync');
 
-    await writeDocumentImageFile('invoice-img-2.jpg', 'AAAA');
+    await writeDocumentFile('invoice-img-2.jpg', 'AAAA');
 
     expect(makeDirSpy).toHaveBeenCalledWith('file:///mock-documents/invoices/', {
       intermediates: true,

@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   ADD_BRAND_AND_PRICE_COLUMNS,
+  ADD_DOCUMENT_FILE_NAME_COLUMN,
   ADD_DOCUMENT_KIND_COLUMN,
   ADD_EXTENDED_WARRANTY_SCOPE_COLUMNS,
   ADD_PHOTO_URI_COLUMN,
@@ -98,6 +99,13 @@ export const migrations: Migration[] = [
     name: 'add_extended_warranty_scope_columns',
     up: async (db) => {
       await db.execAsync(ADD_EXTENDED_WARRANTY_SCOPE_COLUMNS);
+    },
+  },
+  {
+    version: 10,
+    name: 'add_file_name_to_invoice_images',
+    up: async (db) => {
+      await db.execAsync(ADD_DOCUMENT_FILE_NAME_COLUMN);
     },
   },
 ];
