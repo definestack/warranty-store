@@ -99,3 +99,12 @@ export const ADD_EXTENDED_WARRANTY_SCOPE_COLUMNS = `
   ALTER TABLE invoice_images ADD COLUMN extended_warranty_id TEXT;
   ALTER TABLE notification_schedules ADD COLUMN extended_warranty_id TEXT;
 `;
+
+/**
+ * The name a document was picked under, shown on PDF tiles where a thumbnail would
+ * otherwise say nothing. NULL for every row written before this column existed and for
+ * images, which show their picture instead.
+ */
+export const ADD_DOCUMENT_FILE_NAME_COLUMN = `
+  ALTER TABLE invoice_images ADD COLUMN file_name TEXT;
+`;

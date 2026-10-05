@@ -396,6 +396,18 @@ describe('insertImportedItems', () => {
     });
   });
 
+  it('preserves the original file name of imported PDF documents', async () => {
+    await insertImportedItems([
+      {
+        ...imported,
+        invoiceDocuments: [{ ...imported.invoiceDocuments[0], uri: 'file:///x.pdf', fileName: 'Bill.pdf' }],
+      },
+    ]);
+
+    const stored = await getItemById('imported-1');
+    expect(stored?.invoiceDocuments[0]).toMatchObject({ uri: 'file:///x.pdf', fileName: 'Bill.pdf' });
+  });
+
   it('inserts the accompanying document rows, preserving each kind', async () => {
     await insertImportedItems([imported]);
 

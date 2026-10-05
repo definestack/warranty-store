@@ -18,6 +18,7 @@ interface ItemDocumentRow {
   created_at: string;
   kind: string;
   extended_warranty_id: string | null;
+  file_name: string | null;
 }
 
 /** Documents pre-grouped by kind, each list ordered densely from zero within its kind. */
@@ -52,6 +53,7 @@ function mapRowToDocument(row: ItemDocumentRow): ItemDocument {
     kind: parseKind(row.kind),
     extendedWarrantyId: row.extended_warranty_id ?? undefined,
     uri: row.uri,
+    fileName: row.file_name ?? undefined,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
   };
@@ -145,6 +147,7 @@ export async function getDocumentsForExtendedWarranties(
 export interface ItemDocumentDraft {
   id: string;
   uri: string;
+  fileName?: string;
   isPersisted: boolean;
 }
 
@@ -191,15 +194,16 @@ export async function saveDocumentsForScope(
       } else {
         await db.runAsync(
           `INSERT INTO invoice_images
-            (id, item_id, uri, sort_order, created_at, kind, extended_warranty_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            (id, item_id, uri, sort_order, created_at, kind, extended_warranty_id, file_name)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           Crypto.randomUUID(),
           section.itemId,
           document.uri,
           index,
           nowIso(),
           section.kind,
-          scopeId
+          scopeId,
+          document.fileName ?? null
         );
       }
     }

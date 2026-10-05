@@ -83,3 +83,8 @@ declare module 'expo-file-system/legacy' {
   export function __setWriteFailure(pattern: string | null): void;
   export function __resetMockFileSystem(): void;
 }
+
+/** Mirrors the content:// URI a file provider would expose for a private file. */
+export async function getContentUriAsync(uri: string): Promise<string> {
+  return uri.replace('file://', 'content://mock-provider');
+}

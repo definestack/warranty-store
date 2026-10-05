@@ -11,6 +11,7 @@ Warranty Store helps users remember warranty expiry dates, store invoice images 
 * Add and manage purchased items
 * Track warranty expiry dates
 * Attach invoice photos from camera or gallery
+* Attach PDF documents (invoices and warranty papers) from device storage, open them in a PDF viewer
 * Store all data locally on the device
 * Search and filter items
 * View items expiring soon
@@ -147,7 +148,7 @@ splash at all.
 
 ## Database
 
-The app uses a local SQLite database. Invoice images are stored in the app’s private file storage, and only the file path is saved in the database.
+The app uses a local SQLite database. Invoice images and PDF documents are stored in the app’s private file storage, and only the file path (plus the original file name, for PDFs) is saved in the database. Images are compressed before saving; PDFs are copied unchanged.
 
 ---
 

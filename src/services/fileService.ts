@@ -114,7 +114,19 @@ export async function saveDocumentImage(sourceUri: string): Promise<string> {
   return saveImageInto(DOCUMENTS_DIR, 'invoice', sourceUri);
 }
 
-export async function writeDocumentImageFile(fileName: string, base64: string): Promise<string> {
+/**
+ * Copies a picked PDF into app-private storage byte-for-byte. Never compressed: the image
+ * pipeline would re-encode it as a JPEG and destroy it.
+ */
+export async function saveDocumentPdf(sourceUri: string): Promise<string> {
+  await ensureDirExists(DOCUMENTS_DIR);
+  const destinationUri = `${DOCUMENTS_DIR}invoice-${Crypto.randomUUID()}.pdf`;
+  await copyAsync({ from: sourceUri, to: destinationUri });
+  return destinationUri;
+}
+
+/** Writes a restored document under its archived name, whatever its type (image or PDF). */
+export async function writeDocumentFile(fileName: string, base64: string): Promise<string> {
   return writeImageInto(DOCUMENTS_DIR, fileName, base64);
 }
 

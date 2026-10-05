@@ -20,6 +20,7 @@ import type { LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
+import DocumentThumbnail from '../components/DocumentThumbnail';
 import type { ExtendedWarrantyCardValues } from '../components/ExtendedWarrantyCard';
 import ExtendedWarrantyCard from '../components/ExtendedWarrantyCard';
 import FieldLabel from '../components/FieldLabel';
@@ -43,10 +44,10 @@ import { createItem, getItemById, updateItem } from '../db/warrantyRepository';
 import { useTranslation } from '../i18n/LocaleContext';
 import { deleteDocumentFile, deleteItemPhotoFile } from '../services/fileService';
 import {
-  pickDocumentFromCamera,
-  pickDocumentFromGallery,
+  pickDocument,
   pickItemPhotoFromCamera,
   pickItemPhotoFromGallery,
+  type DocumentSource,
 } from '../services/imageService';
 import {
   cancelScheduledReminders,
@@ -99,7 +100,7 @@ function draftsFor(drafts: DocumentDrafts, ref: DocumentSectionRef): ItemDocumen
 const EMPTY_DRAFTS: DocumentDrafts = {};
 
 function toDraft(document: ItemDocument): ItemDocumentDraft {
-  return { id: document.id, uri: document.uri, isPersisted: true };
+  return { id: document.id, uri: document.uri, fileName: document.fileName, isPersisted: true };
 }
 
 /**
@@ -340,7 +341,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     setSourceModalSection(ref);
   };
 
-  const showDocumentPermissionAlert = (source: 'camera' | 'gallery') => {
+  const showDocumentPermissionAlert = (source: DocumentSource) => {
     const isCamera = source === 'camera';
     Alert.alert(
       isCamera ? t('addEditItem.cameraPermissionTitle') : t('addEditItem.galleryPermissionTitle'),
@@ -410,7 +411,7 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
       );
     });
 
-  const handlePickDocumentSource = async (source: 'camera' | 'gallery') => {
+  const handlePickDocumentSource = async (source: DocumentSource) => {
     const ref = sourceModalSection;
     const targetIndex = replaceTargetIndex;
     setSourceModalSection(null);
@@ -422,11 +423,10 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
     if (targetIndex !== null) {
       setAttachingSection(key);
       try {
-        const result =
-          source === 'camera' ? await pickDocumentFromCamera() : await pickDocumentFromGallery(1);
+        const result = await pickDocument(source, 1);
 
-        if (result.status === 'success' && result.uris.length > 0) {
-          const [newUri] = result.uris;
+        if (result.status === 'success' && result.documents.length > 0) {
+          const [{ uri: newUri, fileName }] = result.documents;
           const oldDraft = draftsFor(documentDrafts, ref)[targetIndex];
           unsavedDocumentUrisRef.current = [...unsavedDocumentUrisRef.current, newUri];
           if (oldDraft && !oldDraft.isPersisted) {
@@ -436,7 +436,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
           setDocumentDrafts((drafts) => ({
             ...drafts,
             [key]: (drafts[key] ?? []).map((draft, i) =>
-              i === targetIndex ? { id: Crypto.randomUUID(), uri: newUri, isPersisted: false } : draft
+              i === targetIndex
+                ? { id: Crypto.randomUUID(), uri: newUri, fileName, isPersisted: false }
+                : draft
             ),
           }));
         } else if (result.status === 'permission-denied') {
@@ -461,28 +463,31 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
 
     setAttachingSection(key);
     try {
-      const result =
-        source === 'camera'
-          ? await pickDocumentFromCamera()
-          : await pickDocumentFromGallery(remainingCapacity);
+      const result = await pickDocument(source, remainingCapacity);
 
       if (result.status === 'success') {
-        const uris = result.uris.slice(0, remainingCapacity);
+        const documents = result.documents.slice(0, remainingCapacity);
         // Anything past the cap was already copied into app storage by the picker, so it
         // has to be discarded here rather than simply ignored.
-        const overflow = result.uris.slice(remainingCapacity);
+        const overflow = result.documents.slice(remainingCapacity);
         if (overflow.length > 0) {
           useToastStore
             .getState()
             .show(t('addEditItem.maxDocumentsReached', { max: MAX_DOCUMENTS_PER_KIND }));
-          await Promise.all(overflow.map((uri) => deleteDocumentFile(uri)));
+          await Promise.all(overflow.map((document) => deleteDocumentFile(document.uri)));
         }
+        const uris = documents.map((document) => document.uri);
         unsavedDocumentUrisRef.current = [...unsavedDocumentUrisRef.current, ...uris];
         setDocumentDrafts((drafts) => ({
           ...drafts,
           [key]: [
             ...(drafts[key] ?? []),
-            ...uris.map((uri) => ({ id: Crypto.randomUUID(), uri, isPersisted: false })),
+            ...documents.map((document) => ({
+              id: Crypto.randomUUID(),
+              uri: document.uri,
+              fileName: document.fileName,
+              isPersisted: false,
+            })),
           ],
         }));
       } else if (result.status === 'permission-denied') {
@@ -538,7 +543,11 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         {drafts.map((draft, index) => (
           <View key={draft.id} style={[styles.documentTileCard, { backgroundColor: theme.surfaceAlt }]}>
             <View style={styles.documentTileImageWrapper}>
-              <Image source={{ uri: draft.uri }} style={styles.documentTileThumbnail} />
+              <DocumentThumbnail
+                uri={draft.uri}
+                fileName={draft.fileName}
+                style={styles.documentTileThumbnail}
+              />
               <Pressable
                 hitSlop={8}
                 disabled={attachingSection !== null}
@@ -1312,8 +1321,9 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         options={[
           { value: 'camera', label: t('addEditItem.takePhoto') },
           { value: 'gallery', label: t('addEditItem.chooseFromGallery') },
+          { value: 'files', label: t('addEditItem.choosePdf') },
         ]}
-        onSelect={(value) => handlePickDocumentSource(value as 'camera' | 'gallery')}
+        onSelect={(value) => handlePickDocumentSource(value as DocumentSource)}
         onClose={() => {
           setSourceModalSection(null);
           setReplaceTargetIndex(null);

@@ -16,7 +16,7 @@ import { getCoverageEndDate } from '../utils/coverage';
 import { getWarrantyStatus } from '../utils/date';
 import { BACKUP_DATA_FILE_NAME, BACKUP_FORMAT_VERSION } from './backupService';
 
-import { writeDocumentImageFile, writeItemPhotoFile } from './fileService';
+import { writeDocumentFile, writeItemPhotoFile } from './fileService';
 import { getNotificationsEnabled } from './notificationPreferenceService';
 import { scheduleExpiryReminders } from './notificationService';
 
@@ -98,6 +98,8 @@ function validateDocument(
     kind: documentKind(document.kind),
     extendedWarrantyId,
     uri: document.uri,
+    // Absent for images and for archives written before PDFs were supported.
+    fileName: isNonEmptyString(document.fileName) ? document.fileName : undefined,
     sortOrder: document.sortOrder,
     createdAt: document.createdAt,
   };
@@ -341,7 +343,7 @@ async function restoreSection(
 
     try {
       const base64 = await entry.async('base64');
-      const uri = await writeDocumentImageFile(restoredDocumentFileName(document), base64);
+      const uri = await writeDocumentFile(restoredDocumentFileName(document), base64);
       const target =
         document.kind === 'warranty' ? restored.warrantyDocuments : restored.invoiceDocuments;
       target.push({ ...document, itemId, uri, sortOrder: target.length });

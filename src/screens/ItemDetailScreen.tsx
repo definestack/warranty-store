@@ -2,19 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Card from '../components/Card';
 import type { CoverageDocumentSection, CoveragePeriodView } from '../components/CoveragePeriodCard';
 import CoveragePeriodCard from '../components/CoveragePeriodCard';
 import DetailRow from '../components/DetailRow';
+import DocumentThumbnail from '../components/DocumentThumbnail';
 import DocumentViewer from '../components/DocumentViewer';
 import ItemIcon from '../components/ItemIcon';
 import ScreenHeader from '../components/ScreenHeader';
 import StatusBadge from '../components/StatusBadge';
 import Surface from '../components/Surface';
 import { useTranslation } from '../i18n/LocaleContext';
+import { openPdf } from '../services/documentOpenerService';
 import { useItemsStore } from '../store/itemsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -23,6 +25,7 @@ import type { ExtendedWarranty, ItemDocument } from '../types/warranty';
 import { DEFAULT_CATEGORY, getCategoryLabel } from '../utils/categories';
 import { formatPeriodCountdown, getPeriodStatus } from '../utils/coverage';
 import { formatIsoDate, getDaysRemaining, getWarrantyStatus } from '../utils/date';
+import { isPdfUri, viewableImagesAt } from '../utils/documentType';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ItemDetail'>;
 
@@ -99,9 +102,20 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
     );
   };
 
-  const openViewer = (documents: ItemDocument[], index: number) => {
-    setViewerIndex(index);
-    setViewerDocuments(documents.map((entry) => entry.uri));
+  /**
+   * A PDF cannot be paged in the image viewer, so it goes to an external viewer instead. The
+   * image viewer then pages through the section's images only.
+   */
+  const openViewer = async (documents: ItemDocument[], index: number) => {
+    const tapped = documents[index];
+    if (isPdfUri(tapped.uri)) {
+      const opened = await openPdf(tapped.uri);
+      if (!opened) useToastStore.getState().show(t('itemDetail.noPdfViewer'));
+      return;
+    }
+    const viewable = viewableImagesAt(documents, index);
+    setViewerIndex(viewable.index);
+    setViewerDocuments(viewable.uris);
   };
 
   /**
@@ -159,7 +173,11 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
         {documents.map((document, index) => (
           <View key={document.id} style={[styles.documentTile, { borderColor: theme.border }]}>
             <Pressable onPress={() => openViewer(documents, index)}>
-              <Image source={{ uri: document.uri }} style={styles.documentThumbnail} />
+              <DocumentThumbnail
+                uri={document.uri}
+                fileName={document.fileName}
+                style={styles.documentThumbnail}
+              />
             </Pressable>
             <Pressable
               hitSlop={6}

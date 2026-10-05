@@ -22,6 +22,8 @@ export interface ItemDocument {
    */
   extendedWarrantyId?: string;
   uri: string;
+  /** The name the file was picked under. Shown on PDF tiles; absent for images and older rows. */
+  fileName?: string;
   sortOrder: number;
   createdAt: string;
 }

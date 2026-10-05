@@ -230,15 +230,16 @@ export async function insertImportedItems(items: WarrantyItem[]): Promise<void> 
       for (const document of documents) {
         await db.runAsync(
           `INSERT INTO invoice_images
-            (id, item_id, uri, sort_order, created_at, kind, extended_warranty_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            (id, item_id, uri, sort_order, created_at, kind, extended_warranty_id, file_name)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           document.id,
           item.id,
           document.uri,
           document.sortOrder,
           document.createdAt,
           document.kind,
-          document.extendedWarrantyId ?? null
+          document.extendedWarrantyId ?? null,
+          document.fileName ?? null
         );
       }
     }

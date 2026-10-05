@@ -336,6 +336,42 @@ describe('runMigrations', () => {
     }
   });
 
+  it('adds a nullable file_name column to invoice_images for the original name of an attached file', async () => {
+    const db = await freshDb();
+    await runMigrations(db);
+
+    const columns = await db.getAllAsync<{ name: string; notnull: number; dflt_value: string | null }>(
+      'PRAGMA table_info(invoice_images)'
+    );
+    const column = columns.find((candidate) => candidate.name === 'file_name');
+
+    expect(column).toBeDefined();
+    expect(column?.notnull).toBe(0);
+    expect(column?.dflt_value).toBeNull();
+  });
+
+  it('keeps documents attached before migration 10 intact with a null file_name', async () => {
+    const db = await freshDb();
+    await migrateToVersion(db, 9);
+    await db.runAsync(
+      `INSERT INTO warranty_items (id, name, purchase_date, warranty_months, expiry_date, created_at, updated_at)
+       VALUES ('item-1', 'Kettle', '2025-01-01', 12, '2026-01-01', '2025-01-01', '2025-01-01')`
+    );
+    await db.runAsync(
+      `INSERT INTO invoice_images (id, item_id, uri, sort_order, created_at, kind)
+       VALUES ('doc-1', 'item-1', 'file:///invoices/invoice-doc-1.jpg', 0, '2025-01-01', 'invoice')`
+    );
+
+    const migrationV10 = migrations.find((migration) => migration.version === 10);
+    await migrationV10?.up(db);
+
+    const row = await db.getFirstAsync<{ uri: string; file_name: string | null }>(
+      "SELECT uri, file_name FROM invoice_images WHERE id = 'doc-1'"
+    );
+    expect(row?.uri).toBe('file:///invoices/invoice-doc-1.jpg');
+    expect(row?.file_name).toBeNull();
+  });
+
   it('reads rows written before migration 9 as item-scoped documents and manufacturer reminders', async () => {
     const db = await freshDb();
     await migrateToVersion(db, 8);
