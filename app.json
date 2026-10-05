@@ -2,7 +2,7 @@
   "expo": {
     "name": "Warranty Store",
     "slug": "warranty-store",
-    "version": "0.5.2",
+    "version": "0.5.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -11,6 +11,7 @@
     },
     "android": {
       "package": "in.definestack.warrantystore",
+      "versionCode": 2624804,
       "adaptiveIcon": {
         "backgroundColor": "#FBFBFD",
         "foregroundImage": "./assets/android-icon-foreground.png",
