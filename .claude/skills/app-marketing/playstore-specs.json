@@ -1,0 +1,60 @@
+{
+  "_comment": "Google Play Console asset/text limits used by validate.mjs. These are a starting point captured at `verifiedOn` — step 4 of SKILL.md re-checks each `sourceUrl` before any asset is generated or validated, and updates this file (bumping `verifiedOn`) if a value has changed. Never generate or validate assets against stale values without re-checking first.",
+  "verifiedOn": "2026-10-10",
+  "icon": {
+    "sourceUrl": "https://support.google.com/googleplay/android-developer/answer/9866151",
+    "width": 512,
+    "height": 512,
+    "format": ["png"],
+    "maxBytes": 1048576,
+    "requireAlpha": true
+  },
+  "featureGraphic": {
+    "sourceUrl": "https://support.google.com/googleplay/android-developer/answer/9866151",
+    "width": 1024,
+    "height": 500,
+    "format": ["png", "jpg", "jpeg"],
+    "maxBytes": 15728640,
+    "requireAlpha": false
+  },
+  "screenshots": {
+    "sourceUrl": "https://support.google.com/googleplay/android-developer/answer/9866151",
+    "format": ["png", "jpg", "jpeg"],
+    "requireAlpha": false,
+    "minPerDeviceType": 2,
+    "maxPerDeviceType": 8,
+    "maxAspectRatioLongToShort": 2.0,
+    "deviceTypes": {
+      "phone": {
+        "minShortSidePx": 320,
+        "maxLongSidePx": 3840,
+        "recommended": { "width": 1080, "height": 1920 }
+      },
+      "sevenInchTablet": {
+        "minShortSidePx": 320,
+        "maxLongSidePx": 3840,
+        "recommended": { "width": 1200, "height": 1920 }
+      },
+      "tenInchTablet": {
+        "minShortSidePx": 320,
+        "maxLongSidePx": 3840,
+        "recommended": { "width": 1600, "height": 2560 }
+      }
+    }
+  },
+  "text": {
+    "sourceUrl": "https://support.google.com/googleplay/android-developer/answer/9859152",
+    "title": { "maxChars": 30 },
+    "shortDescription": { "maxChars": 80 },
+    "fullDescription": { "maxChars": 4000 }
+  },
+  "policy": {
+    "sourceUrl": "https://support.google.com/googleplay/android-developer/answer/9898842",
+    "notes": [
+      "No unverifiable superlative/ranking claims (e.g. '#1', 'best').",
+      "No references to competing apps/stores by name.",
+      "No keyword stuffing in title or descriptions.",
+      "Screenshots must represent real, current app functionality."
+    ]
+  }
+}
