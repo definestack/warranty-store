@@ -2,8 +2,7 @@
 /**
  * Image composition for Play Store / website assets: flattening alpha,
  * resizing the app icon, building a feature graphic, and (optionally)
- * framing a real screenshot with a caption. Uses `jimp` (already a
- * devDependency, used by `scripts/generate-icons.mjs`) — no new dependency.
+ * framing a real screenshot with a caption. Uses `jimp` (a devDependency).
  *
  * App-agnostic: every app-specific value (brand color, app name, tagline,
  * icon path) is passed on the command line rather than hard-coded, so this

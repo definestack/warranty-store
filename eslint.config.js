@@ -7,7 +7,7 @@ module.exports = [
     ignores: ["dist/*"],
   },
   {
-    files: ["scripts/**/*.js"],
+    files: ["scripts/**/*.js", ".claude/**/*.mjs", ".claude/**/*.js"],
     languageOptions: {
       globals: globals.node,
     },
