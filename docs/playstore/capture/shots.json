@@ -1,0 +1,33 @@
+[
+  {
+    "name": "01-home",
+    "theme": "light",
+    "steps": [{ "action": "tap", "text": "Home" }]
+  },
+  {
+    "name": "02-products",
+    "theme": "light",
+    "steps": [{ "action": "tap", "text": "Products" }]
+  },
+  {
+    "name": "03-item-detail",
+    "theme": "light",
+    "steps": [
+      { "action": "tap", "text": "Philips Air Purifier" },
+      { "action": "wait", "ms": 1200 }
+    ]
+  },
+  {
+    "name": "04-settings",
+    "theme": "light",
+    "steps": [
+      { "action": "back" },
+      { "action": "tap", "text": "Settings" }
+    ]
+  },
+  {
+    "name": "05-home-dark",
+    "theme": "dark",
+    "steps": [{ "action": "tap", "text": "Home" }]
+  }
+]

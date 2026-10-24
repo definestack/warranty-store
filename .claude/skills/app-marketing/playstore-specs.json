@@ -1,6 +1,6 @@
 {
   "_comment": "Google Play Console asset/text limits used by validate.mjs. These are a starting point captured at `verifiedOn` — step 4 of SKILL.md re-checks each `sourceUrl` before any asset is generated or validated, and updates this file (bumping `verifiedOn`) if a value has changed. Never generate or validate assets against stale values without re-checking first.",
-  "verifiedOn": "2026-10-10",
+  "verifiedOn": "2026-10-24",
   "icon": {
     "sourceUrl": "https://support.google.com/googleplay/android-developer/answer/9866151",
     "width": 512,
