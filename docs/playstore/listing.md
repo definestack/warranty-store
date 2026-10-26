@@ -48,8 +48,8 @@ Productivity
 
 ## Contact & Privacy
 
-<!-- TODO: fill in before publishing; not inferable from the repo -->
-- Developer contact email: TODO
+<!-- TODO: fill in privacy policy URL before publishing; not inferable from the repo -->
+- Developer contact email: definestack@gmail.com
 - Privacy policy URL: TODO
 
 ## Graphics
