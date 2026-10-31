@@ -253,8 +253,6 @@ export default function SettingsScreen({ navigation }: Props) {
 
         <SectionHeader title={t('settings.about')} />
         <Card style={styles.card}>
-          <SettingsRow icon="information-circle-outline" label={t('settings.aboutApp')} />
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsRow
             icon="shield-checkmark-outline"
             label={t('settings.privacyPolicy')}

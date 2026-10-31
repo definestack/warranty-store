@@ -284,7 +284,6 @@ const es: Messages = {
     importBackupFailed: 'Error al importar la copia de seguridad',
     notificationsEnabled: 'Notificaciones activadas',
     about: 'Acerca de',
-    aboutApp: 'Acerca de Warranty Store',
     privacyPolicy: 'Política de privacidad',
     version: 'Versión',
     build: 'Compilación',
