@@ -289,8 +289,13 @@ const fr: Messages = {
     notificationsEnabled: 'Notifications activées',
     about: 'À propos',
     aboutApp: 'À propos de Warranty Store',
+    privacyPolicy: 'Politique de confidentialité',
     version: 'Version',
     build: 'Build',
+  },
+  privacyPolicy: {
+    title: 'Politique de confidentialité',
+    loadFailed: 'Impossible de charger la politique de confidentialité. Vérifiez votre connexion et réessayez.',
   },
   date: {
     addedToday: 'Ajouté aujourd’hui',

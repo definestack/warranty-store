@@ -285,8 +285,13 @@ const es: Messages = {
     notificationsEnabled: 'Notificaciones activadas',
     about: 'Acerca de',
     aboutApp: 'Acerca de Warranty Store',
+    privacyPolicy: 'Política de privacidad',
     version: 'Versión',
     build: 'Compilación',
+  },
+  privacyPolicy: {
+    title: 'Política de privacidad',
+    loadFailed: 'No se pudo cargar la política de privacidad. Comprueba tu conexión e inténtalo de nuevo.',
   },
   date: {
     addedToday: 'Añadido hoy',

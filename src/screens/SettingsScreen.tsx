@@ -1,4 +1,6 @@
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,16 +25,19 @@ import { useNotificationsStore } from '../store/notificationsStore';
 import { useToastStore } from '../store/toastStore';
 import { useAppTheme, useThemePreference } from '../theme/ThemeContext';
 import type { ThemePreference } from '../theme/ThemeContext';
-import type { MainTabParamList } from '../types/navigation';
+import type { MainTabParamList, RootStackParamList } from '../types/navigation';
 import { getAppVersionInfo } from '../utils/appVersion';
 import { formatDate, nowIso } from '../utils/date';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'Settings'>;
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Settings'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
 
 const { versionName, buildNumber } = getAppVersionInfo();
 const versionDisplay = `${versionName} (Build ${buildNumber})`;
 
-export default function SettingsScreen(_props: Props) {
+export default function SettingsScreen({ navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const { t, locale } = useTranslation();
@@ -249,6 +254,13 @@ export default function SettingsScreen(_props: Props) {
         <SectionHeader title={t('settings.about')} />
         <Card style={styles.card}>
           <SettingsRow icon="information-circle-outline" label={t('settings.aboutApp')} />
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <SettingsRow
+            icon="shield-checkmark-outline"
+            label={t('settings.privacyPolicy')}
+            chevron="forward"
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsRow icon="pricetag-outline" label={t('settings.version')} trailingText={versionDisplay} />
         </Card>
