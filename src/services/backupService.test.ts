@@ -1,6 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { __resetMockFileSystem, __setFileContent, readAsStringAsync } from 'expo-file-system/legacy';
-import { __getLastSharedUri, __resetMockSharing, __setAvailable } from 'expo-sharing';
+import {
+  __getSafCreatedFiles,
+  __resetMockFileSystem,
+  __setFileContent,
+  __setSafPermission,
+  __setWriteFailure,
+  readAsStringAsync,
+} from 'expo-file-system/legacy';
 import JSZip from 'jszip';
 
 import { getDatabase, initDatabase } from '../db/database';
@@ -12,7 +18,7 @@ import {
   BackupMissingFilesError,
   buildBackupPayload,
   createBackupArchive,
-  shareBackupArchive,
+  saveBackupArchiveToDevice,
 } from './backupService';
 
 const baseItem: NewWarrantyItem = {
@@ -35,7 +41,6 @@ beforeEach(async () => {
   await getDatabase().runAsync('DELETE FROM extended_warranties');
   await getDatabase().runAsync('DELETE FROM warranty_items');
   __resetMockFileSystem();
-  __resetMockSharing();
   await AsyncStorage.clear();
 });
 
@@ -237,19 +242,48 @@ describe('createBackupArchive', () => {
   });
 });
 
-describe('shareBackupArchive', () => {
-  it('opens the share sheet for the given archive uri', async () => {
-    await shareBackupArchive('file:///mock-cache/backups/warranty-backup-test.zip');
+describe('saveBackupArchiveToDevice', () => {
+  const ARCHIVE_URI = 'file:///mock-cache/backups/warranty-backup-test.zip';
 
-    expect(__getLastSharedUri()).toBe('file:///mock-cache/backups/warranty-backup-test.zip');
+  beforeEach(() => {
+    __setFileContent(ARCHIVE_URI, 'fake-zip-base64');
   });
 
-  it('does not attempt to share when sharing is unavailable on the device', async () => {
-    __setAvailable(false);
+  it('returns "cancelled" and writes nothing when the user dismisses the folder picker', async () => {
+    __setSafPermission(false);
 
-    await shareBackupArchive('file:///mock-cache/backups/warranty-backup-test.zip');
+    const result = await saveBackupArchiveToDevice(ARCHIVE_URI);
 
-    expect(__getLastSharedUri()).toBeNull();
+    expect(result).toBe('cancelled');
+    expect(__getSafCreatedFiles()).toEqual([]);
+  });
+
+  it('writes the archive\'s exact content to the folder the user picked', async () => {
+    __setSafPermission(true);
+
+    const result = await saveBackupArchiveToDevice(ARCHIVE_URI);
+
+    expect(result).toBe('saved');
+    const [savedUri] = __getSafCreatedFiles();
+    expect(savedUri).toBeDefined();
+    expect(await readAsStringAsync(savedUri, { encoding: 'base64' })).toBe('fake-zip-base64');
+  });
+
+  it('names the created file after the archive and saves it as a zip', async () => {
+    __setSafPermission(true);
+
+    await saveBackupArchiveToDevice(ARCHIVE_URI);
+
+    const [savedUri] = __getSafCreatedFiles();
+    expect(savedUri).toContain('warranty-backup-test');
+    expect(savedUri).toMatch(/\.zip$/);
+  });
+
+  it('rejects when the write to the picked folder fails', async () => {
+    __setSafPermission(true);
+    __setWriteFailure('mock-saf');
+
+    await expect(saveBackupArchiveToDevice(ARCHIVE_URI)).rejects.toThrow();
   });
 });
 

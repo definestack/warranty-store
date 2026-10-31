@@ -3,9 +3,9 @@ import {
   getInfoAsync,
   makeDirectoryAsync,
   readAsStringAsync,
+  StorageAccessFramework,
   writeAsStringAsync,
 } from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import JSZip from 'jszip';
 
 import { getAllItems } from '../db/warrantyRepository';
@@ -212,17 +212,35 @@ export async function createBackupArchive(
   return { uri: fileUri, itemCount: items.length, skippedFileCount: missingFiles.length };
 }
 
+export type SaveBackupResult = 'saved' | 'cancelled';
+
+/** The archive's file name, without its extension, to reuse as the saved file's name. */
+function archiveFileName(archiveUri: string): string {
+  const fileName = archiveUri.split('/').pop() ?? 'warranty-backup';
+  return fileName.replace(/\.zip$/, '');
+}
+
 /**
- * Presents the OS share/save sheet for a previously created backup archive.
+ * Lets the user pick a folder (via Android's Storage Access Framework) and writes a
+ * previously created backup archive there.
  *
- * Android's share intent resolves the same way whether the user picks a target
- * or backs out of the chooser, so this promise settling is not proof the file
- * was actually saved anywhere — callers should treat the backup as complete
- * once `createBackupArchive` succeeds, and use this only as a best-effort
- * follow-up rather than a gate on success.
+ * Unlike a share-sheet intent, SAF's directory picker reports cancellation unambiguously
+ * (`granted: false`), so callers can gate "backup complete" on this resolving to `'saved'`
+ * rather than on `createBackupArchive` alone.
  */
-export async function shareBackupArchive(uri: string): Promise<void> {
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, { mimeType: 'application/zip', dialogTitle: 'Warranty Store Backup' });
+export async function saveBackupArchiveToDevice(archiveUri: string): Promise<SaveBackupResult> {
+  const permission = await StorageAccessFramework.requestDirectoryPermissionsAsync();
+  if (!permission.granted) {
+    return 'cancelled';
   }
+
+  const safUri = await StorageAccessFramework.createFileAsync(
+    permission.directoryUri,
+    archiveFileName(archiveUri),
+    'application/zip'
+  );
+  const content = await readAsStringAsync(archiveUri, { encoding: 'base64' });
+  await writeAsStringAsync(safUri, content, { encoding: 'base64' });
+
+  return 'saved';
 }

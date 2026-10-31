@@ -10,7 +10,7 @@ import SettingsRow from '../components/SettingsRow';
 import { useLanguagePreference, useTranslation } from '../i18n/LocaleContext';
 import { LANGUAGE_ENDONYMS, SUPPORTED_LOCALES } from '../i18n/i18n';
 import { getLastBackupTime, setLastBackupTime as persistLastBackupTime } from '../services/backupPreferenceService';
-import { BackupMissingFilesError, createBackupArchive, shareBackupArchive } from '../services/backupService';
+import { BackupMissingFilesError, createBackupArchive, saveBackupArchiveToDevice } from '../services/backupService';
 import {
   BackupValidationError,
   applyBackup,
@@ -55,6 +55,13 @@ export default function SettingsScreen(_props: Props) {
       setExportingBackup(true);
       try {
         const result = await createBackupArchive({ skipMissingFiles });
+        const saveResult = await saveBackupArchiveToDevice(result.uri);
+        setExportingBackup(false);
+
+        if (saveResult === 'cancelled') {
+          return;
+        }
+
         const timestamp = nowIso();
         await persistLastBackupTime(timestamp);
         setLastBackupTime(timestamp);
@@ -65,13 +72,6 @@ export default function SettingsScreen(_props: Props) {
               ? t('settings.exportBackupSuccessSkipped', { count: result.skippedFileCount })
               : t('settings.exportBackupSuccess')
           );
-        setExportingBackup(false);
-
-        // Android's share intent resolves the same way on cancel or completion, so it
-        // can't gate the success feedback above — fire it as a best-effort follow-up.
-        shareBackupArchive(result.uri).catch((err) => {
-          if (__DEV__) console.warn('Failed to open share sheet for backup', err);
-        });
       } catch (err) {
         setExportingBackup(false);
 
