@@ -288,7 +288,6 @@ const fr: Messages = {
     importBackupFailed: "Échec de l'importation de la sauvegarde",
     notificationsEnabled: 'Notifications activées',
     about: 'À propos',
-    aboutApp: 'À propos de Warranty Store',
     privacyPolicy: 'Politique de confidentialité',
     version: 'Version',
     build: 'Build',

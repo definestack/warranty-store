@@ -282,7 +282,6 @@ const en = {
     importBackupFailed: 'Failed to import backup',
     notificationsEnabled: 'Notifications enabled',
     about: 'About',
-    aboutApp: 'About Warranty Store',
     privacyPolicy: 'Privacy Policy',
     version: 'Version',
     build: 'Build',
