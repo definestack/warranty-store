@@ -288,8 +288,13 @@ const de: Messages = {
     notificationsEnabled: 'Benachrichtigungen aktiviert',
     about: 'Über',
     aboutApp: 'Über Warranty Store',
+    privacyPolicy: 'Datenschutzrichtlinie',
     version: 'Version',
     build: 'Build',
+  },
+  privacyPolicy: {
+    title: 'Datenschutzrichtlinie',
+    loadFailed: 'Die Datenschutzrichtlinie konnte nicht geladen werden. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
   },
   date: {
     addedToday: 'Heute hinzugefügt',

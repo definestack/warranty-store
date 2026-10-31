@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import ItemDetailScreen from '../screens/ItemDetailScreen';
 import AddEditItemScreen from '../screens/AddEditItemScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import type { RootStackParamList } from '../types/navigation';
 import MainTabNavigator from './MainTabNavigator';
 
@@ -13,6 +14,7 @@ export default function RootNavigator() {
       <Stack.Screen name="MainTabs" component={MainTabNavigator} />
       <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
       <Stack.Screen name="AddEditItem" component={AddEditItemScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
     </Stack.Navigator>
   );
 }
