@@ -33,4 +33,5 @@ export type RootStackParamList = {
   MainTabs: undefined;
   ItemDetail: { itemId: string };
   AddEditItem: { itemId?: string; focus?: AddEditSection };
+  PrivacyPolicy: undefined;
 };

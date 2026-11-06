@@ -282,9 +282,13 @@ const en = {
     importBackupFailed: 'Failed to import backup',
     notificationsEnabled: 'Notifications enabled',
     about: 'About',
-    aboutApp: 'About Warranty Store',
+    privacyPolicy: 'Privacy Policy',
     version: 'Version',
     build: 'Build',
+  },
+  privacyPolicy: {
+    title: 'Privacy Policy',
+    loadFailed: "Couldn't load the privacy policy. Check your connection and try again.",
   },
   date: {
     addedToday: 'Added today',

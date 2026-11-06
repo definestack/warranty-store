@@ -8,6 +8,9 @@
 const existingUris = new Set<string>();
 const fileContents = new Map<string, string>();
 let writeFailurePattern: string | null = null;
+let safGranted = true;
+let safDirectoryUri = 'content://mock-saf/tree/primary%3ABackups';
+const safCreatedFiles: string[] = [];
 
 export const documentDirectory = 'file:///mock-documents/';
 export const cacheDirectory = 'file:///mock-cache/';
@@ -35,6 +38,22 @@ export function __resetMockFileSystem(): void {
   existingUris.clear();
   fileContents.clear();
   writeFailurePattern = null;
+  safGranted = true;
+  safDirectoryUri = 'content://mock-saf/tree/primary%3ABackups';
+  safCreatedFiles.length = 0;
+}
+
+/** Controls whether the mock SAF folder picker is "cancelled" by the user. */
+export function __setSafPermission(granted: boolean, directoryUri?: string): void {
+  safGranted = granted;
+  if (directoryUri !== undefined) {
+    safDirectoryUri = directoryUri;
+  }
+}
+
+/** The SAF file URIs created via `StorageAccessFramework.createFileAsync`, in order. */
+export function __getSafCreatedFiles(): string[] {
+  return [...safCreatedFiles];
 }
 
 export async function getInfoAsync(uri: string): Promise<{ exists: boolean }> {
@@ -82,9 +101,24 @@ declare module 'expo-file-system/legacy' {
   export function __setFileContent(uri: string, content: string): void;
   export function __setWriteFailure(pattern: string | null): void;
   export function __resetMockFileSystem(): void;
+  export function __setSafPermission(granted: boolean, directoryUri?: string): void;
+  export function __getSafCreatedFiles(): string[];
 }
 
 /** Mirrors the content:// URI a file provider would expose for a private file. */
 export async function getContentUriAsync(uri: string): Promise<string> {
   return uri.replace('file://', 'content://mock-provider');
 }
+
+/** Mirrors the real `StorageAccessFramework` namespace closely enough for the backup flow. */
+export const StorageAccessFramework = {
+  async requestDirectoryPermissionsAsync(): Promise<{ granted: boolean; directoryUri: string }> {
+    return { granted: safGranted, directoryUri: safGranted ? safDirectoryUri : '' };
+  },
+  async createFileAsync(dirUri: string, fileName: string, mimeType: string): Promise<string> {
+    const safUri = `${dirUri}/${fileName}.${mimeType.split('/')[1]}`;
+    existingUris.add(safUri);
+    safCreatedFiles.push(safUri);
+    return safUri;
+  },
+};

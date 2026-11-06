@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { FlatList, Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Surface from './Surface';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -27,16 +28,26 @@ export default function SelectModal({
   onClose,
 }: SelectModalProps) {
   const theme = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
         <Pressable onPress={() => {}}>
-          <Surface style={styles.sheet}>
+          <Surface style={[styles.sheet, { paddingBottom: 32 + insets.bottom }]}>
             <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
             <FlatList
               data={options}
               keyExtractor={(item) => item.value}
+              showsVerticalScrollIndicator
+              bounces={false}
               renderItem={({ item }) => (
                 <Pressable
                   style={[styles.option, { borderBottomColor: theme.border }]}
