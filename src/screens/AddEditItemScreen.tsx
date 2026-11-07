@@ -19,6 +19,7 @@ import {
 import type { LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import ActionSheet from '../components/ActionSheet';
 import Card from '../components/Card';
 import DocumentThumbnail from '../components/DocumentThumbnail';
 import type { ExtendedWarrantyCardValues } from '../components/ExtendedWarrantyCard';
@@ -71,6 +72,7 @@ import { CATEGORIES, getCategoryLabel, resolveCategory } from '../utils/categori
 import { deriveCoverageEndDate, getNextCoverageStartDate } from '../utils/coverage';
 import { addMonths, formatDate, formatIsoDate, fromIsoDate, toIsoDate } from '../utils/date';
 import { MAX_DOCUMENTS_PER_KIND } from '../utils/documents';
+import { buildDocumentSourceSheet, buildPhotoSourceSheet } from '../utils/sourceSheetActions';
 import { NOTES_MAX_LENGTH, parsePrice, parseWarrantyMonths } from '../utils/validation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditItem'>;
@@ -1311,34 +1313,22 @@ export default function AddEditItemScreen({ route, navigation }: Props) {
         onSelect={setCategory}
         onClose={() => setCategoryModalVisible(false)}
       />
-      <SelectModal
+      <ActionSheet
         visible={sourceModalSection !== null}
-        title={
-          replaceTargetIndex !== null
-            ? t('addEditItem.replaceDocumentTitle')
-            : t('addEditItem.attachDocumentTitle')
-        }
-        options={[
-          { value: 'camera', label: t('addEditItem.takePhoto') },
-          { value: 'gallery', label: t('addEditItem.chooseFromGallery') },
-          { value: 'files', label: t('addEditItem.choosePdf') },
-        ]}
+        {...buildDocumentSourceSheet(sourceModalSection?.kind ?? 'invoice', replaceTargetIndex !== null)}
         onSelect={(value) => handlePickDocumentSource(value as DocumentSource)}
         onClose={() => {
           setSourceModalSection(null);
           setReplaceTargetIndex(null);
         }}
+        t={t}
       />
-      <SelectModal
+      <ActionSheet
         visible={photoSourceModalVisible}
-        title={t('addEditItem.photoSourceTitle')}
-        options={[
-          { value: 'camera', label: t('addEditItem.takePhoto') },
-          { value: 'gallery', label: t('addEditItem.chooseFromGallery') },
-          ...(photoDraft ? [{ value: 'remove', label: t('addEditItem.removePhoto') }] : []),
-        ]}
+        {...buildPhotoSourceSheet(!!photoDraft)}
         onSelect={(value) => handlePickPhotoSource(value as 'camera' | 'gallery' | 'remove')}
         onClose={() => setPhotoSourceModalVisible(false)}
+        t={t}
       />
       {datePickerVisible ? (
         <DateTimePicker
