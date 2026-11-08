@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { FlatList, Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Surface from './Surface';
@@ -29,6 +29,7 @@ export default function SelectModal({
 }: SelectModalProps) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
 
   return (
     <Modal
@@ -41,11 +42,17 @@ export default function SelectModal({
     >
       <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
         <Pressable onPress={() => {}}>
-          <Surface style={[styles.sheet, { paddingBottom: 32 + insets.bottom }]}>
+          <Surface
+            style={[
+              styles.sheet,
+              { maxHeight: windowHeight * 0.7, paddingBottom: 16 + insets.bottom },
+            ]}
+          >
             <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
             <FlatList
               data={options}
               keyExtractor={(item) => item.value}
+              style={styles.list}
               showsVerticalScrollIndicator
               bounces={false}
               renderItem={({ item }) => (
@@ -80,13 +87,15 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingTop: 16,
     paddingHorizontal: 20,
-    paddingBottom: 32,
-    maxHeight: '70%',
+    flexShrink: 1,
   },
   title: {
     fontSize: 17,
     fontWeight: '600',
     marginBottom: 12,
+  },
+  list: {
+    flexGrow: 0,
   },
   option: {
     minHeight: 52,
