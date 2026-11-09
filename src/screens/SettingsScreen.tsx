@@ -34,7 +34,6 @@ type Props = CompositeScreenProps<
 >;
 
 const { versionName, buildNumber } = getAppVersionInfo();
-const versionDisplay = `${versionName} (Build ${buildNumber})`;
 
 export default function SettingsScreen({ navigation }: Props) {
   const theme = useAppTheme();
@@ -236,7 +235,9 @@ export default function SettingsScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('PrivacyPolicy')}
           />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <SettingsRow icon="pricetag-outline" label={t('settings.version')} trailingText={versionDisplay} />
+          <SettingsRow icon="pricetag-outline" label={t('settings.version')} trailingText={versionName} />
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <SettingsRow icon="construct-outline" label={t('settings.build')} trailingText={buildNumber} />
         </Card>
       </ScrollView>
 
