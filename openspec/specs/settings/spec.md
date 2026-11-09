@@ -36,8 +36,11 @@ shown in one of those explicitly unavailable states.
 Settings SHALL present exactly two backup entry points: one that exports the user's data
 to a local backup file, and one that imports data from a previously exported backup file.
 
-The export control SHALL indicate when the last backup was taken, or that no backup has
-ever been taken.
+Export SHALL hand the backup archive to the platform's native share sheet rather than a
+destination picker, since it lets the user send the file to the app, cloud drive, or
+device of their choice in one fewer step. Because the share sheet does not report a
+reliable cancellation signal, Settings SHALL NOT display or persist a "last backed up"
+timestamp.
 
 While backup to an external or cloud destination is unimplemented, Settings SHALL NOT
 present any additional backup entry point, including one labelled as covering backup and
@@ -46,8 +49,7 @@ restore generally.
 #### Scenario: Both working backup controls are present
 
 - **WHEN** the user opens Settings
-- **THEN** an export control is shown, subtitled with the date of the last backup, or with
-  a statement that no backup has been taken
+- **THEN** an export control is shown, with no "last backed up" subtitle
 - **AND** an import control is shown, described as restoring items from a backup file
 
 #### Scenario: No cloud or general backup entry point is shown

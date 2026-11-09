@@ -267,9 +267,6 @@ const fr: Messages = {
     language: 'Langue',
     general: 'Général',
     exportData: 'Exporter les données',
-    exportBackupNeverExported: 'Aucune sauvegarde effectuée',
-    exportBackupLastExported: 'Dernière sauvegarde : %{date}',
-    exportBackupSuccess: 'Sauvegarde exportée',
     exportBackupFailed: "Échec de l'exportation de la sauvegarde",
     exportBackupMissingFilesTitle: 'Certains fichiers sont introuvables',
     exportBackupMissingFilesMessage: {
@@ -278,10 +275,6 @@ const fr: Messages = {
         '%{count} fichiers référencés par vos produits sont introuvables sur cet appareil. Exporter maintenant les exclura de la sauvegarde.',
     },
     exportBackupMissingFilesAction: 'Exporter quand même',
-    exportBackupSuccessSkipped: {
-      one: 'Sauvegarde exportée sans 1 fichier manquant',
-      other: 'Sauvegarde exportée sans %{count} fichiers manquants',
-    },
     importData: 'Importer une sauvegarde',
     importBackupSubtitle: 'Restaurer vos produits depuis un fichier de sauvegarde',
     importBackupConfirmTitle: 'Importer cette sauvegarde ?',
