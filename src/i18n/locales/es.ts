@@ -263,9 +263,6 @@ const es: Messages = {
     language: 'Idioma',
     general: 'General',
     exportData: 'Exportar datos',
-    exportBackupNeverExported: 'Nunca se ha hecho una copia de seguridad',
-    exportBackupLastExported: 'Última copia: %{date}',
-    exportBackupSuccess: 'Copia de seguridad exportada',
     exportBackupFailed: 'Error al exportar la copia de seguridad',
     exportBackupMissingFilesTitle: 'Faltan algunos archivos',
     exportBackupMissingFilesMessage: {
@@ -274,10 +271,6 @@ const es: Messages = {
         'No se han encontrado en este dispositivo %{count} archivos a los que hacen referencia tus productos. Si exportas ahora, quedarán fuera de la copia de seguridad.',
     },
     exportBackupMissingFilesAction: 'Exportar de todos modos',
-    exportBackupSuccessSkipped: {
-      one: 'Copia de seguridad exportada sin 1 archivo que faltaba',
-      other: 'Copia de seguridad exportada sin %{count} archivos que faltaban',
-    },
     importData: 'Importar copia de seguridad',
     importBackupSubtitle: 'Restaura tus productos desde un archivo de copia de seguridad',
     importBackupConfirmTitle: '¿Importar esta copia de seguridad?',
