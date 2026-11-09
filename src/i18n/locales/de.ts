@@ -266,9 +266,6 @@ const de: Messages = {
     language: 'Sprache',
     general: 'Allgemein',
     exportData: 'Daten exportieren',
-    exportBackupNeverExported: 'Noch keine Sicherung erstellt',
-    exportBackupLastExported: 'Letzte Sicherung: %{date}',
-    exportBackupSuccess: 'Sicherung exportiert',
     exportBackupFailed: 'Sicherung konnte nicht exportiert werden',
     exportBackupMissingFilesTitle: 'Einige Dateien fehlen',
     exportBackupMissingFilesMessage: {
@@ -277,10 +274,6 @@ const de: Messages = {
         '%{count} Dateien, auf die deine Produkte verweisen, wurden auf diesem Gerät nicht gefunden. Beim Exportieren fehlen sie in der Sicherung.',
     },
     exportBackupMissingFilesAction: 'Trotzdem exportieren',
-    exportBackupSuccessSkipped: {
-      one: 'Sicherung ohne 1 fehlende Datei exportiert',
-      other: 'Sicherung ohne %{count} fehlende Dateien exportiert',
-    },
     importData: 'Sicherung importieren',
     importBackupSubtitle: 'Produkte aus einer Sicherungsdatei wiederherstellen',
     importBackupConfirmTitle: 'Diese Sicherung importieren?',

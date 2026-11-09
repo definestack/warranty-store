@@ -1,9 +1,10 @@
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text as PaperText } from 'react-native-paper';
 
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
@@ -11,8 +12,7 @@ import SelectModal from '../components/SelectModal';
 import SettingsRow from '../components/SettingsRow';
 import { useLanguagePreference, useTranslation } from '../i18n/LocaleContext';
 import { LANGUAGE_ENDONYMS, SUPPORTED_LOCALES } from '../i18n/i18n';
-import { getLastBackupTime, setLastBackupTime as persistLastBackupTime } from '../services/backupPreferenceService';
-import { BackupMissingFilesError, createBackupArchive, saveBackupArchiveToDevice } from '../services/backupService';
+import { BackupMissingFilesError, createBackupArchive, shareBackupArchive } from '../services/backupService';
 import {
   BackupValidationError,
   applyBackup,
@@ -27,7 +27,6 @@ import { useAppTheme, useThemePreference } from '../theme/ThemeContext';
 import type { ThemePreference } from '../theme/ThemeContext';
 import type { MainTabParamList, RootStackParamList } from '../types/navigation';
 import { getAppVersionInfo } from '../utils/appVersion';
-import { formatDate, nowIso } from '../utils/date';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Settings'>,
@@ -35,48 +34,27 @@ type Props = CompositeScreenProps<
 >;
 
 const { versionName, buildNumber } = getAppVersionInfo();
-const versionDisplay = `${versionName} (Build ${buildNumber})`;
 
 export default function SettingsScreen({ navigation }: Props) {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const { preference: themePreference, setPreference: setThemePreference } = useThemePreference();
   const { preference: languagePreference, setPreference: setLanguagePreference } = useLanguagePreference();
   const notificationsEnabled = useNotificationsStore((state) => state.enabled);
   const setNotificationsEnabled = useNotificationsStore((state) => state.setEnabled);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
-  const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
   const [exportingBackup, setExportingBackup] = useState(false);
   const [importingBackup, setImportingBackup] = useState(false);
-
-  useEffect(() => {
-    getLastBackupTime().then(setLastBackupTime);
-  }, []);
 
   const runExport = useCallback(
     async (skipMissingFiles: boolean) => {
       setExportingBackup(true);
       try {
         const result = await createBackupArchive({ skipMissingFiles });
-        const saveResult = await saveBackupArchiveToDevice(result.uri);
+        await shareBackupArchive(result.uri);
         setExportingBackup(false);
-
-        if (saveResult === 'cancelled') {
-          return;
-        }
-
-        const timestamp = nowIso();
-        await persistLastBackupTime(timestamp);
-        setLastBackupTime(timestamp);
-        useToastStore
-          .getState()
-          .show(
-            result.skippedFileCount > 0
-              ? t('settings.exportBackupSuccessSkipped', { count: result.skippedFileCount })
-              : t('settings.exportBackupSuccess')
-          );
       } catch (err) {
         setExportingBackup(false);
 
@@ -198,7 +176,9 @@ export default function SettingsScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-      <Text style={[styles.title, { color: theme.text }]}>{t('settings.title')}</Text>
+      <PaperText variant="titleLarge" style={[styles.title, { color: theme.text }]}>
+        {t('settings.title')}
+      </PaperText>
       <ScrollView contentContainerStyle={styles.content}>
         <SectionHeader title={t('settings.appearance')} />
         <Card style={styles.card}>
@@ -224,11 +204,6 @@ export default function SettingsScreen({ navigation }: Props) {
           <SettingsRow
             icon="download-outline"
             label={t('settings.exportData')}
-            subtitle={
-              lastBackupTime
-                ? t('settings.exportBackupLastExported', { date: formatDate(new Date(lastBackupTime), locale) })
-                : t('settings.exportBackupNeverExported')
-            }
             trailing={exportingBackup ? <ActivityIndicator color={theme.subtleText} /> : undefined}
             chevron={exportingBackup ? 'none' : 'forward'}
             onPress={handleExportBackup}
@@ -260,7 +235,9 @@ export default function SettingsScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('PrivacyPolicy')}
           />
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          <SettingsRow icon="pricetag-outline" label={t('settings.version')} trailingText={versionDisplay} />
+          <SettingsRow icon="pricetag-outline" label={t('settings.version')} trailingText={versionName} />
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <SettingsRow icon="construct-outline" label={t('settings.build')} trailingText={buildNumber} />
         </Card>
       </ScrollView>
 
@@ -289,7 +266,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 22,
     fontWeight: '700',
     paddingHorizontal: 16,
     paddingTop: 12,

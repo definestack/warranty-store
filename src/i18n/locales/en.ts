@@ -261,9 +261,6 @@ const en = {
     language: 'Language',
     general: 'General',
     exportData: 'Export Data',
-    exportBackupNeverExported: 'Never backed up',
-    exportBackupLastExported: 'Last backup: %{date}',
-    exportBackupSuccess: 'Backup exported',
     exportBackupFailed: 'Failed to export backup',
     exportBackupMissingFilesTitle: 'Some files are missing',
     exportBackupMissingFilesMessage: {
@@ -272,10 +269,6 @@ const en = {
         '%{count} files referenced by your products could not be found on this device. Exporting now will leave them out of the backup.',
     },
     exportBackupMissingFilesAction: 'Export anyway',
-    exportBackupSuccessSkipped: {
-      one: 'Backup exported without 1 missing file',
-      other: 'Backup exported without %{count} missing files',
-    },
     importData: 'Import Backup',
     importBackupSubtitle: 'Restore products from a backup file',
     importBackupConfirmTitle: 'Import this backup?',

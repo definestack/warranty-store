@@ -1,12 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  __getSafCreatedFiles,
-  __resetMockFileSystem,
-  __setFileContent,
-  __setSafPermission,
-  __setWriteFailure,
-  readAsStringAsync,
-} from 'expo-file-system/legacy';
+import { __resetMockFileSystem, __setFileContent, readAsStringAsync } from 'expo-file-system/legacy';
+import { isAvailableAsync, shareAsync } from 'expo-sharing';
 import JSZip from 'jszip';
 
 import { getDatabase, initDatabase } from '../db/database';
@@ -18,7 +12,7 @@ import {
   BackupMissingFilesError,
   buildBackupPayload,
   createBackupArchive,
-  saveBackupArchiveToDevice,
+  shareBackupArchive,
 } from './backupService';
 
 const baseItem: NewWarrantyItem = {
@@ -42,6 +36,8 @@ beforeEach(async () => {
   await getDatabase().runAsync('DELETE FROM warranty_items');
   __resetMockFileSystem();
   await AsyncStorage.clear();
+  (isAvailableAsync as jest.Mock).mockReset().mockResolvedValue(true);
+  (shareAsync as jest.Mock).mockReset().mockResolvedValue(undefined);
 });
 
 describe('buildBackupPayload', () => {
@@ -242,48 +238,34 @@ describe('createBackupArchive', () => {
   });
 });
 
-describe('saveBackupArchiveToDevice', () => {
+describe('shareBackupArchive', () => {
   const ARCHIVE_URI = 'file:///mock-cache/backups/warranty-backup-test.zip';
 
   beforeEach(() => {
     __setFileContent(ARCHIVE_URI, 'fake-zip-base64');
   });
 
-  it('returns "cancelled" and writes nothing when the user dismisses the folder picker', async () => {
-    __setSafPermission(false);
+  it('opens the native Sharesheet on the archive file', async () => {
+    await shareBackupArchive(ARCHIVE_URI);
 
-    const result = await saveBackupArchiveToDevice(ARCHIVE_URI);
-
-    expect(result).toBe('cancelled');
-    expect(__getSafCreatedFiles()).toEqual([]);
+    expect(shareAsync).toHaveBeenCalledWith(ARCHIVE_URI, {
+      mimeType: 'application/zip',
+      UTI: 'public.zip-archive',
+    });
   });
 
-  it('writes the archive\'s exact content to the folder the user picked', async () => {
-    __setSafPermission(true);
+  it('rejects without opening the Sharesheet when sharing is unavailable', async () => {
+    (isAvailableAsync as jest.Mock).mockResolvedValue(false);
 
-    const result = await saveBackupArchiveToDevice(ARCHIVE_URI);
+    await expect(shareBackupArchive(ARCHIVE_URI)).rejects.toThrow();
 
-    expect(result).toBe('saved');
-    const [savedUri] = __getSafCreatedFiles();
-    expect(savedUri).toBeDefined();
-    expect(await readAsStringAsync(savedUri, { encoding: 'base64' })).toBe('fake-zip-base64');
+    expect(shareAsync).not.toHaveBeenCalled();
   });
 
-  it('names the created file after the archive and saves it as a zip', async () => {
-    __setSafPermission(true);
+  it('rejects when the Sharesheet itself fails', async () => {
+    (shareAsync as jest.Mock).mockRejectedValue(new Error('share failed'));
 
-    await saveBackupArchiveToDevice(ARCHIVE_URI);
-
-    const [savedUri] = __getSafCreatedFiles();
-    expect(savedUri).toContain('warranty-backup-test');
-    expect(savedUri).toMatch(/\.zip$/);
-  });
-
-  it('rejects when the write to the picked folder fails', async () => {
-    __setSafPermission(true);
-    __setWriteFailure('mock-saf');
-
-    await expect(saveBackupArchiveToDevice(ARCHIVE_URI)).rejects.toThrow();
+    await expect(shareBackupArchive(ARCHIVE_URI)).rejects.toThrow();
   });
 });
 

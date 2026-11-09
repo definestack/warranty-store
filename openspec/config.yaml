@@ -71,9 +71,9 @@ context: |
   Dates are stored as strings: YYYY-MM-DD for dates, full ISO-8601 for timestamps.
   Ids are Crypto.randomUUID().
 
-  ## Persistence — AsyncStorage (settings only, exactly four keys)
+  ## Persistence — AsyncStorage (settings only, exactly three keys)
   settings.notificationsEnabled (absent or != 'false' means enabled)
-  settings.lastBackupTime, settings.themePreference, settings.languagePreference
+  settings.themePreference, settings.languagePreference
   ('system' or a locale). No warranty data is stored in AsyncStorage.
 
   ## Domain rules (all unit-tested)

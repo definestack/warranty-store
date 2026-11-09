@@ -6,6 +6,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text as PaperText } from 'react-native-paper';
 
 import RecentProductsCard from '../components/RecentProductsCard';
 import WarrantyStatusCard from '../components/WarrantyStatusCard';
@@ -71,7 +72,9 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Text style={[styles.brandText, { color: theme.text }]}>{t('common.appName')}</Text>
+        <PaperText variant="titleLarge" style={[styles.title, { color: theme.text }]}>
+          {t('common.appName')}
+        </PaperText>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -138,8 +141,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
   },
-  brandText: {
-    fontSize: 18,
+  title: {
     fontWeight: '700',
   },
   content: {
