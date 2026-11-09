@@ -6,6 +6,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text as PaperText } from 'react-native-paper';
 
 import Card from '../components/Card';
 import ItemIcon from '../components/ItemIcon';
@@ -96,7 +97,9 @@ export default function ProductListScreen({ navigation, route }: Props) {
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={[styles.title, { color: theme.text }]}>{t('products.title')}</Text>
+          <PaperText variant="titleLarge" style={[styles.title, { color: theme.text }]}>
+            {t('products.title')}
+          </PaperText>
           <Text style={[styles.subtitle, { color: theme.subtleText }]}>{t('products.subtitle')}</Text>
         </View>
         <Pressable
@@ -282,7 +285,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   title: {
-    fontSize: 22,
     fontWeight: '700',
   },
   subtitle: {
