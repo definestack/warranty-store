@@ -2,8 +2,9 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text as PaperText } from 'react-native-paper';
 
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
@@ -176,7 +177,9 @@ export default function SettingsScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
-      <Text style={[styles.title, { color: theme.text }]}>{t('settings.title')}</Text>
+      <PaperText variant="titleLarge" style={[styles.title, { color: theme.text }]}>
+        {t('settings.title')}
+      </PaperText>
       <ScrollView contentContainerStyle={styles.content}>
         <SectionHeader title={t('settings.appearance')} />
         <Card style={styles.card}>
@@ -262,7 +265,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 22,
     fontWeight: '700',
     paddingHorizontal: 16,
     paddingTop: 12,
