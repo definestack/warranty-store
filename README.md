@@ -6,26 +6,16 @@ Warranty Store helps users remember warranty expiry dates, store invoice images 
 
 ---
 
-## Features (Phase 1)
+## Features
 
-* Add and manage purchased items
-* Track warranty expiry dates
-* Attach invoice photos from camera or gallery
-* Attach PDF documents (invoices and warranty papers) from device storage, open them in a PDF viewer
-* Store all data locally on the device
-* Search and filter items
-* View items expiring soon
-* Local backup and restore
-* Offline-first design
-
----
-
-## Planned Premium Features (Phase 2)
-
-* Google Drive backup and restore
-* Multi-device sync
-* Automatic scheduled backups
-* Advanced warranty insights
+* **Warranty tracking** — Record purchase date, warranty length, price, store, and notes for every item, with the expiry date calculated automatically.
+* **Extended warranty support** — Layer one or more extended warranty periods — provider, duration, and cost — on top of the original manufacturer cover, each tracked and reminded separately.
+* **Invoice & document storage** — Attach invoice photos from the camera or gallery, or PDF documents, for both the original purchase and any extended warranty, and open them again anytime.
+* **Expiry reminders** — Local notifications 30 days before, 7 days before, and on the day a warranty expires — no account or backend required.
+* **Search & filter** — See items at a glance by status: active, expiring soon, or expired.
+* **Local backup & restore** — Export every item and its documents into a single zip file and restore it later; importing merges safely so nothing already on the device is overwritten.
+* **Dark mode & multi-language** — Light, dark, or system theme, with English, Spanish, French, and German support.
+* **Fully offline & private** — No account required, no data leaves the device, no analytics.
 
 ---
 
