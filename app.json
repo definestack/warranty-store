@@ -30,7 +30,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Warranty Store uses your photos to attach invoice images to your products.",
-          "cameraPermission": "Warranty Store uses your camera to take photos of invoices for your products."
+          "cameraPermission": "Warranty Store uses your camera to take photos of invoices for your products.",
+          "microphonePermission": false
         }
       ],
       "expo-font",
