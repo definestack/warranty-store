@@ -239,6 +239,15 @@ export default function SettingsScreen({ navigation }: Props) {
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
           <SettingsRow icon="construct-outline" label={t('settings.build')} trailingText={buildNumber} />
         </Card>
+
+        <View style={styles.attribution}>
+          <PaperText variant="bodySmall" style={{ color: theme.subtleText }}>
+            {t('settings.companyAttributionCaption')}
+          </PaperText>
+          <PaperText variant="bodyMedium" style={{ color: theme.text }}>
+            {t('settings.companyAttributionName')}
+          </PaperText>
+        </View>
       </ScrollView>
 
       <SelectModal
@@ -281,5 +290,9 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     marginLeft: 50,
+  },
+  attribution: {
+    alignItems: 'center',
+    marginTop: 8,
   },
 });

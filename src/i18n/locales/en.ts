@@ -290,6 +290,8 @@ const en = {
     privacyPolicy: 'Privacy Policy',
     version: 'Version',
     build: 'Build',
+    companyAttributionCaption: 'A product by',
+    companyAttributionName: 'DefineStack',
   },
   privacyPolicy: {
     title: 'Privacy Policy',
