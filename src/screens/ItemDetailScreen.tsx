@@ -151,7 +151,8 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
 
   /**
    * A document strip. Rendered even when the section is empty, so an empty section is
-   * visibly empty rather than absent and its add tile stays reachable.
+   * visibly empty rather than absent. Read-only here — adding happens via "Edit Item",
+   * not an inline tile — so unlike the edit screen's strip, this one has no add tile.
    */
   const renderDocumentStrip = (documents: ItemDocument[], focus: AddEditSection) => {
     // An empty section is served by its header control, which is shown exactly when this
@@ -189,15 +190,6 @@ export default function ItemDetailScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
         ))}
-        <Pressable
-          onPress={() => openEditor(focus)}
-          style={[styles.documentAddTile, { borderColor: theme.primary }]}
-        >
-          <Ionicons name="add" size={20} color={theme.primary} />
-          <Text style={[styles.documentAddLabel, { color: theme.primary }]}>
-            {t('itemDetail.addMore')}
-          </Text>
-        </Pressable>
       </ScrollView>
     );
   };
@@ -551,20 +543,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 2,
     paddingVertical: 3,
-  },
-  documentAddTile: {
-    width: 76,
-    height: 88,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  documentAddLabel: {
-    fontSize: 11,
-    fontWeight: '600',
   },
   actionBar: {
     flexDirection: 'row',
