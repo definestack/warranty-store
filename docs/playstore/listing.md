@@ -50,7 +50,12 @@ Productivity
 
 <!-- TODO: fill in privacy policy URL before publishing; not inferable from the repo -->
 - Developer contact email: definestack@gmail.com
+- Developer contact phone: +91 9895270951
 - Privacy policy URL: TODO
+
+This file is the source of truth for the Play Console "App content" / store
+settings contact details. If either value above changes, update it here
+first, then copy it into Play Console.
 
 ## Graphics
 

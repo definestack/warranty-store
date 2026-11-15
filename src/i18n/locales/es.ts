@@ -292,6 +292,8 @@ const es: Messages = {
     privacyPolicy: 'Política de privacidad',
     version: 'Versión',
     build: 'Compilación',
+    companyAttributionCaption: 'Un producto de',
+    companyAttributionName: 'DefineStack',
   },
   privacyPolicy: {
     title: 'Política de privacidad',
