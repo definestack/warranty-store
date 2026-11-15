@@ -295,6 +295,8 @@ const de: Messages = {
     privacyPolicy: 'Datenschutzrichtlinie',
     version: 'Version',
     build: 'Build',
+    companyAttributionCaption: 'Ein Produkt von',
+    companyAttributionName: 'DefineStack',
   },
   privacyPolicy: {
     title: 'Datenschutzrichtlinie',
