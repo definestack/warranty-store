@@ -37,8 +37,19 @@ It is updated by `scripts/update-version.js` (see `npm run version:bump`), which
 2. Computes the `YYDOYBOD` value for today.
 3. If today's computed value is not greater than the stored value (e.g. a second build
    on the same day), increments the `BOD` segment instead.
-4. Writes the new value back to `version-code.txt` and updates `android/app/build.gradle`
-   with the new `versionCode` and `versionName`.
+4. Writes the new value back to `version-code.txt`, updates `android/app/build.gradle`
+   with the new `versionCode` and `versionName` (skipped with a warning if `android/`
+   hasn't been generated yet), and updates `app.json`'s `expo.android.versionCode`.
+
+### Why `app.json` matters
+
+`expo-constants` embeds `expo.android.versionCode` from `app.json` into the app at
+build time, and `src/utils/appVersion.ts` reads it at runtime to show the build number
+in the Settings screen. It's also the value `expo prebuild` uses to (re)generate
+`android/app/build.gradle`. If `app.json` isn't kept in sync, the in-app display goes
+stale even though the native build number keeps incrementing — so the bump script
+treats `app.json` as one of the files it must update on every run, not just
+`version-code.txt` and `build.gradle`.
 
 ## Usage
 
@@ -53,7 +64,8 @@ This will:
 - Ensure strict monotonic increase (never goes backward)
 - Increment `BOD` for multiple builds on the same day
 - Update `version-code.txt` with the new code
-- Update `android/app/build.gradle` to match
+- Update `android/app/build.gradle` to match (if `android/` exists)
+- Update `app.json`'s `expo.android.versionCode` to match
 
 Example workflow:
 

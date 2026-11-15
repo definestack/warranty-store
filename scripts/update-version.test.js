@@ -1,31 +1,14 @@
 /**
- * Tests for the YYDOYBOD version code calculation
+ * Tests for the YYDOYBOD version code calculation and app.json sync
  * Run with: npm test scripts/update-version.test.js
  */
 
-// Re-implement the functions for testing
-function getDayOfYear(date) {
-  const start = new Date(date.getFullYear(), 0, 0);
-  const diff = date - start;
-  const oneDay = 1000 * 60 * 60 * 24;
-  return Math.floor(diff / oneDay);
-}
-
-function computeVersionCode(date, buildOfDay = 1) {
-  const year = String(date.getFullYear()).slice(-2).padStart(2, '0');
-  const doy = String(getDayOfYear(date)).padStart(3, '0');
-  const bod = String(buildOfDay).padStart(4, '0');
-  return parseInt(year + doy + bod, 10);
-}
-
-function parseVersionCode(versionCode) {
-  const str = String(versionCode).padStart(9, '0');
-  return {
-    year: parseInt(str.substring(0, 2), 10),
-    doy: parseInt(str.substring(2, 5), 10),
-    bod: parseInt(str.substring(5, 9), 10),
-  };
-}
+const {
+  getDayOfYear,
+  computeVersionCode,
+  parseVersionCode,
+  setAppJsonVersionCode,
+} = require('./update-version');
 
 // Tests
 describe('YYDOYBOD Version Code', () => {
@@ -77,5 +60,49 @@ describe('YYDOYBOD Version Code', () => {
     expect(parsed.year).toBe(10);
     expect(parsed.doy).toBe(1);
     expect(parsed.bod).toBe(1);
+  });
+});
+
+describe('setAppJsonVersionCode', () => {
+  test('sets expo.android.versionCode and leaves other fields unchanged', () => {
+    const appJson = {
+      expo: {
+        name: 'Warranty Store',
+        version: '1.0.3',
+        android: {
+          package: 'in.definestack.warrantystore',
+          versionCode: 2,
+          adaptiveIcon: { backgroundColor: '#FBFBFD' },
+        },
+        plugins: ['expo-sqlite'],
+      },
+    };
+
+    const result = setAppJsonVersionCode(appJson, 263130001);
+
+    expect(result.expo.android.versionCode).toBe(263130001);
+    expect(result.expo.name).toBe('Warranty Store');
+    expect(result.expo.version).toBe('1.0.3');
+    expect(result.expo.android.package).toBe('in.definestack.warrantystore');
+    expect(result.expo.android.adaptiveIcon).toEqual({ backgroundColor: '#FBFBFD' });
+    expect(result.expo.plugins).toEqual(['expo-sqlite']);
+  });
+
+  test('does not mutate the input object', () => {
+    const appJson = {
+      expo: { version: '1.0.3', android: { versionCode: 2 } },
+    };
+
+    setAppJsonVersionCode(appJson, 263130001);
+
+    expect(appJson.expo.android.versionCode).toBe(2);
+  });
+
+  test('creates expo.android when it is missing', () => {
+    const appJson = { expo: { version: '1.0.3' } };
+
+    const result = setAppJsonVersionCode(appJson, 263130001);
+
+    expect(result.expo.android).toEqual({ versionCode: 263130001 });
   });
 });
